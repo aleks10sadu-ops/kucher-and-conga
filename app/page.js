@@ -149,6 +149,8 @@ export default function Page() {
   const [contentManagerCategory, setContentManagerCategory] = useState(null);
   const [bookingMessage, setBookingMessage] = useState(null); // { type: 'success' | 'error', text: string }
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingPrivacyConsent, setBookingPrivacyConsent] = useState(false);
+  const [deliveryPrivacyConsent, setDeliveryPrivacyConsent] = useState(false);
   const { items, add, dec, remove, clear, count, total } = useCart();
   
   // Используем хук для проверки админа
@@ -257,6 +259,16 @@ export default function Page() {
   // Сабмит БРОНИ (из секции booking)
   async function submitBooking(e) {
     e.preventDefault();
+    
+    // Проверка согласия на обработку персональных данных
+    if (!bookingPrivacyConsent) {
+      setBookingMessage({
+        type: 'error',
+        text: 'Необходимо дать согласие на обработку персональных данных.',
+      });
+      return;
+    }
+    
     setBookingLoading(true);
     setBookingMessage(null);
 
@@ -301,6 +313,7 @@ export default function Page() {
           try {
             e.currentTarget.reset();
             setGuests(2);
+            setBookingPrivacyConsent(false);
           } catch (resetError) {
             console.warn('Failed to reset form:', resetError);
             // Игнорируем ошибки сброса формы, так как бронирование уже создано
@@ -355,6 +368,7 @@ export default function Page() {
         });
         e.currentTarget.reset();
         setGuests(2);
+        setBookingPrivacyConsent(false);
         setBookingLoading(false);
         return;
       }
@@ -402,6 +416,12 @@ export default function Page() {
   async function submitDelivery(e) {
     e.preventDefault();
     
+    // Проверка согласия на обработку персональных данных
+    if (!deliveryPrivacyConsent) {
+      alert('Необходимо дать согласие на обработку персональных данных.');
+      return;
+    }
+    
     // Проверка условий для бизнес-ланчей
     if (!validateBusinessLunchOrder.isValid) {
       alert(validateBusinessLunchOrder.message);
@@ -418,6 +438,7 @@ export default function Page() {
     setDeliveryOpen(false);
     setCartOpen(false);
     setDForm({ name: '', phone: '', address: '', comment: '' });
+    setDeliveryPrivacyConsent(false);
     alert('Заявка на доставку отправлена! Ожидайте звонка.');
   }
 
@@ -694,6 +715,22 @@ export default function Page() {
                     />
                   </div>
                   <textarea id="booking-comment" name="comment" aria-label="Пожелания" className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
+                  <div className="md:col-span-2 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="booking-privacy-consent"
+                      checked={bookingPrivacyConsent}
+                      onChange={(e) => setBookingPrivacyConsent(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
+                      required
+                    />
+                    <label htmlFor="booking-privacy-consent" className="text-xs sm:text-sm text-neutral-300">
+                      Оформляя бронирование, вы соглашаетесь с{' '}
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
+                        политикой конфиденциальности
+                      </a>
+                    </label>
+                  </div>
                   {bookingMessage && (
                     <div className={`md:col-span-2 p-3 sm:p-4 rounded-lg border ${
                       bookingMessage.type === 'success' 
@@ -733,6 +770,22 @@ export default function Page() {
                     />
                   </div>
                   <textarea name="comment" className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
+                  <div className="md:col-span-2 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="booking-privacy-consent-ssr"
+                      checked={bookingPrivacyConsent}
+                      onChange={(e) => setBookingPrivacyConsent(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
+                      required
+                    />
+                    <label htmlFor="booking-privacy-consent-ssr" className="text-xs sm:text-sm text-neutral-300">
+                      Оформляя бронирование, вы соглашаетесь с{' '}
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
+                        политикой конфиденциальности
+                      </a>
+                    </label>
+                  </div>
                   {bookingMessage && (
                     <div className={`md:col-span-2 p-3 sm:p-4 rounded-lg border ${
                       bookingMessage.type === 'success' 
@@ -1191,6 +1244,22 @@ export default function Page() {
             value={dForm.comment}
             onChange={e => setDForm(o => ({ ...o, comment: e.target.value }))}
           />
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="delivery-privacy-consent"
+              checked={deliveryPrivacyConsent}
+              onChange={(e) => setDeliveryPrivacyConsent(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
+              required
+            />
+            <label htmlFor="delivery-privacy-consent" className="text-xs sm:text-sm text-neutral-300">
+              Оформляя доставку, вы соглашаетесь с{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
+                политикой конфиденциальности
+              </a>
+            </label>
+          </div>
           {/* Предупреждение о бизнес-ланчах */}
           {validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid && (
             <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2">
