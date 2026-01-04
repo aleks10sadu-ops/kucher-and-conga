@@ -297,8 +297,14 @@ export default function Page() {
             type: 'success',
             text: message,
           });
-          e.currentTarget.reset();
-          setGuests(2);
+          
+          try {
+            e.currentTarget.reset();
+            setGuests(2);
+          } catch (resetError) {
+            console.warn('Failed to reset form:', resetError);
+            // Игнорируем ошибки сброса формы, так как бронирование уже создано
+          }
           
           // Также отправляем в Telegram как резервный вариант
           try {
@@ -317,11 +323,17 @@ export default function Page() {
             console.warn('Failed to send to Telegram:', telegramError);
             // Не показываем ошибку пользователю, так как основное бронирование создано
           }
+          
+          // Выходим из функции, так как бронирование успешно создано
+          setBookingLoading(false);
+          return;
         } else {
           setBookingMessage({
             type: 'error',
             text: result.error || 'Ошибка при создании бронирования. Попробуйте позже.',
           });
+          setBookingLoading(false);
+          return;
         }
       } else {
         // Если URL API не указан, отправляем только в Telegram (старое поведение)
@@ -343,9 +355,13 @@ export default function Page() {
         });
         e.currentTarget.reset();
         setGuests(2);
+        setBookingLoading(false);
+        return;
       }
     } catch (error) {
       console.error('Booking submission error:', error);
+      // Показываем ошибку только если бронирование не было успешно создано
+      // (т.е. если мы не вышли из функции раньше через return)
       setBookingMessage({
         type: 'error',
         text: 'Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с нами по телефону.',
