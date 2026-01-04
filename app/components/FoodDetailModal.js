@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Star, Clock, Scale, Edit2, Save, Trash2 } from 'lucide-react';
-import { getFoodImage } from '../data/foodImages';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 import { uploadDishImage, isSupabaseStorageUrl } from '../../lib/supabase/storage';
 import MenuTypesAndCategoriesManager from './MenuTypesAndCategoriesManager';
@@ -203,8 +202,35 @@ export default function FoodDetailModal({ item, isOpen, onClose, onAddToCart, ca
     }
   };
 
-  // Получаем правильное изображение (из редактирования, БД или fallback)
-  const displayImage = editImageUrl || item?.image_url || item?.image || getFoodImage(item?.id);
+  // Получаем правильное изображение (фильтруем Unsplash)
+  const rawDisplayImage = editImageUrl || item?.image_url || item?.image || null;
+  const displayImage = rawDisplayImage && !rawDisplayImage.includes('unsplash.com') ? rawDisplayImage : null;
+  const hasDisplayImage = !!displayImage;
+  
+  // Состояние загрузки изображения
+  const [modalImageLoading, setModalImageLoading] = useState(hasDisplayImage);
+  const [modalImageError, setModalImageError] = useState(false);
+  
+  // Сброс состояния при изменении изображения
+  useEffect(() => {
+    if (displayImage) {
+      setModalImageLoading(true);
+      setModalImageError(false);
+    } else {
+      setModalImageLoading(false);
+      setModalImageError(false);
+    }
+  }, [displayImage]);
+  
+  // Оптимизация URL изображений Supabase
+  const optimizeSupabaseImageUrl = (url, width = 600) => {
+    if (!url) return null;
+    if (url.includes('supabase.co/storage/v1/object/public/')) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}width=${width}&quality=80`;
+    }
+    return url;
+  };
 
   const handleAdd = (variant = null) => {
     if (variant) {
@@ -385,12 +411,57 @@ export default function FoodDetailModal({ item, isOpen, onClose, onAddToCart, ca
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
             {/* Image */}
             <div className="space-y-4">
-              <div className="aspect-square rounded-xl overflow-hidden bg-white/5">
-                <img
-                  src={displayImage}
-                  alt={displayName}
-                  className="w-full h-full object-cover"
-                />
+              <div className="aspect-square rounded-xl overflow-hidden bg-neutral-800 relative">
+                {/* Плейсхолдер если нет изображения */}
+                {!hasDisplayImage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                    <div className="text-center p-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-700 flex items-center justify-center">
+                        <svg className="w-10 h-10 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-neutral-500">Изображение отсутствует</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Спиннер загрузки */}
+                {hasDisplayImage && modalImageLoading && !modalImageError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
+                    <div className="w-12 h-12 border-3 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                  </div>
+                )}
+                
+                {/* Плейсхолдер при ошибке */}
+                {hasDisplayImage && modalImageError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                    <div className="text-center p-8">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-700 flex items-center justify-center">
+                        <svg className="w-10 h-10 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-neutral-500">Ошибка загрузки</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Само изображение - оптимизированное */}
+                {hasDisplayImage && (
+                  <img
+                    src={optimizeSupabaseImageUrl(displayImage, 600)}
+                    alt={displayName}
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${
+                      modalImageLoading || modalImageError ? 'opacity-0' : 'opacity-100'
+                    }`}
+                    onLoad={() => setModalImageLoading(false)}
+                    onError={() => {
+                      setModalImageLoading(false);
+                      setModalImageError(true);
+                    }}
+                  />
+                )}
               </div>
               {isEditing && (
                 <div className="space-y-2">

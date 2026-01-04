@@ -14,11 +14,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ru">
       <head>
-        {/* Preconnect только для реально используемых источников */}
+        {/* Preconnect для Supabase (основной источник изображений) */}
         <link rel="preconnect" href="https://mmyfglktqvojwpycreko.supabase.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://mmyfglktqvojwpycreko.supabase.co" />
-        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
         {/* Обработка ошибок загрузки чанков */}
         <script
           dangerouslySetInnerHTML={{
@@ -30,6 +28,29 @@ export default function RootLayout({ children }) {
                 // Обработка ошибок загрузки ресурсов (404 для chunk файлов)
                 window.addEventListener('error', function(e) {
                   const target = e.target;
+                  
+                  // Игнорируем CSP ошибки и ошибки от внешних сервисов (Vercel Live и т.д.)
+                  const isCSPError = e.message && (
+                    e.message.includes('Content Security Policy') ||
+                    e.message.includes('CSP') ||
+                    (target && target.src && (
+                      target.src.includes('vercel.live') ||
+                      target.src.includes('_next-live')
+                    ))
+                  );
+                  
+                  // Игнорируем React hydration ошибки (#418)
+                  const isReactHydrationError = e.message && (
+                    e.message.includes('Minified React error #418') ||
+                    e.message.includes('React error #418') ||
+                    (url && url.includes('react.dev/errors/418'))
+                  );
+                  
+                  if (isCSPError || isReactHydrationError) {
+                    console.warn('Ignoring CSP or React hydration error:', e.message || target?.src);
+                    return false;
+                  }
+                  
                   const isChunkError = target && (
                     (target.tagName === 'SCRIPT' && target.src && target.src.includes('/_next/static/chunks/')) ||
                     (target.tagName === 'LINK' && target.href && target.href.includes('/_next/static/chunks/'))
@@ -69,6 +90,28 @@ export default function RootLayout({ children }) {
                 // Обработка ошибок через window.onerror
                 const originalError = window.onerror;
                 window.onerror = function(msg, url, line, col, error) {
+                  // Игнорируем CSP ошибки
+                  const isCSPError = msg && (
+                    msg.includes('Content Security Policy') ||
+                    msg.includes('CSP') ||
+                    (url && (
+                      url.includes('vercel.live') ||
+                      url.includes('_next-live')
+                    ))
+                  );
+                  
+                  // Игнорируем React hydration ошибки (#418)
+                  const isReactHydrationError = msg && (
+                    msg.includes('Minified React error #418') ||
+                    msg.includes('React error #418') ||
+                    (url && url.includes('react.dev/errors/418'))
+                  );
+                  
+                  if (isCSPError || isReactHydrationError) {
+                    console.warn('Ignoring CSP or React hydration error:', msg, url);
+                    return false;
+                  }
+                  
                   const isChunkRelated = url && (
                     url.includes('/_next/static/chunks/') ||
                     url.includes('chunk') ||

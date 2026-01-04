@@ -1,8 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
-import { getFoodImage } from '../data/foodImages';
+import React, { useState, useEffect } from 'react';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
+
+// Иконка загрузки - пульсирующий круг с анимацией
+const LoadingSpinner = () => (
+  <div className="absolute inset-0 flex items-center justify-center bg-neutral-800/95">
+    <div className="relative">
+      {/* Внешний пульсирующий круг */}
+      <div className="absolute inset-0 w-10 h-10 border-2 border-amber-400/20 rounded-full animate-ping" />
+      {/* Вращающийся спиннер */}
+      <div className="w-10 h-10 border-3 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+    </div>
+  </div>
+);
+
+// Плейсхолдер для блюд без изображения - минималистичный тёмный фон
+const ImagePlaceholder = () => (
+  <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 via-neutral-850 to-neutral-900 flex items-center justify-center">
+    <div className="w-16 h-16 rounded-full bg-neutral-700/50 flex items-center justify-center">
+      <svg className="w-8 h-8 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </div>
+  </div>
+);
+
+// Оптимизация URL изображений Supabase - добавляем параметры трансформации
+const optimizeSupabaseImageUrl = (url, width = 400) => {
+  if (!url) return null;
+  // Если это Supabase Storage URL, добавляем параметры трансформации
+  if (url.includes('supabase.co/storage/v1/object/public/')) {
+    // Supabase Image Transformation: ?width=400&quality=75
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}width=${width}&quality=75`;
+  }
+  return url;
+};
 
 /**
  * Компонент отдельного блюда в меню
@@ -36,13 +70,34 @@ export default function MenuItem({
     return cartVariant?.qty || 0;
   };
 
+  // Получаем изображение блюда (только из Supabase, игнорируем Unsplash)
+  const rawImageUrl = item?.image || item?.image_url || null;
+  // Фильтруем Unsplash URL - они не должны показываться
+  const imageUrl = rawImageUrl && !rawImageUrl.includes('unsplash.com') ? rawImageUrl : null;
+  const hasImage = !!imageUrl;
+  
+  // Состояние загрузки изображения
+  const [imageLoading, setImageLoading] = useState(hasImage);
+  const [imageError, setImageError] = useState(false);
+  
+  // Сброс состояния при изменении изображения
+  useEffect(() => {
+    if (imageUrl) {
+      setImageLoading(true);
+      setImageError(false);
+    } else {
+      setImageLoading(false);
+      setImageError(false);
+    }
+  }, [imageUrl]);
+
   // Проверяем, что item существует и имеет необходимые свойства
   if (!item || !item.id || !item.name) {
     return null;
   }
-
-  // Получаем изображение блюда (из базы данных или статическое)
-  const getItemImage = () => item.image || getFoodImage(item.id);
+  
+  // Функция для получения изображения (для корзины)
+  const getItemImage = () => imageUrl;
 
   const handleAdd = (variant = null) => {
     if (variant) {
@@ -207,15 +262,34 @@ export default function MenuItem({
       className="group overflow-hidden rounded-lg sm:rounded-xl lg:rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-amber-400/30 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex flex-col h-full cursor-pointer"
     >
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden">
-        <img
-          src={getItemImage()}
-          alt={item.name}
-          className="w-full h-full object-cover transition-transform group-hover:scale-105"
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding={priority ? "sync" : "async"}
-        />
+      <div className="relative aspect-square overflow-hidden bg-neutral-800">
+        {/* Показываем плейсхолдер если нет изображения */}
+        {!hasImage && <ImagePlaceholder />}
+        
+        {/* Показываем спиннер пока изображение загружается */}
+        {hasImage && imageLoading && !imageError && <LoadingSpinner />}
+        
+        {/* Показываем плейсхолдер при ошибке загрузки */}
+        {hasImage && imageError && <ImagePlaceholder />}
+        
+        {/* Само изображение - оптимизированное для быстрой загрузки */}
+        {hasImage && (
+          <img
+            src={optimizeSupabaseImageUrl(imageUrl, 400)}
+            alt={item.name}
+            className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${
+              imageLoading || imageError ? 'opacity-0' : 'opacity-100'
+            }`}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            decoding={priority ? "sync" : "async"}
+            onLoad={() => setImageLoading(false)}
+            onError={() => {
+              setImageLoading(false);
+              setImageError(true);
+            }}
+          />
+        )}
       </div>
       
       <div className="p-2 sm:p-3 lg:p-6 flex flex-col flex-grow">
