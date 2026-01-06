@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import EnhancedMenuSection from './components/EnhancedMenuSection';
 import ContentManager from './components/ContentManager';
+import DeliveryMap from './components/DeliveryMapNew';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
 import { createReservation } from '../lib/reservations';
 
@@ -162,7 +163,32 @@ export default function Page() {
   }, []);
 
   // Доставка: локальный стейт формы
-  const [dForm, setDForm] = useState({ name: '', phone: '', address: '', comment: '' });
+  const [dForm, setDForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    comment: '',
+    deliveryZone: null,
+    deliveryPrice: null,
+    coordinates: null
+  });
+
+  // Обработчики для карты доставки
+  const handleDeliveryZoneChange = (zone) => {
+    setDForm(prev => ({
+      ...prev,
+      deliveryZone: zone,
+      deliveryPrice: zone ? zone.price : null
+    }));
+  };
+
+  const handleDeliveryAddressChange = (address, coordinates) => {
+    setDForm(prev => ({
+      ...prev,
+      address: address,
+      coordinates: coordinates
+    }));
+  };
 
   // Блокируем скролл body при открытых модалках (но не при меню)
   useEffect(() => {
@@ -415,31 +441,51 @@ export default function Page() {
   // Сабмит ДОСТАВКИ (из модалки)
   async function submitDelivery(e) {
     e.preventDefault();
-    
+
     // Проверка согласия на обработку персональных данных
     if (!deliveryPrivacyConsent) {
       alert('Необходимо дать согласие на обработку персональных данных.');
       return;
     }
-    
+
     // Проверка условий для бизнес-ланчей
     if (!validateBusinessLunchOrder.isValid) {
       alert(validateBusinessLunchOrder.message);
       return;
     }
-    
+
+    // Проверка зоны доставки
+    if (!dForm.deliveryZone) {
+      alert('Пожалуйста, укажите адрес доставки и выберите зону на карте.');
+      return;
+    }
+
+    const deliveryTotal = total + (dForm.deliveryPrice || 0);
+
     const payload = {
       type: 'delivery',
       ...dForm,
       items,
-      total,
+      subtotal: total,
+      deliveryPrice: dForm.deliveryPrice,
+      total: deliveryTotal,
+      zoneName: dForm.deliveryZone?.name,
     };
+
     await notifyTelegram(payload);
     setDeliveryOpen(false);
     setCartOpen(false);
-    setDForm({ name: '', phone: '', address: '', comment: '' });
+    setDForm({
+      name: '',
+      phone: '',
+      address: '',
+      comment: '',
+      deliveryZone: null,
+      deliveryPrice: null,
+      coordinates: null
+    });
     setDeliveryPrivacyConsent(false);
-    alert('Заявка на доставку отправлена! Ожидайте звонка.');
+    alert(`Заявка на доставку отправлена! Стоимость доставки: ${dForm.deliveryPrice === 0 ? 'бесплатно' : dForm.deliveryPrice + '₽'}. Ожидайте звонка.`);
   }
 
   return (
@@ -1207,86 +1253,123 @@ export default function Page() {
       {/* --- DELIVERY MODAL --- */}
       {deliveryOpen && <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setDeliveryOpen(false)} aria-hidden />}
       <div
-        className={`fixed inset-x-0 top-1/2 -translate-y-1/2 z-50 mx-auto w-[94%] max-w-lg rounded-2xl bg-neutral-950 border border-white/10 p-6 transition ${
+        className={`fixed inset-x-0 top-1/2 -translate-y-1/2 z-50 mx-auto w-[94%] max-w-6xl rounded-2xl bg-neutral-950 border border-white/10 transition overflow-hidden ${
           deliveryOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         role="dialog"
         aria-label="Оформление доставки"
       >
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-lg font-semibold">Оформление доставки</div>
-          <button onClick={() => setDeliveryOpen(false)} className="p-2 rounded hover:bg-white/5" aria-label="Закрыть">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3">
-          <input
-            required placeholder="Имя"
-            className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
-            value={dForm.name}
-            onChange={e => setDForm(o => ({ ...o, name: e.target.value }))}
-          />
-          <input
-            required placeholder="Телефон"
-            className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
-            value={dForm.phone}
-            onChange={e => setDForm(o => ({ ...o, phone: e.target.value }))}
-          />
-          <input
-            required placeholder="Адрес доставки"
-            className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
-            value={dForm.address}
-            onChange={e => setDForm(o => ({ ...o, address: e.target.value }))}
-          />
-          <textarea
-            rows={3} placeholder="Комментарий (необязательно)"
-            className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
-            value={dForm.comment}
-            onChange={e => setDForm(o => ({ ...o, comment: e.target.value }))}
-          />
-          <div className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              id="delivery-privacy-consent"
-              checked={deliveryPrivacyConsent}
-              onChange={(e) => setDeliveryPrivacyConsent(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
-              required
-            />
-            <label htmlFor="delivery-privacy-consent" className="text-xs sm:text-sm text-neutral-300">
-              Оформляя доставку, вы соглашаетесь с{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
-                политикой конфиденциальности
-              </a>
-            </label>
-          </div>
-          {/* Предупреждение о бизнес-ланчах */}
-          {validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid && (
-            <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-amber-300 text-sm font-semibold mb-1">Условия заказа бизнес-ланчей</p>
-                <p className="text-amber-200/80 text-xs">{validateBusinessLunchOrder.message}</p>
+        <div className="flex flex-col lg:flex-row h-[90vh] max-h-[800px]">
+          {/* Левая часть - форма */}
+          <div className="flex-1 p-6 border-r border-white/10 lg:max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-lg font-semibold">Оформление доставки</div>
+              <button onClick={() => setDeliveryOpen(false)} className="p-2 rounded hover:bg-white/5" aria-label="Закрыть">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3 h-full overflow-auto">
+              <input
+                required placeholder="Имя"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                value={dForm.name}
+                onChange={e => setDForm(o => ({ ...o, name: e.target.value }))}
+              />
+              <input
+                required placeholder="Телефон"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                value={dForm.phone}
+                onChange={e => setDForm(o => ({ ...o, phone: e.target.value }))}
+              />
+              <textarea
+                rows={3} placeholder="Комментарий (необязательно)"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                value={dForm.comment}
+                onChange={e => setDForm(o => ({ ...o, comment: e.target.value }))}
+              />
+
+              {/* Информация о доставке */}
+              {dForm.address && dForm.deliveryPrice !== null && (
+                <div className="p-3 rounded-lg border bg-green-900/20 border-green-500/50 text-green-300">
+                  <div className="mb-2">
+                    <span className="text-sm opacity-75">Адрес:</span>
+                    <div className="text-lg font-semibold">{dForm.address}</div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm opacity-75">Стоимость доставки:</span>
+                    <span className="text-xl font-bold text-amber-400">
+                      {dForm.deliveryPrice === 0 ? 'Бесплатно' : `${dForm.deliveryPrice}₽`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="delivery-privacy-consent"
+                  checked={deliveryPrivacyConsent}
+                  onChange={(e) => setDeliveryPrivacyConsent(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
+                  required
+                />
+                <label htmlFor="delivery-privacy-consent" className="text-xs sm:text-sm text-neutral-300">
+                  Оформляя доставку, вы соглашаетесь с{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
+                    политикой конфиденциальности
+                  </a>
+                </label>
               </div>
-            </div>
-          )}
-          
-          <button
-            type="submit"
-            disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid)}
-            className="mt-2 px-8 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
-          >
-            Отправить заявку в Telegram
-          </button>
-          <div className="text-sm text-neutral-400">
-            В заказе позиций: <b>{items.reduce((s,i)=>s+i.qty,0)}</b>, на сумму <b>{total.toLocaleString('ru-RU')} ₽</b>
+
+              {/* Предупреждение о бизнес-ланчах */}
+              {validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid && (
+                <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-amber-300 text-sm font-semibold mb-1">Условия заказа бизнес-ланчей</p>
+                    <p className="text-amber-200/80 text-xs">{validateBusinessLunchOrder.message}</p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid) || !dForm.deliveryZone}
+                className="mt-4 px-8 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+              >
+                Отправить заявку в Telegram
+              </button>
+
+              <div className="text-sm text-neutral-400 space-y-1">
+                <div>Позиций в заказе: <b>{items.reduce((s,i)=>s+i.qty,0)}</b></div>
+                <div>Сумма заказа: <b>{total.toLocaleString('ru-RU')} ₽</b></div>
+                {dForm.deliveryPrice !== null && dForm.deliveryPrice > 0 && (
+                  <div>Доставка: <b>{dForm.deliveryPrice} ₽</b></div>
+                )}
+                {dForm.deliveryPrice !== null && (
+                  <div className="border-t border-white/10 pt-1 mt-2">
+                    Итого: <b className="text-amber-400">{(total + (dForm.deliveryPrice || 0)).toLocaleString('ru-RU')} ₽</b>
+                  </div>
+                )}
+              </div>
+
+              {validateBusinessLunchOrder.businessLunchCount > 0 && (
+                <div className="text-xs text-amber-400">
+                  Бизнес-ланчей в заказе: {validateBusinessLunchOrder.businessLunchCount}
+                </div>
+              )}
+            </form>
           </div>
-          {validateBusinessLunchOrder.businessLunchCount > 0 && (
-            <div className="text-xs text-amber-400">
-              Бизнес-ланчей в заказе: {validateBusinessLunchOrder.businessLunchCount}
-            </div>
-          )}
-        </form>
+
+          {/* Правая часть - карта */}
+          <div className="flex-1 min-h-[400px]">
+            <DeliveryMap
+              onZoneChange={handleDeliveryZoneChange}
+              onAddressChange={handleDeliveryAddressChange}
+            />
+          </div>
+        </div>
       </div>
     </div>
 

@@ -67,3 +67,19 @@ body {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* Скрываем элементы copyright Yandex Maps */
+[class*="ymaps-2-1-79-copyright"],
+[class*="ymaps-2-1-79-copyright__"],
+[class*="ymaps-2-1-79-gototech"],
+[class*="ymaps-2-1-79-gotoymaps"],
+[class*="ymaps-2-1-79-gotoymap"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Скрываем панель copyright */
+.ymaps-2-1-79-copyright__pane {
+  display: none !important;
+}
