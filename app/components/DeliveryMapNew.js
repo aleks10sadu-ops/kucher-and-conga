@@ -151,13 +151,15 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
 
         // Скрываем элементы copyright через CSS
         const hideCopyrightElements = () => {
-          const copyrightElements = mapRef.current.querySelectorAll('[class*="copyright"], [class*="gototech"], [class*="gotoymaps"]');
-          copyrightElements.forEach(el => {
-            if (el && el.style) {
-              el.style.display = 'none !important';
-              el.style.visibility = 'hidden';
-            }
-          });
+          if (mapRef.current) {
+            const copyrightElements = mapRef.current.querySelectorAll('[class*="copyright"], [class*="gototech"], [class*="gotoymaps"]');
+            copyrightElements.forEach(el => {
+              if (el && el.style) {
+                el.style.display = 'none !important';
+                el.style.visibility = 'hidden';
+              }
+            });
+          }
         };
 
         // Прячем сразу и через таймаут
