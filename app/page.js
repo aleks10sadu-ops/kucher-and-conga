@@ -10,6 +10,8 @@ import {
 import EnhancedMenuSection from './components/EnhancedMenuSection';
 import ContentManager from './components/ContentManager';
 import DeliveryMap from './components/DeliveryMapNew';
+import DeliverySettings from './components/DeliverySettings';
+import DeliveryStatusBanner from './components/DeliveryStatusBanner';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
 import { createReservation } from '../lib/reservations';
 
@@ -258,6 +260,119 @@ export default function Page() {
   const [cartOpen, setCartOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [deliverySettingsOpen, setDeliverySettingsOpen] = useState(false);
+  const [deliverySettings, setDeliverySettings] = useState({
+    isDeliveryEnabled: true,
+    startTime: '14:00',
+    endTime: '22:00',
+    minDeliveryHours: 1.5,
+    maxAdvanceDays: 7
+  });
+
+  // Загружаем настройки доставки при монтировании
+  useEffect(() => {
+    const saved = localStorage.getItem('deliverySettings');
+    if (saved) {
+      setDeliverySettings(JSON.parse(saved));
+    }
+  }, []);
+
+  // Функция для получения минимального времени доставки
+  const getMinDeliveryTime = () => {
+    const now = new Date();
+    const minTime = new Date(now.getTime() + (deliverySettings.minDeliveryHours * 60 * 60 * 1000));
+    return minTime.toISOString().slice(0, 16); // Формат YYYY-MM-DDTHH:MM
+  };
+
+  // Функция для получения максимального времени доставки
+  const getMaxDeliveryTime = () => {
+    const now = new Date();
+    const maxTime = new Date(now.getTime() + (deliverySettings.maxAdvanceDays * 24 * 60 * 60 * 1000));
+
+    // Устанавливаем время окончания работы в этот день
+    const [hours, minutes] = deliverySettings.endTime.split(':');
+    maxTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    return maxTime.toISOString().slice(0, 16);
+  };
+
+  // Проверяем, доступна ли доставка в выбранное время
+  const isDeliveryTimeValid = (dateTimeString) => {
+    if (!dateTimeString) return false;
+
+    const selectedTime = new Date(dateTimeString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Проверяем минимальное время
+    const minTime = new Date(now.getTime() + (deliverySettings.minDeliveryHours * 60 * 60 * 1000));
+    if (selectedTime < minTime) return false;
+
+    // Проверяем максимальное время вперед
+    const maxTime = new Date(now.getTime() + (deliverySettings.maxAdvanceDays * 24 * 60 * 60 * 1000));
+    if (selectedTime > maxTime) return false;
+
+    // Для сегодняшней доставки проверяем время работы
+    const selectedDate = new Date(selectedTime.getFullYear(), selectedTime.getMonth(), selectedTime.getDate());
+    if (selectedDate.getTime() === today.getTime()) {
+      const [startHours, startMinutes] = deliverySettings.startTime.split(':');
+      const [endHours, endMinutes] = deliverySettings.endTime.split(':');
+
+      const startTime = new Date(selectedDate);
+      startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0);
+
+      const endTime = new Date(selectedDate);
+      endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+      if (selectedTime < startTime || selectedTime > endTime) return false;
+    }
+
+    return true;
+  };
+
+  // Проверяем, доступна ли доставка прямо сейчас
+  const isDeliveryAvailableNow = () => {
+    if (!deliverySettings.isDeliveryEnabled) return false;
+
+    const now = new Date();
+    const [startHours, startMinutes] = deliverySettings.startTime.split(':');
+    const [endHours, endMinutes] = deliverySettings.endTime.split(':');
+
+    const startTime = new Date(now);
+    startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0);
+
+    const endTime = new Date(now);
+    endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+    return now >= startTime && now <= endTime;
+  };
+
+  // Форматируем время для Москвы (GMT+3)
+  const formatMoscowTime = (date) => {
+    const moscowTime = new Date(date.getTime() + (3 * 60 * 60 * 1000)); // GMT+3
+    return moscowTime.toLocaleString('ru-RU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Форматируем дату для Москвы в формате DD.MM.YYYY
+  const formatMoscowDate = (date) => {
+    const moscowTime = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+    return moscowTime.toLocaleDateString('ru-RU');
+  };
+
+  // Форматируем время для Москвы в формате HH:MM
+  const formatMoscowTimeOnly = (date) => {
+    const moscowTime = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+    return moscowTime.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
@@ -286,7 +401,11 @@ export default function Page() {
     comment: '',
     deliveryZone: null,
     deliveryPrice: null,
-    coordinates: null
+    coordinates: null,
+    deliveryTime: 'asap', // 'asap' или конкретное время
+    deliveryTimeCustom: '',
+    paymentMethod: 'card', // 'card', 'transfer', 'cash'
+    changeAmount: 'no-change' // 'no-change' или сумма сдачи
   });
 
   // Обработчики для карты доставки
@@ -576,6 +695,20 @@ export default function Page() {
       return;
     }
 
+    // Проверка времени доставки
+    if (dForm.deliveryTime === 'custom' && !dForm.deliveryTimeCustom) {
+      alert('Пожалуйста, укажите время доставки.');
+      return;
+    }
+
+    // Проверка корректности времени доставки
+    if (dForm.deliveryTime === 'custom' && dForm.deliveryTimeCustom) {
+      if (!isDeliveryTimeValid(dForm.deliveryTimeCustom)) {
+        alert(`Время доставки должно быть в рабочее время (${deliverySettings.startTime} - ${deliverySettings.endTime}) и не раньше чем через ${deliverySettings.minDeliveryHours} часа от текущего времени.`);
+        return;
+      }
+    }
+
     const deliveryTotal = total + (dForm.deliveryPrice || 0);
 
     const payload = {
@@ -598,7 +731,11 @@ export default function Page() {
       comment: '',
       deliveryZone: null,
       deliveryPrice: null,
-      coordinates: null
+      coordinates: null,
+      deliveryTime: 'asap',
+      deliveryTimeCustom: '',
+      paymentMethod: 'card',
+      changeAmount: 'no-change'
     });
     setDeliveryPrivacyConsent(false);
     alert(`Заявка на доставку отправлена! Стоимость доставки: ${dForm.deliveryPrice === 0 ? 'бесплатно' : dForm.deliveryPrice + '₽'}. Ожидайте звонка.`);
@@ -786,9 +923,20 @@ export default function Page() {
         </div>
       </section>
 
+      {/* Статус доставки */}
+      <section className="py-4 border-t border-white/10">
+        <div className="container mx-auto px-4">
+          <DeliveryStatusBanner
+            settings={deliverySettings}
+            isAvailable={isDeliveryAvailableNow()}
+            onDeliveryClick={() => scrollTo('#menu')}
+          />
+        </div>
+      </section>
+
       {/* МЕНЮ РЕСТОРАНА */}
-      <EnhancedMenuSection 
-        onAddToCart={add} 
+      <EnhancedMenuSection
+        onAddToCart={add}
         cartItems={items}
         enableAdminEditing={true}
       />
@@ -835,6 +983,12 @@ export default function Page() {
                   className="px-4 py-2 rounded-full bg-orange-500 text-white font-semibold hover:bg-orange-600 transition"
                 >
                   Управление залами
+                </button>
+                <button
+                  onClick={() => setDeliverySettingsOpen(true)}
+                  className="px-4 py-2 rounded-full bg-amber-500 text-black font-semibold hover:bg-amber-400 transition"
+                >
+                  ⚙️ Настройки доставки
                 </button>
               </div>
             </div>
@@ -1354,9 +1508,15 @@ export default function Page() {
           <div className="flex items-center gap-3">
             <button
             disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid)}
-            onClick={() => setDeliveryOpen(true)}
+            onClick={() => {
+              if (!isDeliveryAvailableNow() && !deliverySettings.isDeliveryEnabled) {
+                alert('Доставка временно отключена администратором.');
+                return;
+              }
+              setDeliveryOpen(true);
+            }}
               className="w-full px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
-          >
+            >
             Доставка
             </button>
           </div>
@@ -1375,18 +1535,34 @@ export default function Page() {
         role="dialog"
         aria-label="Оформление доставки"
       >
-        <div className="flex flex-col lg:flex-row h-[90vh]">
+        <div className="flex flex-col lg:flex-row min-h-[90vh] max-h-[95vh]">
 
           {/* Левая часть - форма */}
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 border-r border-white/10 lg:max-w-md">
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 border-r border-white/10 lg:max-w-md flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-6 sm:mb-8 flex-shrink-0">
               <div className="text-lg sm:text-xl font-semibold">Оформление доставки</div>
-              <button onClick={() => setDeliveryOpen(false)} className="p-2 rounded hover:bg-white/5" aria-label="Закрыть">
+              <button onClick={() => setDeliveryOpen(false)} className="p-2 rounded hover:bg-white/5 flex-shrink-0" aria-label="Закрыть">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3 sm:gap-4">
+            {/* Информационный блок о часах работы */}
+            {!isDeliveryAvailableNow() && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-amber-300 font-semibold mb-1">Доставка временно недоступна</h4>
+                    <p className="text-amber-200 text-sm">
+                      Доставка осуществляется с {deliverySettings.startTime} до {deliverySettings.endTime}.
+                      Вы можете выбрать время доставки или оформить заказ на другое время.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3 sm:gap-4 flex-1 overflow-y-auto min-h-0">
               <input
                 required placeholder="Имя"
                 className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
@@ -1400,8 +1576,8 @@ export default function Page() {
                 onChange={e => setDForm(o => ({ ...o, phone: e.target.value }))}
               />
               <textarea
-                rows={1} placeholder="Комментарий (необязательно)"
-                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 resize-none"
+                rows={2} placeholder="Комментарий (необязательно)"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 resize-none min-h-[60px]"
                 value={dForm.comment}
                 onChange={e => setDForm(o => ({ ...o, comment: e.target.value }))}
               />
@@ -1476,6 +1652,140 @@ export default function Page() {
                 📍 Выбрать на карте
               </button>
 
+              {/* Время доставки */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Время доставки
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="deliveryTime"
+                      value="asap"
+                      checked={dForm.deliveryTime === 'asap'}
+                      onChange={e => setDForm(o => ({ ...o, deliveryTime: e.target.value, deliveryTimeCustom: '' }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Как можно быстрее</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="deliveryTime"
+                      value="custom"
+                      checked={dForm.deliveryTime === 'custom'}
+                      onChange={e => setDForm(o => ({ ...o, deliveryTime: e.target.value }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">К определенному времени</span>
+                  </label>
+                  {dForm.deliveryTime === 'custom' && (
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="datetime-local"
+                        value={dForm.deliveryTimeCustom}
+                        min={getMinDeliveryTime()}
+                        max={getMaxDeliveryTime()}
+                        onChange={e => setDForm(o => ({ ...o, deliveryTimeCustom: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
+                        required={dForm.deliveryTime === 'custom'}
+                      />
+                      <p className="text-xs text-neutral-500">
+                        Доставка доступна: {deliverySettings.startTime} - {deliverySettings.endTime}
+                        (минимум через {deliverySettings.minDeliveryHours} ч.)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Способ оплаты */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Способ оплаты
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      checked={dForm.paymentMethod === 'card'}
+                      onChange={e => setDForm(o => ({ ...o, paymentMethod: e.target.value, changeAmount: 'no-change' }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Картой (при получении)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="transfer"
+                      checked={dForm.paymentMethod === 'transfer'}
+                      onChange={e => setDForm(o => ({ ...o, paymentMethod: e.target.value, changeAmount: 'no-change' }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Переводом</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cash"
+                      checked={dForm.paymentMethod === 'cash'}
+                      onChange={e => setDForm(o => ({ ...o, paymentMethod: e.target.value }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Наличными</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Сдача (только при выборе наличных) */}
+              {dForm.paymentMethod === 'cash' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    С какой суммы требуется сдача?
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="changeAmount"
+                        value="no-change"
+                        checked={dForm.changeAmount === 'no-change'}
+                        onChange={e => setDForm(o => ({ ...o, changeAmount: e.target.value }))}
+                        className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                      />
+                      <span className="ml-2 text-sm text-neutral-300">Без сдачи</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="changeAmount"
+                        value="custom"
+                        checked={typeof dForm.changeAmount === 'string' && dForm.changeAmount !== 'no-change'}
+                        onChange={e => setDForm(o => ({ ...o, changeAmount: '' }))}
+                        className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                      />
+                      <span className="ml-2 text-sm text-neutral-300">С суммы:</span>
+                    </label>
+                    {typeof dForm.changeAmount === 'string' && dForm.changeAmount !== 'no-change' && (
+                      <input
+                        type="number"
+                        placeholder="Введите сумму"
+                        value={dForm.changeAmount}
+                        onChange={e => setDForm(o => ({ ...o, changeAmount: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
+                        min="0"
+                        step="1"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Информация о доставке */}
               {dForm.address && dForm.deliveryPrice !== null && (
                 <div className="p-3 rounded-lg border bg-green-900/20 border-green-500/50 text-green-300">
@@ -1539,6 +1849,10 @@ export default function Page() {
                 </div>
               </div>
 
+            </form>
+
+            {/* Фиксированные элементы внизу */}
+            <div className="flex-shrink-0 mt-4 space-y-3">
               {/* Предупреждение о бизнес-ланчах */}
               {validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid && (
                 <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-3">
@@ -1550,20 +1864,22 @@ export default function Page() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid) || !dForm.deliveryZone}
-                className="px-6 py-3 text-base rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                Отправить в Telegram
-              </button>
+              <form onSubmit={submitDelivery} className="space-y-3">
+                <button
+                  type="submit"
+                  disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid) || !dForm.deliveryZone}
+                  className="w-full px-6 py-3 text-base rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  Отправить в Telegram
+                </button>
 
-              {validateBusinessLunchOrder.businessLunchCount > 0 && (
-                <div className="text-xs text-amber-400">
-                  Бизнес-ланчей в заказе: {validateBusinessLunchOrder.businessLunchCount}
-                </div>
-              )}
-            </form>
+                {validateBusinessLunchOrder.businessLunchCount > 0 && (
+                  <div className="text-xs text-amber-400 text-center">
+                    Бизнес-ланчей в заказе: {validateBusinessLunchOrder.businessLunchCount}
+                  </div>
+                )}
+              </form>
+            </div>
           </div>
 
           {/* Правая часть - карта (десктоп) */}
@@ -1633,6 +1949,12 @@ export default function Page() {
         }}
       />
     )}
+
+    {/* Модальное окно настроек доставки */}
+    <DeliverySettings
+      isOpen={deliverySettingsOpen}
+      onClose={() => setDeliverySettingsOpen(false)}
+    />
     </>
   );
 }
