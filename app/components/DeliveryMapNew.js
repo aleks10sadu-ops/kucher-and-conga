@@ -96,14 +96,17 @@ const deliveryZones = [
     price: 500,
     color: '#9C27B0',
     opacity: 0.25,
-    // Самая дальняя зона - окраины
+    // Самая дальняя зона - окраины Дмитрова и Дмитровского района
     coordinates: [[
-      [56.777390, 37.511647],
-      [56.363570, 37.035098],
-      [56.309001, 38.049062],
-      [56.089447, 37.530746],
-      [56.089447, 37.530746],
-      [56.777390, 37.511647] // Замыкающая точка
+      [56.550, 37.300], // Северо-запад
+      [56.450, 37.200], // Запад
+      [56.350, 37.100], // Юго-запад
+      [56.250, 37.200], // Юг
+      [56.200, 37.400], // Юго-восток
+      [56.250, 37.600], // Восток
+      [56.350, 37.700], // Северо-восток
+      [56.450, 37.650], // Север
+      [56.550, 37.300]  // Замыкающая точка
     ]]
   }
 ];
@@ -130,7 +133,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     // Функция инициализации карты
     const initMap = () => {
       if (!mapRef.current || !window.ymaps || !window.ymaps.Map) {
-        setError('Yandex Maps API не загружен');
+        setError('Yandex Maps API не загружен. Проверьте подключение к интернету.');
         setIsLoading(false);
         return;
       }
@@ -288,26 +291,87 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
       return;
     }
 
-    // Загружаем Yandex Maps API
+    // Проверяем, находимся ли мы в production среде (Vercel)
+    const isProduction = typeof window !== 'undefined' &&
+      (window.location.hostname.includes('vercel.app') ||
+       window.location.hostname.includes('vercel.live') ||
+       process.env.NODE_ENV === 'production');
+
+    // Загружаем Yandex Maps API с дополнительными проверками
     const script = document.createElement('script');
     script.src = `https://api-maps.yandex.ru/2.1/?apikey=058ef9d4-8dac-4162-a855-b1e7cf0878ef&lang=ru_RU&load=package.full`;
     script.async = true;
+    script.crossOrigin = 'anonymous'; // Добавляем для работы на Vercel
+
+    // В production добавляем дополнительные заголовки для обхода CORS
+    if (isProduction) {
+      script.setAttribute('referrerPolicy', 'no-referrer-when-downgrade');
+    }
 
     script.onload = () => {
-      window.ymaps.ready(() => {
-        setTimeout(() => {
-          initMap();
-        }, 100);
-      });
+      console.log('Yandex Maps script loaded successfully');
+
+      // Проверяем готовность API с таймаутом
+      let attempts = 0;
+      const maxAttempts = 50; // 5 секунд максимум
+
+      const checkReady = () => {
+        attempts++;
+        if (window.ymaps && window.ymaps.ready) {
+          window.ymaps.ready(() => {
+            console.log('Yandex Maps API ready');
+            setTimeout(() => {
+              initMap();
+            }, 100);
+          });
+        } else if (attempts < maxAttempts) {
+          setTimeout(checkReady, 100);
+        } else {
+          console.error('Yandex Maps API failed to initialize within timeout');
+          setError('Превышено время ожидания загрузки карты');
+          setIsLoading(false);
+        }
+      };
+
+      checkReady();
     };
 
-    script.onerror = (error) => {
-      console.error('Failed to load Yandex Maps API:', error);
-      setError('Ошибка загрузки Yandex Maps API');
-      setIsLoading(false);
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    const loadScriptWithRetry = () => {
+      retryCount++;
+      console.log(`Loading Yandex Maps API, attempt ${retryCount}/${maxRetries + 1}`);
+
+      script.onerror = (error) => {
+        console.error(`Failed to load Yandex Maps API, attempt ${retryCount}:`, error);
+
+        if (retryCount <= maxRetries) {
+          console.log(`Retrying Yandex Maps API load in 2 seconds...`);
+          setTimeout(() => {
+            // Создаем новый скрипт для повторной попытки
+            const retryScript = document.createElement('script');
+            retryScript.src = script.src;
+            retryScript.async = true;
+            retryScript.crossOrigin = 'anonymous';
+            if (isProduction) {
+              retryScript.setAttribute('referrerPolicy', 'no-referrer-when-downgrade');
+            }
+            retryScript.onload = script.onload;
+            retryScript.onerror = loadScriptWithRetry; // Рекурсивный вызов для retry
+            document.head.appendChild(retryScript);
+          }, 2000);
+        } else {
+          console.error('All retry attempts failed');
+          setError('Карта временно недоступна. Используйте поиск по адресу для определения зоны доставки.');
+          setIsLoading(false);
+        }
+      };
+
+      document.head.appendChild(script);
     };
 
-    document.head.appendChild(script);
+    loadScriptWithRetry();
 
   }, []);
 
@@ -565,9 +629,15 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     return (
       <div className="w-full h-full flex flex-col bg-neutral-900 rounded-lg overflow-hidden">
         <div className="flex-1 flex items-center justify-center bg-red-900/20">
-          <div className="text-center text-red-300">
+          <div className="text-center text-red-300 p-6">
             <p className="text-lg font-semibold mb-2">Ошибка загрузки карты</p>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm mb-4">{error}</p>
+            <div className="bg-neutral-800 p-4 rounded-lg">
+              <p className="text-sm text-neutral-300 mb-2">Альтернативный способ определения зоны доставки:</p>
+              <p className="text-xs text-neutral-400">
+                Введите адрес в поле поиска выше или позвоните нам для уточнения стоимости доставки.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -601,6 +671,26 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
           </button>
         </div>
 
+        {/* Результат определения зоны */}
+        {selectedZone && (
+          <div className={`p-3 rounded-lg border ${selectedZone.price === 0 ? 'bg-green-900/20 border-green-500/50 text-green-300' : 'bg-blue-900/20 border-blue-500/50 text-blue-300'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold">Зона доставки:</span>
+              <span className="text-lg font-bold">{selectedZone.name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm opacity-75">Стоимость доставки:</span>
+              <span className="text-xl font-bold text-amber-400">
+                {selectedZone.price === 0 ? 'Бесплатно' : `${selectedZone.price}₽`}
+              </span>
+            </div>
+            {selectedAddress && (
+              <div className="mt-2 text-xs opacity-75">
+                <span>Адрес: {selectedAddress}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {deliveryPrice === null && userLocation && (
           <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/50 text-red-300">
@@ -629,7 +719,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
           ))}
         </div>
         <p className="text-xs text-neutral-500 mt-2">
-          💡 Кликните на карту или введите адрес для проверки стоимости доставки
+          💡 Введите адрес в поле поиска выше для проверки стоимости доставки
         </p>
       </div>
 
