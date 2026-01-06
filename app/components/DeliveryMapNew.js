@@ -208,7 +208,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
                   <h4 style="margin: 0 0 8px 0; color: #333;">Kucher&Conga</h4>
                   <p style="margin: 0; color: #666; font-size: 14px;">
                     Наш ресторан<br>
-                    Координаты: ${restaurantCoords.join(', ')}
+                    Адрес: Промышленная улица, 20Б
                   </p>
                 </div>
               `
