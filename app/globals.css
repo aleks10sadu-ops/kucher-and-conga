@@ -83,3 +83,26 @@ body {
 .ymaps-2-1-79-copyright__pane {
   display: none !important;
 }
+
+/* Принудительная русская локаль для полей даты и времени */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  /* Принудительно устанавливаем русскую локаль */
+  /* Это может работать в некоторых браузерах */
+}
+
+/* Кастомные стили для календаря и выбора времени */
+/* Для WebKit браузеров (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  /* Можно добавить кастомные стили для индикатора календаря */
+}
+
+/* Для Firefox */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  /* Firefox использует системную локаль */
+}

@@ -12,6 +12,7 @@ import ContentManager from './components/ContentManager';
 import DeliveryMap from './components/DeliveryMapNew';
 import DeliverySettings from './components/DeliverySettings';
 import DeliveryStatusBanner from './components/DeliveryStatusBanner';
+import DateTimePicker from './components/DateTimePicker';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
 import { createReservation } from '../lib/reservations';
 
@@ -269,6 +270,24 @@ export default function Page() {
     maxAdvanceDays: 7
   });
 
+  // Настройки времени работы ресторана для бронирования
+  const restaurantSettings = {
+    startTime: '14:00',
+    endTime: '22:00',
+    minAdvanceHours: 1, // минимум за 1 час
+    maxAdvanceDays: 30
+  };
+
+  // State для бронирования
+  const [bookingData, setBookingData] = useState({
+    name: '',
+    phone: '',
+    date: '',
+    time: '',
+    guests: 2,
+    comment: ''
+  });
+
   // Загружаем настройки доставки при монтировании
   useEffect(() => {
     const saved = localStorage.getItem('deliverySettings');
@@ -277,11 +296,90 @@ export default function Page() {
     }
   }, []);
 
+  // Синхронизируем guests state с bookingData
+  useEffect(() => {
+    setBookingData(prev => ({ ...prev, guests }));
+  }, [guests]);
+
+  // Устанавливаем русскую локаль для полей даты и времени
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Принудительно устанавливаем русскую локаль для input полей
+      const dateInputs = document.querySelectorAll('input[type="date"], input[type="time"], input[type="datetime-local"]');
+      dateInputs.forEach(input => {
+        input.setAttribute('lang', 'ru');
+        // Для некоторых браузеров может понадобиться дополнительная настройка
+        if (input.type === 'date' || input.type === 'datetime-local') {
+          // Пытаемся установить русскую локаль через JavaScript
+          try {
+            // Это может работать в некоторых браузерах
+            input.style.setProperty('--calendar-lang', 'ru');
+          } catch (e) {
+            // Игнорируем ошибки
+          }
+        }
+      });
+    }
+  }, []);
+
   // Функция для получения минимального времени доставки
   const getMinDeliveryTime = () => {
     const now = new Date();
     const minTime = new Date(now.getTime() + (deliverySettings.minDeliveryHours * 60 * 60 * 1000));
     return minTime.toISOString().slice(0, 16); // Формат YYYY-MM-DDTHH:MM
+  };
+
+  // Функция для получения минимального времени бронирования
+  const getMinBookingTime = () => {
+    const now = new Date();
+    const minTime = new Date(now.getTime() + (restaurantSettings.minAdvanceHours * 60 * 60 * 1000));
+    return minTime.toISOString().slice(0, 16);
+  };
+
+  // Функция для получения максимального времени бронирования
+  const getMaxBookingTime = () => {
+    const now = new Date();
+    const maxTime = new Date(now.getTime() + (restaurantSettings.maxAdvanceDays * 24 * 60 * 60 * 1000));
+
+    // Устанавливаем время окончания работы в этот день
+    const [hours, minutes] = restaurantSettings.endTime.split(':');
+    maxTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    return maxTime.toISOString().slice(0, 16);
+  };
+
+  // Проверяем, доступно ли время бронирования
+  const isBookingTimeValid = (dateTimeString) => {
+    if (!dateTimeString) return false;
+
+    const selectedTime = new Date(dateTimeString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Проверяем минимальное время
+    const minTime = new Date(now.getTime() + (restaurantSettings.minAdvanceHours * 60 * 60 * 1000));
+    if (selectedTime < minTime) return false;
+
+    // Проверяем максимальное время вперед
+    const maxTime = new Date(now.getTime() + (restaurantSettings.maxAdvanceDays * 24 * 60 * 60 * 1000));
+    if (selectedTime > maxTime) return false;
+
+    // Для сегодняшнего бронирования проверяем время работы
+    const selectedDate = new Date(selectedTime.getFullYear(), selectedTime.getMonth(), selectedTime.getDate());
+    if (selectedDate.getTime() === today.getTime()) {
+      const [startHours, startMinutes] = restaurantSettings.startTime.split(':');
+      const [endHours, endMinutes] = restaurantSettings.endTime.split(':');
+
+      const startTime = new Date(selectedDate);
+      startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0);
+
+      const endTime = new Date(selectedDate);
+      endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+      if (selectedTime < startTime || selectedTime > endTime) return false;
+    }
+
+    return true;
   };
 
   // Функция для получения максимального времени доставки
@@ -533,13 +631,20 @@ export default function Page() {
     setBookingLoading(true);
     setBookingMessage(null);
 
-    const form = new FormData(e.currentTarget);
-    const name = form.get('name') || '';
-    const phone = form.get('phone') || '';
-    const date = form.get('date') || '';
-    const time = form.get('time') || '';
-    const guestsValue = form.get('guests') || guests;
-    const comment = form.get('comment') || '';
+    const { name, phone, date, time, guests: guestsValue, comment } = bookingData;
+
+    // Проверка времени бронирования
+    if (date && time) {
+      const bookingDateTime = `${date}T${time}:00`;
+      if (!isBookingTimeValid(bookingDateTime)) {
+        setBookingMessage({
+          type: 'error',
+          text: `Время бронирования должно быть в рабочее время ресторана (${restaurantSettings.startTime} - ${restaurantSettings.endTime}) и не раньше чем за ${restaurantSettings.minAdvanceHours} час(а) от текущего времени.`,
+        });
+        setBookingLoading(false);
+        return;
+      }
+    }
 
     // URL API сайта бронирований из переменной окружения
     // Настройте переменную NEXT_PUBLIC_RESERVATIONS_API_URL в .env.local
@@ -627,7 +732,15 @@ export default function Page() {
           type: 'success',
           text: 'Заявка на бронирование отправлена! Мы свяжемся с вами.',
         });
-        e.currentTarget.reset();
+        // Сбрасываем данные
+        setBookingData({
+          name: '',
+          phone: '',
+          date: '',
+          time: '',
+          guests: 2,
+          comment: ''
+        });
         setGuests(2);
         setBookingPrivacyConsent(false);
         setBookingLoading(false);
@@ -703,8 +816,12 @@ export default function Page() {
 
     // Проверка корректности времени доставки
     if (dForm.deliveryTime === 'custom' && dForm.deliveryTimeCustom) {
-      if (!isDeliveryTimeValid(dForm.deliveryTimeCustom)) {
-        alert(`Время доставки должно быть в рабочее время (${deliverySettings.startTime} - ${deliverySettings.endTime}) и не раньше чем через ${deliverySettings.minDeliveryHours} часа от текущего времени.`);
+      // Для доставки проверяем только время (создаем полный datetime с сегодняшней датой)
+      const today = new Date().toISOString().split('T')[0];
+      const fullDateTime = `${today}T${dForm.deliveryTimeCustom.split('T')[1]}`;
+
+      if (!isDeliveryTimeValid(fullDateTime)) {
+        alert(`Время доставки должно быть с 16:00 до 22:00 и не раньше чем за ${deliverySettings.minDeliveryHours} час(а) от текущего времени.`);
         return;
       }
     }
@@ -743,7 +860,7 @@ export default function Page() {
 
   return (
     <>
-    <div className="bg-neutral-950 text-white">
+    <div className="bg-neutral-950 text-white" lang="ru">
       {/* NAV */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-neutral-950/95 backdrop-blur-md">
         <div className="container mx-auto px-4 py-3">
@@ -1015,22 +1132,44 @@ export default function Page() {
             {/* Форма бронирования */}
             <div className="lg:col-span-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-6 md:p-8 lg:p-10 shadow-lg">
               <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-wider text-center mb-3 sm:mb-4 lg:mb-5 break-words">Забронировать стол</h2>
-              <p className="mt-1.5 sm:mt-2 text-sm sm:text-base lg:text-lg text-neutral-300 text-center mb-4 sm:mb-6 lg:mb-8">Оставьте контакты — администратор подтвердит бронь.</p>
+              <p className="mt-1.5 sm:mt-2 text-sm sm:text-base lg:text-lg text-neutral-300 text-center mb-2 sm:mb-3 lg:mb-4">Оставьте контакты — администратор подтвердит бронь.</p>
+              <p className="text-xs sm:text-sm text-amber-400 text-center mb-4 sm:mb-6 lg:mb-8">
+                🕐 Бронирование столов доступно с {restaurantSettings.startTime} до {restaurantSettings.endTime}
+              </p>
               {isMounted ? (
                 <form onSubmit={submitBooking} className="mt-3 sm:mt-4 lg:mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 lg:gap-5 max-w-3xl mx-auto">
-                  <input id="booking-name" name="name" aria-label="Имя" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Имя" required />
-                  <input id="booking-phone" name="phone" aria-label="Телефон" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Телефон" required />
-                  <input id="booking-date" name="date" type="date" aria-label="Дата" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" required />
-                  <input id="booking-time" name="time" type="time" aria-label="Время" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" required />
+                  <input id="booking-name" name="name" aria-label="Имя" value={bookingData.name} onChange={(e) => setBookingData(prev => ({ ...prev, name: e.target.value }))} className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Имя" required />
+                  <input id="booking-phone" name="phone" aria-label="Телефон" value={bookingData.phone} onChange={(e) => setBookingData(prev => ({ ...prev, phone: e.target.value }))} className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Телефон" required />
+                  <DateTimePicker
+                    name="date"
+                    dateOnly={true}
+                    required={true}
+                    value={bookingData.date}
+                    onChange={(value) => setBookingData(prev => ({ ...prev, date: value }))}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
+                  />
+                  <DateTimePicker
+                    name="time"
+                    timeOnly={true}
+                    required={true}
+                    value={bookingData.time}
+                    onChange={(value) => setBookingData(prev => ({ ...prev, time: value }))}
+                    availableTimes={['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
+                  />
                   <div className="md:col-span-2 flex items-center gap-2 sm:gap-3 lg:gap-4">
                     <label htmlFor="guests" className="text-sm sm:text-base lg:text-lg text-neutral-300 font-medium">Гостей:</label>
                     <input
-                      id="guests" name="guests" type="number" min={1} value={guests}
-                      onChange={(e) => setGuests(Number(e.target.value))}
+                      id="guests" name="guests" type="number" min={1} value={bookingData.guests}
+                      onChange={(e) => {
+                        const newValue = Number(e.target.value);
+                        setGuests(newValue);
+                        setBookingData(prev => ({ ...prev, guests: newValue }));
+                      }}
                       className="w-24 sm:w-28 lg:w-32 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                     />
                   </div>
-                  <textarea id="booking-comment" name="comment" aria-label="Пожелания" className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
+                  <textarea id="booking-comment" name="comment" aria-label="Пожелания" value={bookingData.comment} onChange={(e) => setBookingData(prev => ({ ...prev, comment: e.target.value }))} className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
                   <div className="md:col-span-2 flex items-start gap-2">
                     <input
                       type="checkbox"
@@ -1073,19 +1212,38 @@ export default function Page() {
                 </form>
               ) : (
                 <form onSubmit={submitBooking} className="mt-3 sm:mt-4 lg:mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 lg:gap-5 max-w-3xl mx-auto">
-                  <input name="name" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Имя" required />
-                  <input name="phone" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Телефон" required />
-                  <input name="date" type="date" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" required />
-                  <input name="time" type="time" className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" required />
+                  <input name="name" value={bookingData.name} onChange={(e) => setBookingData(prev => ({ ...prev, name: e.target.value }))} className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Имя" required />
+                  <input name="phone" value={bookingData.phone} onChange={(e) => setBookingData(prev => ({ ...prev, phone: e.target.value }))} className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" placeholder="Телефон" required />
+                  <DateTimePicker
+                    name="date"
+                    dateOnly={true}
+                    required={true}
+                    value={bookingData.date}
+                    onChange={(value) => setBookingData(prev => ({ ...prev, date: value }))}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
+                  />
+                  <DateTimePicker
+                    name="time"
+                    timeOnly={true}
+                    required={true}
+                    value={bookingData.time}
+                    onChange={(value) => setBookingData(prev => ({ ...prev, time: value }))}
+                    availableTimes={['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
+                  />
                   <div className="md:col-span-2 flex items-center gap-2 sm:gap-3 lg:gap-4">
                     <label htmlFor="guests" className="text-sm sm:text-base lg:text-lg text-neutral-300 font-medium">Гостей:</label>
                     <input
-                      id="guests" name="guests" type="number" min={1} value={guests}
-                      onChange={(e) => setGuests(Number(e.target.value))}
+                      id="guests" name="guests" type="number" min={1} value={bookingData.guests}
+                      onChange={(e) => {
+                        const newValue = Number(e.target.value);
+                        setGuests(newValue);
+                        setBookingData(prev => ({ ...prev, guests: newValue }));
+                      }}
                       className="w-24 sm:w-28 lg:w-32 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                     />
                   </div>
-                  <textarea name="comment" className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
+                  <textarea name="comment" value={bookingData.comment} onChange={(e) => setBookingData(prev => ({ ...prev, comment: e.target.value }))} className="md:col-span-2 bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400" rows={3} placeholder="Пожелания (необязательно)" />
                   <div className="md:col-span-2 flex items-start gap-2">
                     <input
                       type="checkbox"
@@ -1682,14 +1840,17 @@ export default function Page() {
                   </label>
                   {dForm.deliveryTime === 'custom' && (
                     <div className="mt-2 space-y-2">
-                      <input
-                        type="datetime-local"
+                      <DateTimePicker
                         value={dForm.deliveryTimeCustom}
-                        min={getMinDeliveryTime()}
-                        max={getMaxDeliveryTime()}
-                        onChange={e => setDForm(o => ({ ...o, deliveryTimeCustom: e.target.value }))}
-                        className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
+                        onChange={(value) => {
+                          // Создаем полное время с сегодняшней датой
+                          const today = new Date().toISOString().split('T')[0];
+                          const fullDateTime = `${today}T${value}:00`;
+                          setDForm(o => ({ ...o, deliveryTimeCustom: fullDateTime }));
+                        }}
                         required={dForm.deliveryTime === 'custom'}
+                        timeOnly={true}
+                        availableTimeRange={{ start: '16:00', end: '22:00', interval: 30 }}
                       />
                       <p className="text-xs text-neutral-500">
                         Доставка доступна: {deliverySettings.startTime} - {deliverySettings.endTime}
