@@ -698,26 +698,6 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
           </button>
         </div>
 
-        {/* Результат определения зоны */}
-        {selectedZone && (
-          <div className={`p-3 rounded-lg border ${selectedZone.price === 0 ? 'bg-green-900/20 border-green-500/50 text-green-300' : 'bg-blue-900/20 border-blue-500/50 text-blue-300'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold">Зона доставки:</span>
-              <span className="text-lg font-bold">{selectedZone.name}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm opacity-75">Стоимость доставки:</span>
-              <span className="text-xl font-bold text-amber-400">
-                {selectedZone.price === 0 ? 'Бесплатно' : `${selectedZone.price}₽`}
-              </span>
-            </div>
-            {selectedAddress && (
-              <div className="mt-2 text-xs opacity-75">
-                <span>Адрес: {selectedAddress}</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {deliveryPrice === null && userLocation && (
           <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/50 text-red-300">
