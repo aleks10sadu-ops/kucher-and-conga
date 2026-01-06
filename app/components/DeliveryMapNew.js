@@ -125,6 +125,9 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     zoom: 12,
   };
 
+  // Координаты ресторана
+  const restaurantCoords = [56.390656, 37.527282];
+
   useEffect(() => {
     // Функция инициализации карты
     const initMap = () => {
@@ -192,6 +195,34 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
             console.error('Error adding zone:', zone.id, zoneError);
           }
         });
+
+        // Добавляем метку ресторана
+        try {
+          const restaurantPlacemark = new window.ymaps.Placemark(
+            restaurantCoords,
+            {
+              hintContent: 'Kucher&Conga - наш ресторан',
+              balloonContent: `
+                <div style="font-family: Arial, sans-serif; padding: 10px; text-align: center;">
+                  <div style="font-size: 24px; margin-bottom: 8px;">🍽️</div>
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Kucher&Conga</h4>
+                  <p style="margin: 0; color: #666; font-size: 14px;">
+                    Наш ресторан<br>
+                    Координаты: ${restaurantCoords.join(', ')}
+                  </p>
+                </div>
+              `
+            },
+            {
+              preset: 'islands#redDotIcon',
+              iconColor: '#FF5722', // Оранжевый цвет для ресторана
+              iconContent: '🍽️'
+            }
+          );
+          mapInstance.geoObjects.add(restaurantPlacemark);
+        } catch (restaurantError) {
+          console.error('Error adding restaurant placemark:', restaurantError);
+        }
 
         // Обработчик клика по карте
         mapInstance.events.add('click', async (e) => {
