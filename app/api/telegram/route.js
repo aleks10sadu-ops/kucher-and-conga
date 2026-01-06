@@ -36,18 +36,30 @@ function buildMessage(payload) {
   }
 
   if (type === 'delivery') {
-    const { name, phone, address, comment, items = [], total = 0 } = payload;
-    const itemsBlock = items.length
-      ? items.map(i => `• ${escapeHtml(i.name)} × ${i.qty} = ${fmtCurrency(i.qty * i.price)} ₽`).join('\n')
+    const { name, phone, address, comment, items = [], subtotal = 0, deliveryPrice = 0, total = 0 } = payload;
+
+    // Формируем список позиций, включая доставку если она платная
+    let allItems = [...items];
+    if (deliveryPrice > 0) {
+      allItems.push({
+        name: `Платная доставка ${deliveryPrice} ₽`,
+        qty: 1,
+        price: deliveryPrice
+      });
+    }
+
+    const itemsBlock = allItems.length
+      ? allItems.map(i => `• ${escapeHtml(i.name)} × ${i.qty} = ${fmtCurrency(i.qty * i.price)} ₽`).join('\n')
       : '—';
+
     return (
       `<b>🟦 Заявка: Доставка</b>\n` +
       `<b>Имя:</b> ${escapeHtml(name)}\n` +
       `<b>Телефон:</b> ${escapeHtml(phone)}\n` +
       `<b>Адрес:</b> ${escapeHtml(address)}\n` +
       (comment ? `<b>Комментарий:</b> ${escapeHtml(comment)}\n` : '') +
-      `\n<b>Позиции:</b>\n${itemsBlock}\n` +
-      `<b>Итого:</b> ${fmtCurrency(total)} ₽`
+      `\n<b>Позиции:</b>\n${itemsBlock}` +
+      `\n<b>Итого:</b> ${fmtCurrency(total)} ₽`
     );
   }
 
