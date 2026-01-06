@@ -356,17 +356,31 @@ export default function Page() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Проверяем минимальное время
-    const minTime = new Date(now.getTime() + (restaurantSettings.minAdvanceHours * 60 * 60 * 1000));
-    if (selectedTime < minTime) return false;
-
     // Проверяем максимальное время вперед
     const maxTime = new Date(now.getTime() + (restaurantSettings.maxAdvanceDays * 24 * 60 * 60 * 1000));
     if (selectedTime > maxTime) return false;
 
-    // Для сегодняшнего бронирования проверяем время работы
+    // Для сегодняшнего бронирования проверяем минимальное время (текущий час + 1)
     const selectedDate = new Date(selectedTime.getFullYear(), selectedTime.getMonth(), selectedTime.getDate());
     if (selectedDate.getTime() === today.getTime()) {
+      // Для сегодняшнего дня минимальное время - текущий час + 1
+      const minTime = new Date(now);
+      minTime.setHours(now.getHours() + 1, 0, 0, 0);
+      if (selectedTime < minTime) return false;
+
+      // Также проверяем время работы ресторана
+      const [startHours, startMinutes] = restaurantSettings.startTime.split(':');
+      const [endHours, endMinutes] = restaurantSettings.endTime.split(':');
+
+      const startTime = new Date(selectedDate);
+      startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0);
+
+      const endTime = new Date(selectedDate);
+      endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+
+      if (selectedTime < startTime || selectedTime > endTime) return false;
+    } else {
+      // Для будущих дней проверяем только время работы ресторана
       const [startHours, startMinutes] = restaurantSettings.startTime.split(':');
       const [endHours, endMinutes] = restaurantSettings.endTime.split(':');
 
@@ -392,6 +406,41 @@ export default function Page() {
     maxTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
     return maxTime.toISOString().slice(0, 16);
+  };
+
+  // Получаем доступные времена для бронирования в зависимости от даты
+  const getAvailableBookingTimes = (selectedDate) => {
+    const allTimes = ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+
+    if (!selectedDate) return allTimes;
+
+    const selectedDateObj = new Date(selectedDate + 'T12:00:00');
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Если выбранная дата - сегодня, фильтруем прошедшее время
+    if (selectedDate === todayStr) {
+      const currentHour = today.getHours();
+      const currentMinute = today.getMinutes();
+
+      return allTimes.filter(time => {
+        const [hour, minute] = time.split(':').map(Number);
+        const timeHour = hour;
+        const timeMinute = minute;
+
+        // Добавляем 1 час к текущему времени для минимального времени бронирования
+        const minBookingTime = new Date(today);
+        minBookingTime.setHours(currentHour + 1, currentMinute, 0, 0);
+
+        const slotTime = new Date(today);
+        slotTime.setHours(timeHour, timeMinute, 0, 0);
+
+        return slotTime >= minBookingTime;
+      });
+    }
+
+    // Для будущих дней возвращаем все времена
+    return allTimes;
   };
 
   // Проверяем, доступна ли доставка в выбранное время
@@ -1146,6 +1195,7 @@ export default function Page() {
                     required={true}
                     value={bookingData.date}
                     onChange={(value) => setBookingData(prev => ({ ...prev, date: value }))}
+                    disablePastDates={true}
                     className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                   />
                   <DateTimePicker
@@ -1154,7 +1204,7 @@ export default function Page() {
                     required={true}
                     value={bookingData.time}
                     onChange={(value) => setBookingData(prev => ({ ...prev, time: value }))}
-                    availableTimes={['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']}
+                    availableTimes={getAvailableBookingTimes(bookingData.date)}
                     className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                   />
                   <div className="md:col-span-2 flex items-center gap-2 sm:gap-3 lg:gap-4">
@@ -1220,6 +1270,7 @@ export default function Page() {
                     required={true}
                     value={bookingData.date}
                     onChange={(value) => setBookingData(prev => ({ ...prev, date: value }))}
+                    disablePastDates={true}
                     className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                   />
                   <DateTimePicker
@@ -1228,7 +1279,7 @@ export default function Page() {
                     required={true}
                     value={bookingData.time}
                     onChange={(value) => setBookingData(prev => ({ ...prev, time: value }))}
-                    availableTimes={['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']}
+                    availableTimes={getAvailableBookingTimes(bookingData.date)}
                     className="bg-black/40 border border-white/10 rounded-lg px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg outline-none focus:border-amber-400"
                   />
                   <div className="md:col-span-2 flex items-center gap-2 sm:gap-3 lg:gap-4">

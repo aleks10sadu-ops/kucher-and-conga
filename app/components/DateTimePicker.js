@@ -15,7 +15,8 @@ export default function DateTimePicker({
   dateOnly = false,
   availableTimes = null,
   todayOnly = false,
-  availableTimeRange = null
+  availableTimeRange = null,
+  disablePastDates = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -55,6 +56,14 @@ export default function DateTimePicker({
     }
   }, [value]);
 
+  // Обновляем времена когда меняются availableTimes или selectedDate
+  useEffect(() => {
+    // Если есть availableTimes, убеждаемся что они правильно отображаются
+    if (availableTimes && availableTimes.length > 0) {
+      // Ничего не делаем, просто перерисовываем компонент
+    }
+  }, [availableTimes, selectedDate]);
+
   // Функция для обновления значения при выборе
   const updateValue = (date, time) => {
     // Не вызываем onChange, если значение уже установлено (избегаем бесконечного цикла)
@@ -88,10 +97,10 @@ export default function DateTimePicker({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
 
+    // Создаем дату без учета часового пояса
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    const startDate = new Date(year, month, 1 - firstDay.getDay());
 
     const days = [];
     const current = new Date(startDate);
@@ -213,7 +222,10 @@ export default function DateTimePicker({
                     onClick={() => {
                       const newDate = new Date(currentMonth);
                       newDate.setMonth(newDate.getMonth() - 1);
-                      setSelectedDate(newDate.toISOString().split('T')[0]);
+                      const year = newDate.getFullYear();
+                      const month = (newDate.getMonth() + 1).toString().padStart(2, '0');
+                      const date = newDate.getDate().toString().padStart(2, '0');
+                      setSelectedDate(`${year}-${month}-${date}`);
                     }}
                     className="p-1 hover:bg-neutral-700 rounded"
                   >
@@ -227,7 +239,10 @@ export default function DateTimePicker({
                     onClick={() => {
                       const newDate = new Date(currentMonth);
                       newDate.setMonth(newDate.getMonth() + 1);
-                      setSelectedDate(newDate.toISOString().split('T')[0]);
+                      const year = newDate.getFullYear();
+                      const month = (newDate.getMonth() + 1).toString().padStart(2, '0');
+                      const date = newDate.getDate().toString().padStart(2, '0');
+                      setSelectedDate(`${year}-${month}-${date}`);
                     }}
                     className="p-1 hover:bg-neutral-700 rounded"
                   >
@@ -248,9 +263,14 @@ export default function DateTimePicker({
                 <div className="grid grid-cols-7 gap-1 p-2">
                   {calendarDays.map((day, index) => {
                     const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-                    const isSelected = selectedDate === day.toISOString().split('T')[0];
+                    // Используем тот же формат даты, что и при установке selectedDate
+                    const dayYear = day.getFullYear();
+                    const dayMonth = (day.getMonth() + 1).toString().padStart(2, '0');
+                    const dayDate = day.getDate().toString().padStart(2, '0');
+                    const dayFormatted = `${dayYear}-${dayMonth}-${dayDate}`;
+                    const isSelected = selectedDate === dayFormatted;
                     const isToday = day.toDateString() === new Date().toDateString();
-                    const isDisabled = (min && day < new Date(min)) || (max && day > new Date(max)) || (todayOnly && !isToday);
+                    const isDisabled = (min && day < new Date(min)) || (max && day > new Date(max)) || (todayOnly && !isToday) || (disablePastDates && day < new Date().setHours(0, 0, 0, 0));
 
                     return (
                       <button
@@ -258,7 +278,11 @@ export default function DateTimePicker({
                         type="button"
                         onClick={() => {
                           if (!isDisabled) {
-                            const newDate = day.toISOString().split('T')[0];
+                            // Используем локальную дату вместо UTC для корректного отображения
+                            const year = day.getFullYear();
+                            const month = (day.getMonth() + 1).toString().padStart(2, '0');
+                            const date = day.getDate().toString().padStart(2, '0');
+                            const newDate = `${year}-${month}-${date}`;
                             setSelectedDate(newDate);
                             if (dateOnly) {
                               updateValue(newDate);
@@ -296,35 +320,24 @@ export default function DateTimePicker({
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {generateTimeSlots().map(time => {
-                    // Проверяем, не прошло ли время
-                    const now = new Date();
-                    const [hours, minutes] = time.split(':').map(Number);
-                    const timeDate = new Date();
-                    timeDate.setHours(hours, minutes, 0, 0);
-
-                    // Всегда проверяем, не прошло ли время + 1.5 часа (для доставки)
-                    const minTime = new Date(now.getTime() + (1.5 * 60 * 60 * 1000)); // +1.5 часа
-                    const isTimeDisabled = timeDate < minTime;
+                    // Для бронирования столов не применяем дополнительную фильтрацию времени
+                    // availableTimes уже содержит правильную логику фильтрации
+                    const isTimeDisabled = false;
 
                     return (
                       <button
                         key={time}
                         type="button"
                         onClick={() => {
-                          if (!isTimeDisabled) {
-                            setSelectedTime(time);
-                            updateValue(selectedDate, time);
-                            setIsOpen(false);
-                          }
+                          setSelectedTime(time);
+                          updateValue(selectedDate, time);
+                          setIsOpen(false);
                         }}
                         className={`py-2 px-3 text-sm rounded border ${
                           selectedTime === time
                             ? 'bg-amber-400 text-black border-amber-400'
-                            : isTimeDisabled
-                            ? 'border-neutral-700 text-neutral-500 opacity-50 cursor-not-allowed'
                             : 'border-neutral-600 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-700'
                         }`}
-                        disabled={isTimeDisabled}
                       >
                         {time}
                       </button>
