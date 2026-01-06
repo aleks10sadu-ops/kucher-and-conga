@@ -13,6 +13,93 @@ import DeliveryMap from './components/DeliveryMapNew';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
 import { createReservation } from '../lib/reservations';
 
+// Зоны доставки для определения по координатам
+const deliveryZones = [
+  {
+    id: 1,
+    name: 'Бесплатная доставка',
+    price: 0,
+    coordinates: [[
+      [56.448083, 37.525316],
+      [56.403938, 37.488497],
+      [56.389160, 37.503898],
+      [56.322309, 37.498645],
+      [56.330247, 37.544675],
+      [56.365411, 37.581519],
+      [56.373084, 37.579845],
+      [56.385925, 37.568143],
+      [56.404277, 37.572474],
+      [56.408275, 37.531050],
+      [56.447954, 37.525318],
+      [56.448083, 37.525316]
+    ]]
+  },
+  {
+    id: 2,
+    name: 'Зона 200₽',
+    price: 200,
+    coordinates: [[
+      [56.458630, 37.515494],
+      [56.446931, 37.477176],
+      [56.374354, 37.405090],
+      [56.299450, 37.469689],
+      [56.285367, 37.466610],
+      [56.281103, 37.475877],
+      [56.277785, 37.478084],
+      [56.276093, 37.506538],
+      [56.266275, 37.584660],
+      [56.380167, 37.632883],
+      [56.410302, 37.593016],
+      [56.418217, 37.561948],
+      [56.458601, 37.515380],
+      [56.458630, 37.515494]
+    ]]
+  },
+  {
+    id: 3,
+    name: 'Зона 300₽',
+    price: 300,
+    coordinates: [[
+      [56.550812, 37.635052],
+      [56.488691, 37.421440],
+      [56.389231, 37.272855],
+      [56.229917, 37.491985],
+      [56.282713, 37.793475],
+      [56.417161, 37.642658],
+      [56.489450, 37.681509],
+      [56.550928, 37.635116],
+      [56.550812, 37.635052]
+    ]]
+  },
+  {
+    id: 4,
+    name: 'Зона 400₽',
+    price: 400,
+    coordinates: [[
+      [56.581765, 37.384760],
+      [56.480682, 37.355947],
+      [56.411939, 37.234555],
+      [56.311687, 37.252218],
+      [56.177398, 37.499376],
+      [56.304108, 37.955656],
+      [56.584128, 37.654163],
+      [56.581765, 37.384760]
+    ]]
+  },
+  {
+    id: 5,
+    name: 'Зона 500₽',
+    price: 500,
+    coordinates: [[
+      [56.781361, 37.513940],
+      [56.362147, 37.033288],
+      [56.090705, 37.530669],
+      [56.310414, 38.048400],
+      [56.781361, 37.513940]
+    ]]
+  }
+];
+
 /* --- УТИЛИТА СКРОЛЛА --- */
 const scrollTo = (target) => {
   const element = document.querySelector(target);
@@ -40,6 +127,34 @@ const events = [
     link: '/events'
   }
 ];
+
+// Функция проверки попадания точки в полигон
+function isPointInPolygon(point, polygon) {
+  const x = point[0], y = point[1];
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+// Функция определения зоны доставки по координатам
+function checkDeliveryZoneForCoords(coords) {
+  for (let i = 0; i < deliveryZones.length; i++) {
+    const zone = deliveryZones[i];
+    if (isPointInPolygon(coords, zone.coordinates[0])) {
+      return zone;
+    }
+  }
+  return null;
+}
 
 /* --- НАВИГАЦИОННЫЕ ССЫЛКИ --- */
 const NAVIGATION_ITEMS = [
@@ -142,6 +257,7 @@ export default function Page() {
   const [guests, setGuests] = useState(2);
   const [cartOpen, setCartOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
@@ -1259,62 +1375,133 @@ export default function Page() {
         role="dialog"
         aria-label="Оформление доставки"
       >
-        <div className="flex flex-col lg:flex-row h-[90vh] max-h-[800px]">
+        <div className="flex flex-col lg:flex-row h-[90vh]">
+
           {/* Левая часть - форма */}
-          <div className="flex-1 p-6 border-r border-white/10 lg:max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold">Оформление доставки</div>
+          <div className="flex-1 p-4 sm:p-6 lg:p-8 border-r border-white/10 lg:max-w-md">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div className="text-lg sm:text-xl font-semibold">Оформление доставки</div>
               <button onClick={() => setDeliveryOpen(false)} className="p-2 rounded hover:bg-white/5" aria-label="Закрыть">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3 h-full overflow-auto">
+            <form onSubmit={submitDelivery} className="grid grid-cols-1 gap-3 sm:gap-4">
               <input
                 required placeholder="Имя"
-                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
                 value={dForm.name}
                 onChange={e => setDForm(o => ({ ...o, name: e.target.value }))}
               />
               <input
                 required placeholder="Телефон"
-                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
                 value={dForm.phone}
                 onChange={e => setDForm(o => ({ ...o, phone: e.target.value }))}
               />
               <textarea
-                rows={3} placeholder="Комментарий (необязательно)"
-                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-amber-400"
+                rows={1} placeholder="Комментарий (необязательно)"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 resize-none"
                 value={dForm.comment}
                 onChange={e => setDForm(o => ({ ...o, comment: e.target.value }))}
               />
+
+              {/* Ручной ввод адреса */}
+              <input
+                placeholder="Адрес доставки"
+                className="bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400"
+                value={dForm.address}
+                onChange={e => {
+                  const newAddress = e.target.value;
+                  setDForm(o => ({ ...o, address: newAddress }));
+
+                  // Если адрес пустой, сбрасываем зону доставки
+                  if (!newAddress.trim()) {
+                    setDForm(o => ({ ...o, deliveryZone: null, deliveryPrice: null }));
+                    onZoneChange && onZoneChange(null);
+                    return;
+                  }
+
+                  // Пытаемся определить зону по введенному адресу
+                  if (window.ymaps && newAddress.trim()) {
+                    window.ymaps.geocode(newAddress.trim() + ', Дмитров, Московская область', {
+                      results: 1,
+                      boundedBy: [[56.2, 37.3], [56.5, 37.7]]
+                    }).then(result => {
+                      const firstGeoObject = result.geoObjects.get(0);
+                      if (firstGeoObject) {
+                        const coords = firstGeoObject.geometry.getCoordinates();
+                        const zone = checkDeliveryZoneForCoords(coords);
+                        if (zone) {
+                          setDForm(o => ({ ...o, deliveryZone: zone, deliveryPrice: zone.price }));
+                          onZoneChange && onZoneChange(zone);
+                        } else {
+                          setDForm(o => ({ ...o, deliveryZone: null, deliveryPrice: null }));
+                          onZoneChange && onZoneChange(null);
+                        }
+                      }
+                    }).catch(error => {
+                      console.warn('Could not geocode manual address:', error);
+                      // Если геокодинг не удался, пробуем определить по ключевым словам
+                      const lowerAddress = newAddress.toLowerCase();
+                      let zone = null;
+
+                      if (lowerAddress.includes('промышленная') || lowerAddress.includes('загорская') || lowerAddress.includes('московская')) {
+                        zone = deliveryZones[0]; // Бесплатная доставка
+                      } else if (lowerAddress.includes('внуковская') || lowerAddress.includes('кропоткинская') || lowerAddress.includes('туполева')) {
+                        zone = deliveryZones[1]; // Зона 200₽
+                      } else if (lowerAddress.includes('ключевая') || lowerAddress.includes('лобненская') || lowerAddress.includes('ольявидово')) {
+                        zone = deliveryZones[2]; // Зона 300₽
+                      } else if (lowerAddress.includes('солнечная') || lowerAddress.includes('юбилейная') || lowerAddress.includes('габово')) {
+                        zone = deliveryZones[3]; // Зона 400₽
+                      } else if (lowerAddress.includes('центральная') || lowerAddress.includes('богослово') || lowerAddress.includes('жуково')) {
+                        zone = deliveryZones[4]; // Зона 500₽
+                      }
+
+                      if (zone) {
+                        setDForm(o => ({ ...o, deliveryZone: zone, deliveryPrice: zone.price }));
+                        onZoneChange && onZoneChange(zone);
+                      }
+                    });
+                  }
+                }}
+              />
+
+              {/* Кнопка выбора адреса на карте (только для мобильных) */}
+              <button
+                type="button"
+                onClick={() => setMapModalOpen(true)}
+                className="lg:hidden px-4 py-3 text-sm rounded-lg bg-neutral-700 text-neutral-200 border border-neutral-600 hover:bg-neutral-600 hover:border-neutral-500 transition-colors"
+              >
+                📍 Выбрать на карте
+              </button>
 
               {/* Информация о доставке */}
               {dForm.address && dForm.deliveryPrice !== null && (
                 <div className="p-3 rounded-lg border bg-green-900/20 border-green-500/50 text-green-300">
                   <div className="mb-2">
                     <span className="text-sm opacity-75">Адрес:</span>
-                    <div className="text-lg font-semibold">{dForm.address}</div>
+                    <div className="text-sm font-semibold leading-tight">{dForm.address}</div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm opacity-75">Стоимость доставки:</span>
-                    <span className="text-xl font-bold text-amber-400">
+                    <span className="text-sm opacity-75">Стоимость:</span>
+                    <span className="text-lg font-bold text-amber-400">
                       {dForm.deliveryPrice === 0 ? 'Бесплатно' : `${dForm.deliveryPrice}₽`}
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   id="delivery-privacy-consent"
                   checked={deliveryPrivacyConsent}
                   onChange={(e) => setDeliveryPrivacyConsent(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-2"
+                  className="mt-1 w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400 focus:ring-1"
                   required
                 />
-                <label htmlFor="delivery-privacy-consent" className="text-xs sm:text-sm text-neutral-300">
+                <label htmlFor="delivery-privacy-consent" className="text-sm text-neutral-300 leading-relaxed">
                   Оформляя доставку, вы соглашаетесь с{' '}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300 underline">
                     политикой конфиденциальности
@@ -1322,13 +1509,43 @@ export default function Page() {
                 </label>
               </div>
 
+              {/* Сумма заказа */}
+              <div className="bg-neutral-800/50 rounded-lg p-4 border border-neutral-700">
+                <div className="space-y-2 text-sm text-neutral-300">
+                  <div className="flex justify-between">
+                    <span>Позиций в заказе:</span>
+                    <span className="font-medium">{items.reduce((s,i)=>s+i.qty,0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Сумма заказа:</span>
+                    <span className="font-medium">{total.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  {dForm.deliveryPrice !== null && dForm.deliveryPrice > 0 && (
+                    <div className="flex justify-between">
+                      <span>Доставка:</span>
+                      <span className="font-medium">{dForm.deliveryPrice} ₽</span>
+                    </div>
+                  )}
+                  {dForm.deliveryPrice !== null && (
+                    <>
+                      <div className="border-t border-neutral-600 pt-3 mt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-semibold text-white">Итого:</span>
+                          <span className="text-xl font-bold text-amber-400">{(total + (dForm.deliveryPrice || 0)).toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* Предупреждение о бизнес-ланчах */}
               {validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid && (
-                <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2">
+                <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-amber-300 text-sm font-semibold mb-1">Условия заказа бизнес-ланчей</p>
-                    <p className="text-amber-200/80 text-xs">{validateBusinessLunchOrder.message}</p>
+                    <p className="text-amber-300 text-sm font-semibold mb-2">Условия заказа бизнес-ланчей</p>
+                    <p className="text-amber-200/80 text-sm leading-relaxed">{validateBusinessLunchOrder.message}</p>
                   </div>
                 </div>
               )}
@@ -1336,23 +1553,10 @@ export default function Page() {
               <button
                 type="submit"
                 disabled={items.length === 0 || (validateBusinessLunchOrder.businessLunchCount > 0 && !validateBusinessLunchOrder.isValid) || !dForm.deliveryZone}
-                className="mt-4 px-8 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+                className="px-6 py-3 text-base rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
-                Отправить заявку в Telegram
+                Отправить в Telegram
               </button>
-
-              <div className="text-sm text-neutral-400 space-y-1">
-                <div>Позиций в заказе: <b>{items.reduce((s,i)=>s+i.qty,0)}</b></div>
-                <div>Сумма заказа: <b>{total.toLocaleString('ru-RU')} ₽</b></div>
-                {dForm.deliveryPrice !== null && dForm.deliveryPrice > 0 && (
-                  <div>Доставка: <b>{dForm.deliveryPrice} ₽</b></div>
-                )}
-                {dForm.deliveryPrice !== null && (
-                  <div className="border-t border-white/10 pt-1 mt-2">
-                    Итого: <b className="text-amber-400">{(total + (dForm.deliveryPrice || 0)).toLocaleString('ru-RU')} ₽</b>
-                  </div>
-                )}
-              </div>
 
               {validateBusinessLunchOrder.businessLunchCount > 0 && (
                 <div className="text-xs text-amber-400">
@@ -1362,8 +1566,8 @@ export default function Page() {
             </form>
           </div>
 
-          {/* Правая часть - карта */}
-          <div className="flex-1 min-h-[400px]">
+          {/* Правая часть - карта (десктоп) */}
+          <div className="hidden lg:block flex-1 min-h-[400px]">
             <DeliveryMap
               onZoneChange={handleDeliveryZoneChange}
               onAddressChange={handleDeliveryAddressChange}
@@ -1371,6 +1575,51 @@ export default function Page() {
           </div>
         </div>
       </div>
+
+      {/* Модальное окно карты для мобильных устройств */}
+      {mapModalOpen && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60 lg:hidden" onClick={() => setMapModalOpen(false)} aria-hidden />
+          <div
+            className={`fixed inset-x-0 inset-y-0 z-50 mx-auto w-full h-full lg:hidden rounded-none bg-neutral-950 border border-white/10 transition overflow-hidden ${
+              mapModalOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+            role="dialog"
+            aria-label="Выбор адреса доставки"
+          >
+            <div className="flex flex-col h-full">
+              {/* Заголовок */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10 bg-neutral-950">
+                <div className="text-lg font-semibold">Выберите адрес доставки</div>
+                <button onClick={() => setMapModalOpen(false)} className="p-2 rounded hover:bg-white/5" aria-label="Закрыть">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Карта */}
+              <div className="flex-1">
+                <DeliveryMap
+                  onZoneChange={handleDeliveryZoneChange}
+                  onAddressChange={(address, coords) => {
+                    handleDeliveryAddressChange(address, coords);
+                    setMapModalOpen(false); // Закрываем модальное окно после выбора адреса
+                  }}
+                />
+              </div>
+
+              {/* Кнопка подтверждения */}
+              <div className="p-4 border-t border-white/10 bg-neutral-950">
+                <button
+                  onClick={() => setMapModalOpen(false)}
+                  className="w-full px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition-colors"
+                >
+                  Подтвердить адрес
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
 
     {/* Модальное окно управления контентом */}
