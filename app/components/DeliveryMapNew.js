@@ -665,7 +665,12 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
 
     try {
       const apiKey = 'da3b7265-1316-40c6-8750-a1f672f83957'; // Ваш API ключ
-      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodeURIComponent(query)}`;
+
+      // Ограничение по зоне доставки 500 рублей (самая большая зона)
+      // bbox: min_lng,min_lat~max_lng,max_lat
+      const bbox = '37.033288,56.090705~38.048400,56.781361';
+
+      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodeURIComponent(query)}&bbox=${bbox}&types=house&results=5`;
 
       const response = await fetch(url);
 
