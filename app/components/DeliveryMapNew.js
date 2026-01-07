@@ -501,6 +501,42 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     return null;
   };
 
+  // Функция для обновления местоположения пользователя
+  const updateUserLocation = (coords) => {
+    console.log('Updating user location to:', coords);
+
+    // Центрируем карту на координатах
+    if (mapInstanceRef.current) {
+      try {
+        // Центрируем карту с анимацией
+        mapInstanceRef.current.setCenter(coords, 16, {
+          duration: 500,
+          timingFunction: 'ease-in-out'
+        });
+
+        // Удаляем предыдущий маркер пользователя
+        if (userPlacemarkRef.current) {
+          mapInstanceRef.current.geoObjects.remove(userPlacemarkRef.current);
+        }
+
+        // Создаем новый маркер
+        const placemark = new window.ymaps.Placemark(coords, {
+          hintContent: 'Указанный адрес',
+          balloonContent: `Адрес: ${address.trim()}\nКоординаты: ${coords.join(', ')}`
+        });
+
+        mapInstanceRef.current.geoObjects.add(placemark);
+        userPlacemarkRef.current = placemark;
+      } catch (mapError) {
+        console.warn('Could not update map:', mapError);
+      }
+    }
+
+    setUserLocation(coords);
+    checkDeliveryZone(coords);
+    onAddressChange && onAddressChange(address.trim(), coords);
+  };
+
   // Геокодинг адреса
   const handleAddressSearch = async () => {
     console.log('handleAddressSearch called with address:', address);
@@ -510,25 +546,43 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     }
 
     try {
-      // Добавляем "Дмитров" к адресу для более точного поиска
-      const searchAddress = address.trim().includes('Дмитров') ? address.trim() : `${address.trim()}, Дмитров, Московская область`;
+      // Ищем адрес точно как ввел пользователь (без автоматического добавления Дмитрова)
+      const searchAddress = address.trim();
 
       console.log('Searching for address:', searchAddress);
 
       const result = await window.ymaps.geocode(searchAddress, {
-        results: 5, // Больше результатов для выбора
-        boundedBy: [[56.2, 37.3], [56.5, 37.7]], // Расширенные границы Дмитрова
+        results: 1, // Один результат
+        boundedBy: [[56.0, 37.0], [57.0, 38.0]], // Широкие границы для поиска везде
         strictBounds: false
       });
 
       console.log('Geocoding result:', result);
-      console.log('Result properties:', Object.keys(result));
-      console.log('Result geoObjects:', result.geoObjects);
 
       // Проверяем, что результат содержит geoObjects
-      if (!result || !result.geoObjects) {
-        console.error('Geocoding failed: no geoObjects in result');
-        alert('Не удалось найти адрес. Попробуйте другой адрес.');
+      if (!result || !result.geoObjects || result.geoObjects.getLength() === 0) {
+        console.log('Geocoding found no results, trying to geocode user input as-is');
+        // Если не нашли адрес, пробуем геокодировать введенный текст напрямую
+        try {
+          const fallbackResult = await window.ymaps.geocode(searchAddress, {
+            results: 1,
+            boundedBy: [[50.0, 30.0], [60.0, 50.0]], // Очень широкие границы
+            strictBounds: false
+          });
+
+          if (fallbackResult && fallbackResult.geoObjects && fallbackResult.geoObjects.getLength() > 0) {
+            const fallbackGeoObject = fallbackResult.geoObjects.get(0);
+            const fallbackCoords = fallbackGeoObject.geometry.getCoordinates();
+            console.log('Fallback geocoding found coordinates:', fallbackCoords);
+            updateUserLocation(fallbackCoords);
+            alert(`Адрес найден (примерно)! Координаты: ${fallbackCoords.join(', ')}\nПроверьте точность на карте.`);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback geocoding failed:', fallbackError);
+        }
+
+        alert('Не удалось найти адрес. Попробуйте уточнить адрес или проверьте правильность написания.');
         return;
       }
 
@@ -537,120 +591,19 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
       if (firstGeoObject) {
         try {
           const coords = firstGeoObject.geometry.getCoordinates();
-          let addressName = '';
+          console.log('Found coordinates:', coords);
 
-          // Безопасно получаем адрес
-          try {
-            addressName = firstGeoObject.getAddressLine ? firstGeoObject.getAddressLine() : '';
-          } catch (addressError) {
-            console.warn('Could not get address line:', addressError);
-          }
-
-          console.log('Found coordinates:', coords, 'Address:', addressName);
-
-          setUserLocation(coords);
-          setSelectedAddress(addressName || address.trim());
-          const extractedAddress = extractStreetAndHouseFromAddress(addressName || address.trim());
-          setSelectedStreet(extractedAddress);
-
-          // Центрируем карту на найденных координатах
-          if (mapInstanceRef.current) {
-            try {
-              // Центрируем карту с анимацией
-              mapInstanceRef.current.setCenter(coords, 16, {
-                duration: 500,
-                timingFunction: 'ease-in-out'
-              });
-
-              // Удаляем предыдущий маркер пользователя
-              if (userPlacemarkRef.current) {
-                mapInstanceRef.current.geoObjects.remove(userPlacemarkRef.current);
-              }
-
-              // Создаем новый маркер
-              const placemark = new window.ymaps.Placemark(coords, {
-                hintContent: 'Найденный адрес',
-                balloonContent: `${addressName || address.trim()}\nКоординаты: ${coords.join(', ')}`
-              });
-
-              mapInstanceRef.current.geoObjects.add(placemark);
-              userPlacemarkRef.current = placemark;
-            } catch (mapError) {
-              console.warn('Could not update map:', mapError);
-            }
-          }
-
-          checkDeliveryZone(coords);
-          onAddressChange && onAddressChange(addressName || address.trim(), coords);
-
-          alert(`Адрес найден! Координаты: ${coords.join(', ')}\nАдрес: ${addressName || 'Не определен'}`);
+          updateUserLocation(coords);
+          alert(`Адрес найден! Координаты: ${coords.join(', ')}`);
 
         } catch (coordsError) {
           console.error('Error getting coordinates:', coordsError);
-          // Переходим к fallback
+          alert('Ошибка при получении координат адреса.');
         }
-      }
-
-      // Всегда переходим к fallback если координаты не получены
-      if (!firstGeoObject || !firstGeoObject.geometry) {
-        // Если Yandex geocoding не нашел адрес, используем fallback
-        console.log('Yandex geocoding found no results, using fallback');
-
-        let mockCoords = [56.340, 37.525]; // Координаты центра Дмитрова по умолчанию
-
-        const lowerAddress = searchAddress.toLowerCase();
-
-        // Распознаем улицы и присваиваем примерные координаты
-        if (lowerAddress.includes('промышленная') || lowerAddress.includes('загорская') || lowerAddress.includes('московская')) {
-          mockCoords = [56.340, 37.525]; // Центр - бесплатная доставка
-        } else if (lowerAddress.includes('внуковская') || lowerAddress.includes('кропоткинская') || lowerAddress.includes('туполева')) {
-          mockCoords = [56.330, 37.515]; // Зона 200₽
-        } else if (lowerAddress.includes('ключевая') || lowerAddress.includes('лобненская') || lowerAddress.includes('ольявидово')) {
-          mockCoords = [56.320, 37.505]; // Зона 300₽
-        } else if (lowerAddress.includes('солнечная') || lowerAddress.includes('юбилейная') || lowerAddress.includes('габово')) {
-          mockCoords = [56.310, 37.495]; // Зона 400₽
-        } else if (lowerAddress.includes('центральная') || lowerAddress.includes('богослово') || lowerAddress.includes('жуково')) {
-          mockCoords = [56.300, 37.485]; // Зона 500₽
-        }
-
-        console.log('Mock coordinates found:', mockCoords);
-
-        setUserLocation(mockCoords);
-        checkDeliveryZone(mockCoords);
-        onAddressChange && onAddressChange(address.trim(), mockCoords);
-
-        alert(`Адрес найден с помощью резервного поиска. Определена зона доставки на основе названия улицы.`);
       }
     } catch (error) {
       console.error('Ошибка геокодинга:', error);
-
-      // Fallback: простая симуляция поиска адреса
-      console.log('Using fallback geocoding for:', searchAddress);
-
-      let mockCoords = [56.340, 37.525]; // Координаты центра Дмитрова по умолчанию
-
-      const lowerAddress = searchAddress.toLowerCase();
-
-      // Распознаем улицы и присваиваем примерные координаты
-      if (lowerAddress.includes('промышленная') || lowerAddress.includes('загорская') || lowerAddress.includes('московская')) {
-        mockCoords = [56.340, 37.525]; // Центр - бесплатная доставка
-      } else if (lowerAddress.includes('внуковская') || lowerAddress.includes('кропоткинская') || lowerAddress.includes('туполева')) {
-        mockCoords = [56.330, 37.515]; // Зона 200₽
-      } else if (lowerAddress.includes('ключевая') || lowerAddress.includes('лобненская') || lowerAddress.includes('ольявидово')) {
-        mockCoords = [56.320, 37.505]; // Зона 300₽
-      } else if (lowerAddress.includes('солнечная') || lowerAddress.includes('юбилейная') || lowerAddress.includes('габово')) {
-        mockCoords = [56.310, 37.495]; // Зона 400₽
-      } else if (lowerAddress.includes('центральная') || lowerAddress.includes('богослово') || lowerAddress.includes('жуково')) {
-        mockCoords = [56.300, 37.485]; // Зона 500₽
-      }
-
-      console.log('Mock coordinates found:', mockCoords);
-
-      setUserLocation(mockCoords);
-      checkDeliveryZone(mockCoords);
-      onAddressChange && onAddressChange(address.trim(), mockCoords);
-
-      alert(`Адрес найден с помощью резервного поиска. Определена зона доставки на основе названия улицы.`);
+      alert('Произошла ошибка при поиске адреса. Попробуйте ввести адрес по-другому.');
     }
   };
 
@@ -790,14 +743,10 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     setShowSuggestions(false);
     setSelectedSuggestionIndex(-1);
 
-    // Если есть координаты, центрируем карту
+    // Если есть координаты, обновляем местоположение
     if (suggestion.coords) {
       const [lng, lat] = suggestion.coords;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.setCenter([lat, lng], 16);
-        // Обновляем пользовательскую метку
-        updateUserLocation([lat, lng]);
-      }
+      updateUserLocation([lat, lng]);
     }
   };
 
