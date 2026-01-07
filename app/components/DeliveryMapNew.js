@@ -167,8 +167,8 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
         setTimeout(hideCopyrightElements, 500);
         setTimeout(hideCopyrightElements, 1500);
 
-        // Добавляем зоны доставки
-        deliveryZones.forEach((zone) => {
+        // Добавляем зоны доставки (от больших к меньшим для эффекта колец)
+        [...deliveryZones].reverse().forEach((zone) => {
           try {
             const polygon = new window.ymaps.Polygon(
               zone.coordinates,
@@ -185,7 +185,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
               },
               {
                 fillColor: zone.color,
-                fillOpacity: zone.opacity,
+                fillOpacity: 0.1,
                 strokeColor: zone.color,
                 strokeWidth: 2,
                 strokeOpacity: 0.8,
@@ -714,7 +714,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
       {/* Легенда */}
       <div className="bg-neutral-800 border-b border-neutral-700 px-4 py-3">
         <div className="flex flex-wrap gap-3 items-center">
-          <span className="text-sm font-semibold text-neutral-300">Легенда:</span>
+          <span className="text-sm font-semibold text-neutral-300">Зоны:</span>
           {deliveryZones.map((zone) => (
             <div key={zone.id} className="flex items-center gap-2">
               <div

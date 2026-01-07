@@ -155,7 +155,20 @@ export default function DateTimePicker({
 
   const formatDisplayValue = () => {
     if (timeOnly && selectedTime) {
-      return selectedTime;
+      // Для поля времени форматируем в читаемый вид: "7 января 2026 г. в 16:30"
+      try {
+        const date = new Date(selectedTime);
+        if (!isNaN(date.getTime())) {
+          const day = date.getDate();
+          const month = date.toLocaleDateString('ru-RU', { month: 'long' });
+          const year = date.getFullYear();
+          const time = date.toTimeString().slice(0, 5);
+          return `${day} ${month} ${year} г. в ${time}`;
+        }
+      } catch (error) {
+        console.warn('Error formatting time:', error);
+      }
+      return selectedTime; // fallback to original format
     }
 
     if (dateOnly && selectedDate) {
