@@ -116,6 +116,11 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
   const [selectedStreet, setSelectedStreet] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionTimeout, setSuggestionTimeout] = useState(null);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [yandexApiConfigured, setYandexApiConfigured] = useState(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const userPlacemarkRef = useRef(null);
@@ -650,8 +655,143 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
   };
 
   // Обработчик изменения адреса
+  // Получение подсказок адресов через наш API endpoint
+  const fetchAddressSuggestions = async (query) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const url = `/api/yandex-suggest?query=${encodeURIComponent(query)}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        // Если API ключ не настроен, просто отключаем подсказки без ошибки
+        if (response.status === 500) {
+          console.log('Yandex suggestions disabled - API key not configured');
+          setSuggestions([]);
+          setShowSuggestions(false);
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.results) {
+        setSuggestions(data.results);
+        setShowSuggestions(true);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Error fetching address suggestions:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
   const handleAddressChange = (newAddress) => {
     setAddress(newAddress);
+
+    // Очищаем предыдущий таймаут
+    if (suggestionTimeout) {
+      clearTimeout(suggestionTimeout);
+    }
+
+    // Устанавливаем новый таймаут для debouncing (300ms)
+    const timeout = setTimeout(() => {
+      fetchAddressSuggestions(newAddress);
+    }, 300);
+
+    setSuggestionTimeout(timeout);
+  };
+
+  // Обработчик клика вне поля для скрытия подсказок
+  const handleClickOutside = (e) => {
+    if (!e.target.closest('#address-input') && !e.target.closest('.suggestions-dropdown')) {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Проверка статуса Yandex API при загрузке
+  useEffect(() => {
+    const checkYandexApi = async () => {
+      try {
+        const response = await fetch('/api/test-yandex-key');
+        const data = await response.json();
+        setYandexApiConfigured(data.configured);
+        console.log('Yandex API status:', data);
+      } catch (error) {
+        console.error('Failed to check Yandex API status:', error);
+        setYandexApiConfigured(false);
+      }
+    };
+
+    checkYandexApi();
+  }, []);
+
+  // Добавляем обработчик клика при монтировании
+  useEffect(() => {
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === 'Enter') {
+        handleAddressSearch();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+          handleSuggestionSelect(suggestions[selectedSuggestionIndex]);
+        } else {
+          handleAddressSearch();
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        break;
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion) => {
+    setAddress(suggestion.title);
+    setSelectedAddress(suggestion.title);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+
+    // Если есть координаты, центрируем карту
+    if (suggestion.coords) {
+      const [lng, lat] = suggestion.coords;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setCenter([lat, lng], 16);
+        // Обновляем пользовательскую метку
+        updateUserLocation([lat, lng]);
+      }
+    }
   };
 
   if (error) {
@@ -683,15 +823,54 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
 
         {/* Поиск адреса */}
         <div className="flex gap-2 mb-3">
-          <input
-            id="address-input"
-            type="text"
-            value={address}
-            onChange={(e) => handleAddressChange(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleAddressSearch()}
-            placeholder="Введите адрес в Дмитрове..."
-            className="flex-1 px-4 py-2 border border-neutral-600 rounded-lg bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          />
+          {yandexApiConfigured === false && (
+            <div className="w-full mb-2 p-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
+              <div className="font-semibold mb-1">⚠️ Подсказки адресов отключены</div>
+              <div className="text-xs">
+                Для включения автодополнения адресов добавьте YANDEX_MAPS_API_KEY в переменные окружения.
+                <br />
+                <a
+                  href="https://yandex.ru/dev/maps/geosearch/doc/concepts/suggest.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-yellow-300 underline hover:text-yellow-100"
+                >
+                  Получить API ключ →
+                </a>
+              </div>
+            </div>
+          )}
+          <div className="flex-1 relative">
+            <input
+              id="address-input"
+              type="text"
+              value={address}
+              onChange={(e) => handleAddressChange(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e)}
+              placeholder="Введите адрес в Дмитрове..."
+              className="w-full px-4 py-2 border border-neutral-600 rounded-lg bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="suggestions-dropdown absolute top-full left-0 right-0 z-50 mt-1 bg-neutral-800 border border-neutral-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                    className={`px-4 py-2 cursor-pointer border-b border-neutral-700 last:border-b-0 ${
+                      index === selectedSuggestionIndex
+                        ? 'bg-amber-600 text-white'
+                        : 'hover:bg-neutral-700 text-white'
+                    }`}
+                  >
+                    <div className="font-medium">{suggestion.title}</div>
+                    {suggestion.subtitle && (
+                      <div className="text-neutral-400 text-sm">{suggestion.subtitle}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleAddressSearch}
             className="px-6 py-2 bg-amber-400 text-black rounded-lg hover:bg-amber-300 transition-colors font-semibold"
