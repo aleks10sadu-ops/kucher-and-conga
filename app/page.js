@@ -552,7 +552,9 @@ export default function Page() {
     deliveryTime: 'asap', // 'asap' или конкретное время
     deliveryTimeCustom: '',
     paymentMethod: 'card', // 'card', 'transfer', 'cash'
-    changeAmount: 'no-change' // 'no-change' или сумма сдачи
+    changeAmount: 'no-change', // 'no-change' или сумма сдачи
+    hasAllergy: false, // Есть ли аллергия
+    allergyDetails: '' // Детали аллергии
   });
 
   // Обработчики для карты доставки
@@ -875,11 +877,23 @@ export default function Page() {
       }
     }
 
+    // Проверка аллергии
+    if (dForm.hasAllergy && !dForm.allergyDetails.trim()) {
+      alert('Пожалуйста, укажите на что у вас аллергия.');
+      return;
+    }
+
     const deliveryTotal = total + (dForm.deliveryPrice || 0);
+
+    // Формируем информацию об аллергии
+    const allergyInfo = dForm.hasAllergy && dForm.allergyDetails.trim()
+      ? { allergy: `Аллергия на: ${dForm.allergyDetails.trim()}` }
+      : {};
 
     const payload = {
       type: 'delivery',
       ...dForm,
+      ...allergyInfo,
       items,
       subtotal: total,
       deliveryPrice: dForm.deliveryPrice,
@@ -901,7 +915,9 @@ export default function Page() {
       deliveryTime: 'asap',
       deliveryTimeCustom: '',
       paymentMethod: 'card',
-      changeAmount: 'no-change'
+      changeAmount: 'no-change',
+      hasAllergy: false,
+      allergyDetails: ''
     });
     setDeliveryPrivacyConsent(false);
     alert(`Заявка на доставку отправлена! Стоимость доставки: ${dForm.deliveryPrice === 0 ? 'бесплатно' : dForm.deliveryPrice + '₽'}. Ожидайте звонка.`);
@@ -2013,6 +2029,46 @@ export default function Page() {
                   </div>
                 </div>
               )}
+
+              {/* Аллергия */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Есть ли аллергия?
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="hasAllergy"
+                      value="false"
+                      checked={!dForm.hasAllergy}
+                      onChange={(e) => setDForm(o => ({ ...o, hasAllergy: false, allergyDetails: '' }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Нет</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="hasAllergy"
+                      value="true"
+                      checked={dForm.hasAllergy}
+                      onChange={(e) => setDForm(o => ({ ...o, hasAllergy: true }))}
+                      className="w-4 h-4 text-amber-400 bg-black/40 border-white/20 focus:ring-amber-400 focus:ring-1"
+                    />
+                    <span className="ml-2 text-sm text-neutral-300">Да</span>
+                  </label>
+                  {dForm.hasAllergy && (
+                    <textarea
+                      rows={2}
+                      placeholder="Укажите продукты или вещества, на которые есть аллергия..."
+                      value={dForm.allergyDetails}
+                      onChange={(e) => setDForm(o => ({ ...o, allergyDetails: e.target.value }))}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 resize-none min-h-[60px]"
+                    />
+                  )}
+                </div>
+              </div>
 
               <div className="flex items-start gap-3">
                 <input

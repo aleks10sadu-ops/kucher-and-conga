@@ -65,6 +65,7 @@ function buildMessage(payload) {
       phone,
       address,
       comment,
+      allergy,
       items = [],
       subtotal = 0,
       deliveryPrice = 0,
@@ -124,6 +125,7 @@ function buildMessage(payload) {
       `<b>Время доставки:</b> ${deliveryTimeInfo}\n` +
       `<b>Оплата:</b> ${paymentInfo}\n` +
       (comment ? `<b>Комментарий:</b> ${escapeHtml(comment)}\n` : '') +
+      (allergy ? `<b>⚠️ ${escapeHtml(allergy)}</b>\n` : '') +
       `\n<b>Позиции:</b>\n${itemsBlock}` +
       `\n<b>Итого:</b> ${fmtCurrency(total)} ₽`
     );
