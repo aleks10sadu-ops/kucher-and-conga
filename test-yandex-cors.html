@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Yandex Suggest CORS</title>
+</head>
+<body>
+    <h1>Тест Яндекс Геосаджест</h1>
+    <input type="text" id="address-input" placeholder="Введите адрес">
+    <button onclick="testSuggest()">Тест</button>
+    <div id="results"></div>
+
+    <script>
+        async function testSuggest() {
+            const query = document.getElementById('address-input').value;
+            const apiKey = 'da3b7265-1316-40c6-8750-a1f672f83957';
+            const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodeURIComponent(query)}`;
+
+            console.log('Testing URL:', url);
+
+            try {
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    document.getElementById('results').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    const errorText = await response.text();
+                    console.error('Error:', errorText);
+                    document.getElementById('results').innerHTML = '<pre>Error: ' + response.status + ' - ' + errorText + '</pre>';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                document.getElementById('results').innerHTML = '<pre>CORS Error: ' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

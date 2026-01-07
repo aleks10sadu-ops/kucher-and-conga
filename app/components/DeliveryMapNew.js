@@ -655,7 +655,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
   };
 
   // Обработчик изменения адреса
-  // Получение подсказок адресов через наш API endpoint
+  // Получение подсказок адресов напрямую от Яндекс API
   const fetchAddressSuggestions = async (query) => {
     if (!query || query.length < 3) {
       setSuggestions([]);
@@ -664,24 +664,26 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
     }
 
     try {
-      const url = `/api/yandex-suggest?query=${encodeURIComponent(query)}`;
+      const apiKey = 'da3b7265-1316-40c6-8750-a1f672f83957'; // Ваш API ключ
+      const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodeURIComponent(query)}`;
+
       const response = await fetch(url);
 
       if (!response.ok) {
-        // Если API ключ не настроен, просто отключаем подсказки без ошибки
-        if (response.status === 500) {
-          console.log('Yandex suggestions disabled - API key not configured');
-          setSuggestions([]);
-          setShowSuggestions(false);
-          return;
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
 
-      if (data.results) {
-        setSuggestions(data.results);
+      if (data.results && data.results.length > 0) {
+        // Форматируем ответ Яндекса и берем первые 5 результатов
+        const formattedSuggestions = data.results.slice(0, 5).map(result => ({
+          title: result.title?.text || result.title,
+          subtitle: result.subtitle?.text || result.subtitle || '',
+          coords: null // Яндекс не возвращает координаты в suggest API
+        }));
+
+        setSuggestions(formattedSuggestions);
         setShowSuggestions(true);
       } else {
         setSuggestions([]);

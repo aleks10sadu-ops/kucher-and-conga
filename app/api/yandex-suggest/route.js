@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
+  console.log('=== YANDEX SUGGEST REQUEST STARTED ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Full request URL:', request.url);
+  console.log('Request method:', request.method);
+
+  // Временная ошибка для проверки
+  // return new Response('Test error', { status: 500 });
+
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
 
+    console.log('Query parameter:', query, 'Length:', query ? query.length : 'null');
+
     if (!query || query.length < 3) {
+      console.log('Query too short or empty, returning empty results');
       return NextResponse.json({ results: [] });
     }
 
@@ -21,10 +32,14 @@ export async function GET(request) {
       );
     }
 
-    // Упрощенный запрос по примеру из документации
-    const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodeURIComponent(query)}`;
+    // Запрос без строгих ограничений сначала
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=${apiKey}&text=${encodedQuery}&lang=ru_RU&results=5`;
 
-    console.log('Fetching Yandex suggestions URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+    console.log('=== FETCHING YANDEX SUGGESTIONS ===');
+    console.log('Original query:', query);
+    console.log('Encoded query:', encodedQuery);
+    console.log('Full URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
 
     // Также попробуем с дополнительными параметрами для Дмитрова
     // const bbox = '37.2,56.2~37.8,56.5'; // bounding box для Дмитрова
@@ -55,15 +70,17 @@ export async function GET(request) {
     }
 
     const data = await response.json();
-    console.log('Yandex API response:', data);
+    console.log('Yandex API response data:', JSON.stringify(data, null, 2));
+    console.log('Results count:', data.results ? data.results.length : 0);
 
     // Форматируем ответ
     const suggestions = data.results ? data.results.map(result => ({
-      title: result.title.text,
-      subtitle: result.subtitle?.text || '',
+      title: result.title?.text || result.title,
+      subtitle: result.subtitle?.text || result.subtitle || '',
       coords: result.coords || null
     })) : [];
 
+    console.log('Formatted suggestions:', suggestions);
     return NextResponse.json({ results: suggestions });
 
   } catch (error) {
