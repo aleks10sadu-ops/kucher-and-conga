@@ -704,7 +704,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }) {
         {deliveryPrice === null && userLocation && (
           <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/50 text-red-300">
             <span className="font-semibold">
-              ❌ Доставка по данному адресу не осуществляется
+              Доставка по данному адресу не осуществляется
             </span>
           </div>
         )}
