@@ -21,6 +21,25 @@ export default function DateTimePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [restrictions, setRestrictions] = useState({ dates: [], times: {} });
+
+  // Загружаем ограничения при монтировании
+  useEffect(() => {
+    const fetchRestrictions = async () => {
+      try {
+        const response = await fetch('https://k-c-reservations.vercel.app/api/settings/public');
+        if (response.ok) {
+          const data = await response.json();
+          const dates = data.find(s => s.key === 'restricted_dates')?.value || [];
+          const times = data.find(s => s.key === 'restricted_times')?.value || {};
+          setRestrictions({ dates, times });
+        }
+      } catch (error) {
+        console.error('Error fetching restrictions:', error);
+      }
+    };
+    fetchRestrictions();
+  }, []);
 
   // Парсим начальное значение
   useEffect(() => {
@@ -285,7 +304,8 @@ export default function DateTimePicker({
                     const dayFormatted = `${dayYear}-${dayMonth}-${dayDate}`;
                     const isSelected = selectedDate === dayFormatted;
                     const isToday = day.toDateString() === new Date().toDateString();
-                    const isDisabled = (min && day < new Date(min)) || (max && day > new Date(max)) || (todayOnly && !isToday) || (disablePastDates && day < new Date().setHours(0, 0, 0, 0));
+                    const isRestricted = restrictions.dates.includes(dayFormatted);
+                    const isDisabled = (min && day < new Date(min)) || (max && day > new Date(max)) || (todayOnly && !isToday) || (disablePastDates && day < new Date().setHours(0, 0, 0, 0)) || isRestricted;
 
                     return (
                       <button
@@ -309,12 +329,12 @@ export default function DateTimePicker({
                           }
                         }}
                         className={`text-center py-2 text-sm rounded ${isSelected
-                            ? 'bg-amber-400 text-black font-semibold'
-                            : isToday
-                              ? 'bg-neutral-700 text-white'
-                              : isCurrentMonth && !isDisabled
-                                ? 'hover:bg-neutral-700 text-white'
-                                : 'text-neutral-500'
+                          ? 'bg-amber-400 text-black font-semibold'
+                          : isToday
+                            ? 'bg-neutral-700 text-white'
+                            : isCurrentMonth && !isDisabled
+                              ? 'hover:bg-neutral-700 text-white'
+                              : 'text-neutral-500'
                           } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isDisabled}
                       >
@@ -336,19 +356,24 @@ export default function DateTimePicker({
                   {generateTimeSlots().map(time => {
                     // Для бронирования столов не применяем дополнительную фильтрацию времени
                     // availableTimes уже содержит правильную логику фильтрации
-                    const isTimeDisabled = false;
+                    const restrictedTimesForDate = restrictions.times[selectedDate] || [];
+                    const isTimeDisabled = restrictedTimesForDate.includes(time);
 
                     return (
                       <button
                         key={time}
                         type="button"
                         onClick={() => {
+                          if (isTimeDisabled) return;
                           setSelectedTime(time);
                           updateValue(selectedDate, time);
                           setIsOpen(false);
                         }}
+                        disabled={isTimeDisabled}
                         className={`py-2 px-3 text-sm rounded border ${selectedTime === time
-                            ? 'bg-amber-400 text-black border-amber-400'
+                          ? 'bg-amber-400 text-black border-amber-400'
+                          : isTimeDisabled
+                            ? 'bg-neutral-900 border-neutral-700 text-neutral-600 cursor-not-allowed'
                             : 'border-neutral-600 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-700'
                           }`}
                       >

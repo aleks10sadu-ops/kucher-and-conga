@@ -118,7 +118,7 @@ export default function DeliverySettings({ isOpen, onClose }) {
                   type="time"
                   value={settings.startTime}
                   onChange={(e) => handleChange('startTime', e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-400"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
                 />
               </div>
               <div>
@@ -127,7 +127,7 @@ export default function DeliverySettings({ isOpen, onClose }) {
                   type="time"
                   value={settings.endTime}
                   onChange={(e) => handleChange('endTime', e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-400"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
                 />
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function DeliverySettings({ isOpen, onClose }) {
               step="0.5"
               value={settings.minDeliveryHours}
               onChange={(e) => handleChange('minDeliveryHours', parseFloat(e.target.value))}
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-400"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
             />
             <p className="text-xs text-neutral-500 mt-1">
               Заказы принимаются минимум за {settings.minDeliveryHours} часа до доставки
@@ -163,7 +163,7 @@ export default function DeliverySettings({ isOpen, onClose }) {
               max="30"
               value={settings.maxAdvanceDays}
               onChange={(e) => handleChange('maxAdvanceDays', parseInt(e.target.value))}
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-400"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
             />
             <p className="text-xs text-neutral-500 mt-1">
               Можно заказывать доставку максимум за {settings.maxAdvanceDays} дней
@@ -172,11 +172,10 @@ export default function DeliverySettings({ isOpen, onClose }) {
 
           {/* Сообщение */}
           {message && (
-            <div className={`p-3 rounded-lg border text-sm ${
-              message.includes('успешно')
+            <div className={`p-3 rounded-lg border text-sm ${message.includes('успешно')
                 ? 'bg-green-900/20 border-green-500/50 text-green-300'
                 : 'bg-red-900/20 border-red-500/50 text-red-300'
-            }`}>
+              }`}>
               {message}
             </div>
           )}
