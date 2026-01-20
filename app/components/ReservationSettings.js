@@ -165,12 +165,12 @@ export default function ReservationSettings({ isOpen, onClose }) {
 
                             {/* Left Column: Block Dates */}
                             <div className="space-y-6">
-                                <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-inner">
-                                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                                <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-inner text-white">
+                                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
                                         <Calendar className="w-5 h-5 text-amber-400" />
                                         Блокировка дат
                                     </h3>
-                                    <p className="text-sm text-neutral-400 mb-6">
+                                    <p className="text-sm text-neutral-300 mb-6">
                                         Выберите даты, которые будут полностью закрыты для бронирования.
                                     </p>
 
@@ -209,12 +209,12 @@ export default function ReservationSettings({ isOpen, onClose }) {
 
                             {/* Right Column: Block Times */}
                             <div className="space-y-6">
-                                <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-inner">
-                                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                                <div className="bg-white/5 border border-white/5 rounded-2xl p-5 shadow-inner text-white">
+                                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
                                         <Clock className="w-5 h-5 text-amber-400" />
                                         Ограничения по времени
                                     </h3>
-                                    <p className="text-sm text-neutral-400 mb-6">
+                                    <p className="text-sm text-neutral-300 mb-6">
                                         Заблокируйте конкретные часы для выбранной даты.
                                     </p>
 

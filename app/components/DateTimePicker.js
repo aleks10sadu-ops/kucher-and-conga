@@ -246,7 +246,7 @@ export default function DateTimePicker({
           onClick={() => setIsOpen(!isOpen)}
           readOnly
           required={required}
-          className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 cursor-pointer"
+          className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm text-white outline-none focus:border-amber-400 cursor-pointer"
           placeholder={
             timeOnly ? "Выберите время" :
               dateOnly ? "Выберите дату" :
@@ -289,7 +289,7 @@ export default function DateTimePicker({
                   >
                     ‹
                   </button>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-white">
                     {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                   </span>
                   <button
@@ -398,7 +398,7 @@ export default function DateTimePicker({
                           ? 'bg-amber-400 text-black border-amber-400'
                           : isTimeDisabled
                             ? 'bg-neutral-900 border-neutral-700 text-neutral-600 cursor-not-allowed'
-                            : 'border-neutral-600 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-700'
+                            : 'border-neutral-600 text-white hover:border-neutral-500 hover:bg-neutral-700'
                           }`}
                       >
                         {time}
