@@ -43,7 +43,9 @@ export default function DateTimePicker({
       }
     } else if (todayOnly && !dateOnly && !timeOnly) {
       // Для todayOnly автоматически устанавливаем сегодняшнюю дату
-      const today = new Date().toISOString().split('T')[0];
+      // Используем локальное время для согласованности с сервером
+      const now = new Date();
+      const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
       setSelectedDate(today);
     }
   }, [value, showTime, timeOnly, dateOnly, todayOnly]);
@@ -204,8 +206,8 @@ export default function DateTimePicker({
           className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-amber-400 cursor-pointer"
           placeholder={
             timeOnly ? "Выберите время" :
-            dateOnly ? "Выберите дату" :
-            showTime ? "Выберите дату и время" : "Выберите дату"
+              dateOnly ? "Выберите дату" :
+                showTime ? "Выберите дату и время" : "Выберите дату"
           }
         />
         <button
@@ -306,15 +308,14 @@ export default function DateTimePicker({
                             }
                           }
                         }}
-                        className={`text-center py-2 text-sm rounded ${
-                          isSelected
+                        className={`text-center py-2 text-sm rounded ${isSelected
                             ? 'bg-amber-400 text-black font-semibold'
                             : isToday
-                            ? 'bg-neutral-700 text-white'
-                            : isCurrentMonth && !isDisabled
-                            ? 'hover:bg-neutral-700 text-white'
-                            : 'text-neutral-500'
-                        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              ? 'bg-neutral-700 text-white'
+                              : isCurrentMonth && !isDisabled
+                                ? 'hover:bg-neutral-700 text-white'
+                                : 'text-neutral-500'
+                          } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isDisabled}
                       >
                         {day.getDate()}
@@ -346,11 +347,10 @@ export default function DateTimePicker({
                           updateValue(selectedDate, time);
                           setIsOpen(false);
                         }}
-                        className={`py-2 px-3 text-sm rounded border ${
-                          selectedTime === time
+                        className={`py-2 px-3 text-sm rounded border ${selectedTime === time
                             ? 'bg-amber-400 text-black border-amber-400'
                             : 'border-neutral-600 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-700'
-                        }`}
+                          }`}
                       >
                         {time}
                       </button>
