@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
-import { createSupabaseBrowserClient } from '../lib/supabase/client';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 export default function DateTimePicker({
   value,

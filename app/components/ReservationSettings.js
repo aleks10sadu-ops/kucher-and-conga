@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Save, Calendar, Clock, Trash2, Plus, AlertCircle } from 'lucide-react';
-import { createSupabaseBrowserClient } from '../lib/supabase/client';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 import DateTimePicker from './DateTimePicker';
 
 export default function ReservationSettings({ isOpen, onClose }) {
@@ -285,8 +285,8 @@ export default function ReservationSettings({ isOpen, onClose }) {
                     {/* Status Messages */}
                     {message && (
                         <div className={`mt-6 p-4 rounded-2xl border flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-300 ${message.type === 'success'
-                                ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                                : 'bg-red-500/10 border-red-500/20 text-red-400'
+                            ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                            : 'bg-red-500/10 border-red-500/20 text-red-400'
                             }`}>
                             <AlertCircle className="w-5 h-5 flex-shrink-0" />
                             <p className="text-sm font-medium">{message.text}</p>
