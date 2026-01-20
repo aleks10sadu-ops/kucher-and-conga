@@ -23,6 +23,8 @@ export default function DateTimePicker({
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [restrictions, setRestrictions] = useState({ dates: [], times: {} });
+  // Default to 10:00 - 00:00 if not set, but will be overwritten by DB
+  const [standardSchedule, setStandardSchedule] = useState({ start: '10:00', end: '00:00' });
 
   // Загружаем ограничения при монтировании
   useEffect(() => {
@@ -42,7 +44,10 @@ export default function DateTimePicker({
 
         const dates = data.find(s => s.key === 'restricted_dates')?.value || [];
         const times = data.find(s => s.key === 'restricted_times')?.value || {};
+        const schedule = data.find(s => s.key === 'standard_schedule')?.value || { start: '10:00', end: '00:00' };
+
         setRestrictions({ dates, times });
+        setStandardSchedule(schedule);
       } catch (error) {
         console.warn('Error fetching local restrictions, trying CRM API:', error);
 
@@ -55,7 +60,9 @@ export default function DateTimePicker({
             // whereas the DB stores them as multiple rows. Adjust accordingly.
             const dates = data.restricted_dates || [];
             const times = data.restricted_times || {};
+            const schedule = data.standard_schedule || { start: '10:00', end: '00:00' };
             setRestrictions({ dates, times });
+            setStandardSchedule(schedule);
           }
         } catch (apiError) {
           console.error('All restriction fetch attempts failed:', apiError);
@@ -181,12 +188,33 @@ export default function DateTimePicker({
       return slots;
     }
 
-    return [
-      '10:00', '11:00', '12:00', '13:00',
-      '14:00', '15:00', '16:00', '17:00',
-      '18:00', '19:00', '20:00', '21:00',
-      '22:00', '23:00', '00:00', '01:00'
-    ];
+    // Use standard schedule from DB
+    const { start, end } = standardSchedule;
+    // Helper to convert time to minutes
+    const toMinutes = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const startMinutes = toMinutes(start);
+    let endMinutes = toMinutes(end);
+
+    // Handle overnight schedules (e.g. 10:00 to 02:00)
+    if (endMinutes < startMinutes) {
+      endMinutes += 24 * 60; // Add 24 hours
+    }
+
+    const slots = [];
+    for (let minutes = startMinutes; minutes <= endMinutes; minutes += 60) {
+      // Normalize minutes to 0-1439 for display
+      const normalizedMinutes = minutes % (24 * 60);
+      const h = Math.floor(normalizedMinutes / 60);
+      const m = normalizedMinutes % 60;
+      const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      slots.push(timeString);
+    }
+
+    return slots;
   };
 
   // Названия месяцев на русском

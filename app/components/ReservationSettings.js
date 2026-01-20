@@ -13,6 +13,8 @@ export default function ReservationSettings({ isOpen, onClose }) {
     const [message, setMessage] = useState(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('18:00');
+    // New state for standard schedule
+    const [standardSchedule, setStandardSchedule] = useState({ start: '10:00', end: '00:00' });
 
     const supabase = createSupabaseBrowserClient();
 
@@ -42,9 +44,11 @@ export default function ReservationSettings({ isOpen, onClose }) {
 
             const dates = data.find(s => s.key === 'restricted_dates')?.value || [];
             const times = data.find(s => s.key === 'restricted_times')?.value || {};
+            const schedule = data.find(s => s.key === 'standard_schedule')?.value || { start: '10:00', end: '00:00' };
 
             setRestrictedDates(Array.isArray(dates) ? dates : []);
             setRestrictedTimes(typeof times === 'object' && times !== null ? times : {});
+            setStandardSchedule(schedule);
         } catch (error) {
             console.error('Error fetching reservation settings:', error);
             setMessage({ type: 'error', text: 'Ошибка при загрузке настроек' });
@@ -75,7 +79,16 @@ export default function ReservationSettings({ isOpen, onClose }) {
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'key' });
 
-            if (error1 || error2) throw error1 || error2;
+            // Сохраняем стандартное расписание
+            const { error: error3 } = await supabase
+                .from('reservation_settings')
+                .upsert({
+                    key: 'standard_schedule',
+                    value: standardSchedule,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+
+            if (error1 || error2 || error3) throw error1 || error2 || error3;
 
             setMessage({ type: 'success', text: 'Настройки успешно сохранены!' });
 
@@ -162,6 +175,37 @@ export default function ReservationSettings({ isOpen, onClose }) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                            {/* Standard Schedule Section */}
+                            <div className="lg:col-span-2 bg-white/5 border border-white/5 rounded-2xl p-5 shadow-inner">
+                                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
+                                    <Clock className="w-5 h-5 text-amber-400" />
+                                    Стандартное время работы
+                                </h3>
+                                <p className="text-sm text-neutral-300 mb-6">
+                                    Установите стандартный диапазон времени бронирования для всех дней.
+                                </p>
+                                <div className="flex flex-wrap gap-4 items-end">
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 block">C:</label>
+                                        <DateTimePicker
+                                            timeOnly
+                                            value={standardSchedule.start}
+                                            onChange={(time) => setStandardSchedule({ ...standardSchedule, start: time })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 block">До:</label>
+                                        <DateTimePicker
+                                            timeOnly
+                                            value={standardSchedule.end}
+                                            onChange={(time) => setStandardSchedule({ ...standardSchedule, end: time })}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Left Column: Block Dates */}
                             <div className="space-y-6">

@@ -16,6 +16,7 @@ import DateTimePicker from './components/DateTimePicker';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
 import { createReservation } from '../lib/reservations';
 import ReservationSettings from './components/ReservationSettings';
+import { createSupabaseBrowserClient } from '../lib/supabase/client';
 
 // Зоны доставки для определения по координатам
 const deliveryZones = [
@@ -273,12 +274,38 @@ export default function Page() {
   });
 
   // Настройки времени работы ресторана для бронирования
-  const restaurantSettings = {
-    startTime: '14:00',
-    endTime: '22:00',
+  const [restaurantSettings, setRestaurantSettings] = useState({
+    startTime: '10:00',
+    endTime: '00:00',
     minAdvanceHours: 1, // минимум за 1 час
     maxAdvanceDays: 30
-  };
+  });
+
+  // Загружаем настройки времени работы из Supabase
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const supabase = createSupabaseBrowserClient();
+      try {
+        const { data, error } = await supabase
+          .from('reservation_settings')
+          .select('*')
+          .eq('key', 'standard_schedule')
+          .single();
+
+        if (data && data.value) {
+          setRestaurantSettings(prev => ({
+            ...prev,
+            startTime: data.value.start || '10:00',
+            endTime: data.value.end || '00:00'
+          }));
+        }
+      } catch (e) {
+        console.error('Error fetching restaurant settings:', e);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   // State для бронирования
   const [bookingData, setBookingData] = useState({
@@ -412,7 +439,23 @@ export default function Page() {
 
   // Получаем доступные времена для бронирования в зависимости от даты
   const getAvailableBookingTimes = (selectedDate) => {
-    const allTimes = ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+    // Генерируем слоты динамически на основе restaurantSettings
+    const { startTime, endTime } = restaurantSettings;
+    const toMinutes = (s) => {
+      const [h, m] = s.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    let startM = toMinutes(startTime);
+    let endM = toMinutes(endTime);
+    if (endM < startM) endM += 24 * 60; // Переход через полночь
+
+    const allTimes = [];
+    for (let m = startM; m <= endM; m += 60) {
+      const h = Math.floor((m % (24 * 60)) / 60);
+      const min = m % 60;
+      allTimes.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+    }
 
     if (!selectedDate) return allTimes;
 
@@ -427,15 +470,22 @@ export default function Page() {
 
       return allTimes.filter(time => {
         const [hour, minute] = time.split(':').map(Number);
-        const timeHour = hour;
-        const timeMinute = minute;
 
-        // Добавляем 1 час к текущему времени для минимального времени бронирования
-        const minBookingTime = new Date(today);
-        minBookingTime.setHours(currentHour + 1, currentMinute, 0, 0);
-
+        // Для сравнения создаем даты
         const slotTime = new Date(today);
-        slotTime.setHours(timeHour, timeMinute, 0, 0);
+        slotTime.setHours(hour, minute, 0, 0);
+        // Если время слота меньше (или равно с запасом) сейчас + мин время, то скрываем
+        // Но здесь логика сложнее если слот "завтра" (например 00:00) но технически это сегодня ночью
+        // Упростим: если слот < сейчас + minAdvance, то недоступен
+
+        const minBookingTime = new Date(today);
+        minBookingTime.setHours(currentHour + restaurantSettings.minAdvanceHours, currentMinute, 0, 0);
+
+        // Если слот перешел через полночь (например 01:00), а сейчас 23:00, то слот 01:00 следующего дня?
+        // Нет, getAvailableBookingTimes вызывается для КОНКРЕТНОЙ даты.
+        // Если выбрано "сегодня", то 01:00 уже прошло.
+        // Если ресторан работает до 02:00, то 01:00 сегодня - это прошедшее время.
+        // А 01:00 "ночью" - это уже технически завтрашняя дата.
 
         return slotTime >= minBookingTime;
       });
