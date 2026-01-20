@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Save, Clock } from 'lucide-react';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 export default function DeliverySettings({ isOpen, onClose }) {
   const [settings, setSettings] = useState({
@@ -14,6 +15,8 @@ export default function DeliverySettings({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  const supabase = createSupabaseBrowserClient();
+
   // Загружаем настройки при открытии
   useEffect(() => {
     if (isOpen) {
@@ -23,14 +26,30 @@ export default function DeliverySettings({ isOpen, onClose }) {
 
   const loadSettings = async () => {
     try {
-      // В будущем здесь будет загрузка из базы данных
-      // Пока используем localStorage для простоты
-      const saved = localStorage.getItem('deliverySettings');
-      if (saved) {
-        setSettings(JSON.parse(saved));
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('reservation_settings')
+        .select('*')
+        .eq('key', 'delivery_settings')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading delivery settings from DB:', error);
+      }
+
+      if (data && data.value) {
+        setSettings(data.value);
+      } else {
+        // Fallback to localStorage if not found in DB (migration path)
+        const saved = localStorage.getItem('deliverySettings');
+        if (saved) {
+          setSettings(JSON.parse(saved));
+        }
       }
     } catch (error) {
       console.error('Error loading delivery settings:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,19 +68,31 @@ export default function DeliverySettings({ isOpen, onClose }) {
         return;
       }
 
-      // Сохраняем настройки (в будущем в базу данных)
+      // Сохраняем настройки в Supabase
+      const { error } = await supabase
+        .from('reservation_settings')
+        .upsert({
+          key: 'delivery_settings',
+          value: settings,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+
+      if (error) throw error;
+
+      // Также обновляем localStorage для обратной совместимости (optional)
       localStorage.setItem('deliverySettings', JSON.stringify(settings));
 
-      setMessage('Настройки сохранены успешно!');
+      setMessage('Настройки успешно сохранены в базе данных!');
 
       // Закрываем через 2 секунды
       setTimeout(() => {
         onClose();
+        setMessage(''); // Clear message on close
       }, 2000);
 
     } catch (error) {
       console.error('Error saving delivery settings:', error);
-      setMessage('Ошибка при сохранении настроек');
+      setMessage('Ошибка при сохранении настроек: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -173,8 +204,8 @@ export default function DeliverySettings({ isOpen, onClose }) {
           {/* Сообщение */}
           {message && (
             <div className={`p-3 rounded-lg border text-sm ${message.includes('успешно')
-                ? 'bg-green-900/20 border-green-500/50 text-green-300'
-                : 'bg-red-900/20 border-red-500/50 text-red-300'
+              ? 'bg-green-900/20 border-green-500/50 text-green-300'
+              : 'bg-red-900/20 border-red-500/50 text-red-300'
               }`}>
               {message}
             </div>

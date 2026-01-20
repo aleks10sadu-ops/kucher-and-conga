@@ -317,12 +317,37 @@ export default function Page() {
     comment: ''
   });
 
-  // Загружаем настройки доставки при монтировании
+  // Загружаем настройки доставки из Supabase
   useEffect(() => {
-    const saved = localStorage.getItem('deliverySettings');
-    if (saved) {
-      setDeliverySettings(JSON.parse(saved));
-    }
+    const fetchDeliverySettings = async () => {
+      const supabase = createSupabaseBrowserClient();
+      try {
+        const { data, error } = await supabase
+          .from('reservation_settings')
+          .select('*')
+          .eq('key', 'delivery_settings')
+          .single();
+
+        if (data && data.value) {
+          setDeliverySettings(prev => ({ ...prev, ...data.value }));
+        } else {
+          // Fallback to localStorage if not found in DB
+          const saved = localStorage.getItem('deliverySettings');
+          if (saved) {
+            setDeliverySettings(JSON.parse(saved));
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching delivery settings:', e);
+        // Fallback on error
+        const saved = localStorage.getItem('deliverySettings');
+        if (saved) {
+          setDeliverySettings(JSON.parse(saved));
+        }
+      }
+    };
+
+    fetchDeliverySettings();
   }, []);
 
   // Синхронизируем guests state с bookingData
