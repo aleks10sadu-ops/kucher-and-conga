@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
+import { createSupabaseBrowserClient } from '../lib/supabase/client';
 
 export default function DateTimePicker({
   value,
@@ -27,15 +28,38 @@ export default function DateTimePicker({
   useEffect(() => {
     const fetchRestrictions = async () => {
       try {
-        const response = await fetch('https://k-c-reservations.vercel.app/api/settings/public');
-        if (response.ok) {
-          const data = await response.json();
-          const dates = data.find(s => s.key === 'restricted_dates')?.value || [];
-          const times = data.find(s => s.key === 'restricted_times')?.value || {};
-          setRestrictions({ dates, times });
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) return;
+
+        const { data, error } = await supabase
+          .from('reservation_settings')
+          .select('*');
+
+        if (error) {
+          // If the table doesn't exist yet or other DB error, fallback to CRM API
+          throw error;
         }
+
+        const dates = data.find(s => s.key === 'restricted_dates')?.value || [];
+        const times = data.find(s => s.key === 'restricted_times')?.value || {};
+        setRestrictions({ dates, times });
       } catch (error) {
-        console.error('Error fetching restrictions:', error);
+        console.warn('Error fetching local restrictions, trying CRM API:', error);
+
+        // Fallback to CRM API
+        try {
+          const response = await fetch('https://k-c-reservations.vercel.app/api/settings/public');
+          if (response.ok) {
+            const data = await response.json();
+            // The public API returns an object { restricted_dates, restricted_times }
+            // whereas the DB stores them as multiple rows. Adjust accordingly.
+            const dates = data.restricted_dates || [];
+            const times = data.restricted_times || {};
+            setRestrictions({ dates, times });
+          }
+        } catch (apiError) {
+          console.error('All restriction fetch attempts failed:', apiError);
+        }
       }
     };
     fetchRestrictions();
