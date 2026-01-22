@@ -102,15 +102,31 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         // Статус по умолчанию обычно 'pending' или 'new', или база сама ставит default
         // Проверим формат даты и времени. data.date: YYYY-MM-DD, data.time: HH:mm
 
+
+        // Найдем ID зала в базе CRM, если передан ID из HallSelector (который может быть hardcoded UUID)
+        let hallIdToSave = data.hallId;
+
+        // CRM требует валидный UUID для hall_id.
+        // Если hallId не передан, попробуем найти "Главный зал" или первый попавшийся
+        if (!hallIdToSave) {
+            const { data: anyHall } = await supabase
+                .from('halls')
+                .select('id')
+                .limit(1)
+                .maybeSingle();
+            if (anyHall) hallIdToSave = anyHall.id;
+        }
+
+
         const reservationPayload = {
             guest_id: guestId,
-            reservation_date: data.date,
-            reservation_time: data.time,
+            date: data.date,          // CRM: date instead of reservation_date
+            time: data.time,          // CRM: time instead of reservation_time
             guests_count: data.guests_count,
             comments: data.comments || '',
-            status: 'pending', // Или 'new', ставим безопасный дефолт, обычно CRM его подхватит
-            created_via: 'website', // Поле для отслеживания источника, если есть
-            hall_id: data.hallId || null // ID зала
+            status: 'new',            // CRM: 'new' (must be one of the allowed values)
+            // created_via: 'website', // REMOVED: Column does not exist in CRM
+            hall_id: hallIdToSave     // CRM: UUID NOT NULL
         };
 
         const { data: reservation, error: reservationError } = await supabase
