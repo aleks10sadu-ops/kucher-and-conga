@@ -892,6 +892,7 @@ export default function Page() {
                       dateOnly
                       value={bookingData.date}
                       onChange={(date) => setBookingData(prev => ({ ...prev, date }))}
+                      disablePastDates
                     />
 
                     {/* Time Selector */}
@@ -1727,6 +1728,22 @@ export default function Page() {
             </div>
           </>
         )}
+        {/* Footer */}
+        <footer className="w-full py-6 mt-12 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+          <div className="container mx-auto px-4 flex justify-center items-center">
+            <p className="text-sm text-neutral-500 font-medium">
+              Сайт сделан{' '}
+              <a
+                href="https://t.me/Kvazar27"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                @Kvazar27
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
 
       {/* Модальное окно управления контентом */}
