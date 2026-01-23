@@ -25,10 +25,10 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
     const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-        console.error('CRM Supabase credentials are missing');
+        console.error('CRM Supabase credentials are missing. Check NEXT_PUBLIC_CRM_SUPABASE_URL and NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY');
         return {
             success: false,
-            error: 'Ошибка конфигурации сервера. Пожалуйста, свяжитесь с администратором.',
+            error: 'Ошибка конфигурации сервера (CRM). Пожалуйста, свяжитесь с администратором.',
         };
     }
 
