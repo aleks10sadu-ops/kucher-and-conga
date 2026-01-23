@@ -1732,7 +1732,7 @@ export default function Page() {
         <footer className="w-full py-6 mt-12 border-t border-white/10 bg-black/20 backdrop-blur-sm">
           <div className="container mx-auto px-4 flex justify-center items-center">
             <p className="text-sm text-neutral-500 font-medium">
-              Сайт сделан{' '}
+              Сайт разработан{' '}
               <a
                 href="https://t.me/Kvazar27"
                 target="_blank"
