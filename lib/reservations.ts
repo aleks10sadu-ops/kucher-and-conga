@@ -20,7 +20,7 @@ type CreateReservationData = BookingData & {
  * Создает бронирование напрямую в базе данных CRM Supabase
  */
 export async function createReservation(data: CreateReservationData): Promise<CreateReservationResponse> {
-    console.log('Using DIRECT CRM DB connection v3 (Surname + Hall)');
+    console.log('Using RPC for public reservation');
     const supabaseUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
 
@@ -32,133 +32,58 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         };
     }
 
-    // Создаем клиент специально для CRM базы данных
     const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
     try {
-        console.log('Creating reservation in CRM DB:', data);
+        console.log('Creating reservation via RPC:', data);
 
         const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : '') || data.name || '';
         const lastName = data.lastName || (data.name && data.name.includes(' ') ? data.name.split(' ').slice(1).join(' ') : '') || '';
 
-        // 1. Поиск или создание гостя
-        // Нормализуем телефон (если нужно), здесь предполагаем, что он уже в нужном формате или как есть
-        const { data: existingGuest, error: findError } = await supabase
-            .from('guests')
-            .select('id, first_name, last_name')
-            .eq('phone', data.phone)
-            .maybeSingle();
-
-        if (findError) {
-            console.error('Error finding guest:', findError);
-            throw findError;
-        }
-
-        let guestId: string | undefined;
-
-        if (existingGuest) {
-            guestId = existingGuest.id;
-            // Опционально: можно обновить фамилию, если она не была заполнена
-            if (!existingGuest.last_name && lastName) {
-                await supabase.from('guests').update({ last_name: lastName }).eq('id', guestId);
-            }
-        } else {
-            // Создаем нового гостя
-            const { data: newGuest, error: createGuestError } = await supabase
-                .from('guests')
-                .insert([
-                    {
-                        first_name: firstName,
-                        last_name: lastName,
-                        phone: data.phone,
-                        // is_blacklisted: false, // Вырезано из-за ошибки прав доступа
-                    }
-                ])
-                .select()
-                .single();
-
-            if (createGuestError) {
-                console.error('Error creating guest:', JSON.stringify(createGuestError, null, 2));
-                // Если ошибка говорит, что гость уже существует (race condition), попробуем найти снова
-                if (createGuestError.code === '23505') { // Unique violation
-                    const { data: retryGuest, error: retryError } = await supabase
-                        .from('guests')
-                        .select('id')
-                        .eq('phone', data.phone)
-                        .single();
-
-                    if (retryError || !retryGuest) throw createGuestError; // Если все равно ошибка, выбрасываем исходную
-                    guestId = retryGuest.id;
-                } else {
-                    throw createGuestError;
-                }
-            } else {
-                guestId = newGuest.id;
-            }
-        }
-
-        // 2. Создание бронирования
-        // Предполагаем, что таблица reservations имеет поля: guest_id, reservation_date, reservation_time, guests_count, comments, status
-        // Статус по умолчанию обычно 'pending' или 'new', или база сама ставит default
-        // Проверим формат даты и времени. data.date: YYYY-MM-DD, data.time: HH:mm
-
-
-        // Найдем ID зала в базе CRM, если передан ID из HallSelector (который может быть hardcoded UUID)
-        let hallIdToSave = data.hallId;
-
-        // CRM требует валидный UUID для hall_id.
-        // Если hallId не передан, попробуем найти "Главный зал" или первый попавшийся
-        if (!hallIdToSave) {
-            const { data: anyHall } = await supabase
-                .from('halls')
-                .select('id')
-                .limit(1)
-                .maybeSingle();
-            if (anyHall) hallIdToSave = anyHall.id;
-        }
-
-
-        const reservationPayload = {
-            guest_id: guestId,
-            date: data.date,          // CRM: date instead of reservation_date
-            time: data.time,          // CRM: time instead of reservation_time
-            guests_count: data.guests_count,
-            comments: data.comments || '',
-            status: 'new',            // CRM: 'new' (must be one of the allowed values)
-            // created_via: 'website', // REMOVED: Column does not exist in CRM
-            hall_id: hallIdToSave     // CRM: UUID NOT NULL
+        // Prepare RPC parameters
+        const rpcParams = {
+            p_phone: data.phone,
+            p_first_name: firstName,
+            p_last_name: lastName || undefined,
+            p_date: data.date,
+            p_time: data.time,
+            p_guests_count: data.guests_count,
+            p_hall_id: data.hallId || undefined,
+            p_comments: data.comments || undefined
         };
 
-        const { data: reservation, error: reservationError } = await supabase
-            .from('reservations')
-            .insert([reservationPayload])
-            .select()
-            .single();
+        const { data: responseData, error } = await supabase.rpc('create_public_reservation', rpcParams);
 
-        if (reservationError) {
-            console.error('Error creating reservation:', JSON.stringify(reservationError, null, 2));
-
-            // Проверка на черный список (если есть триггер или политика)
-            if (reservationError.message && reservationError.message.includes('blacklist')) {
+        if (error) {
+            console.error('Error creating reservation via RPC:', error);
+            // Проверка на черный список (ошибку может вернуть и RPC если внутри raise exception)
+            if (error.message && error.message.includes('blacklist')) {
                 return {
                     success: false,
                     error: 'К сожалению, создание бронирования невозможно. Пожалуйста, свяжитесь с рестораном.',
                 };
             }
-
-            throw reservationError;
+            throw error;
         }
 
-        console.log('Reservation created successfully:', reservation);
-        return {
-            success: true,
-            reservation: reservation,
-            message: 'Бронирование успешно создано! Мы свяжемся с вами для подтверждения.',
-        };
+        if (responseData && responseData.success) {
+            console.log('Reservation created successfully via RPC:', responseData);
+            return {
+                success: true,
+                reservation: { id: responseData.reservation_id }, // minimal mock object
+                message: 'Ваша заявка принята!',
+            };
+        } else {
+            console.error('RPC returned failure:', responseData);
+            return {
+                success: false,
+                error: responseData?.error || 'Не удалось отправить бронь',
+                details: responseData?.error
+            };
+        }
 
     } catch (error: any) {
         console.error('Unexpected error in createReservation:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
         return {
             success: false,
             error: 'Произошла ошибка при создании бронирования. Попробуйте позже или позвоните нам.',
