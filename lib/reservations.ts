@@ -41,14 +41,27 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         const lastName = data.lastName || (data.name && data.name.includes(' ') ? data.name.split(' ').slice(1).join(' ') : '') || '';
 
         // Prepare RPC parameters
+        // Ensure time has seconds: HH:mm -> HH:mm:00
+        let timeStr = data.time;
+        if (timeStr && timeStr.length === 5) {
+            timeStr += ':00';
+        }
+
+        // Validate hallId - must be UUID string, not number
+        let hallIdParam = undefined;
+        if (typeof data.hallId === 'string' && data.hallId.length > 10) {
+            // Simple length check to filter out empty strings or short IDs, RPC validation will handle the rest
+            hallIdParam = data.hallId;
+        }
+
         const rpcParams = {
             p_phone: data.phone,
             p_first_name: firstName,
             p_last_name: lastName || undefined,
             p_date: data.date,
-            p_time: data.time,
+            p_time: timeStr,
             p_guests_count: data.guests_count,
-            p_hall_id: data.hallId || undefined,
+            p_hall_id: hallIdParam,
             p_comments: data.comments || undefined
         };
 
