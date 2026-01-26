@@ -70,7 +70,8 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_hall_id: hallIdParam,
             p_comments: data.comments || undefined,
             p_status: data.status || undefined,
-            p_table_id: data.table_id || undefined
+            p_table_id: data.table_id || undefined,
+            p_menu_type: 'main_menu' // Force main menu for site reservations
         };
 
         const { data: responseData, error } = await supabase.rpc('create_public_reservation', rpcParams);

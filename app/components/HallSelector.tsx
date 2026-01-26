@@ -84,43 +84,64 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
     const [editingHall, setEditingHall] = useState<Hall | null>(null);
     const [viewingHall, setViewingHall] = useState<Hall | null>(null);
 
-    // Fetch halls from Supabase content_posts
+    // Fetch halls from Supabase content_posts AND halls table
     const loadHallsFromDB = async () => {
         try {
             const supabase = createSupabaseBrowserClient() as any;
             if (!supabase) return;
 
-            const { data, error } = await supabase
+            // 1. Fetch content (images, descriptions)
+            const { data: contentData } = await supabase
                 .from('content_posts')
                 .select('*')
                 .eq('category', 'halls');
 
-            if (error) {
-                console.error('Error fetching halls:', error);
-                return;
-            }
+            // 2. Fetch REAL IDs from halls table for availability checks
+            const { data: realHalls } = await supabase
+                .from('halls')
+                .select('id, name, capacity');
 
-            if (data && data.length > 0) {
-                // Merge DB data with initialHalls based on Name
-                setHalls(prevHalls => {
-                    return prevHalls.map(hall => {
-                        // Find matching DB entry by title (case insensitive)
-                        const dbEntry = data.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
+            setHalls(prevHalls => {
+                return prevHalls.map(hall => {
+                    let updatedHall = { ...hall };
 
+                    // Merge content data
+                    if (contentData && contentData.length > 0) {
+                        const dbEntry = contentData.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
                         if (dbEntry) {
-                            return {
-                                ...hall,
-                                description: dbEntry.content || hall.description, // Use content as description
+                            updatedHall = {
+                                ...updatedHall,
+                                description: dbEntry.content || hall.description,
                                 image: dbEntry.image_url || hall.image,
                                 capacity: dbEntry.metadata?.capacity || hall.capacity,
                                 gallery: dbEntry.metadata?.gallery || [],
                                 dbId: dbEntry.id
                             };
                         }
-                        return hall;
-                    });
+                    }
+
+                    // Merge REAL ID from halls table
+                    if (realHalls && realHalls.length > 0) {
+                        // Loose matching by name
+                        const realEntry = realHalls.find((h: any) =>
+                            h.name.toLowerCase().trim() === hall.name.toLowerCase().trim() ||
+                            (hall.name.includes(h.name)) ||
+                            (h.name.includes('Кучер') && hall.name.includes('Кучер') && h.name.includes(hall.name.split(' ')[0]))
+                        );
+
+                        if (realEntry) {
+                            updatedHall.id = realEntry.id; // CRITICAL: Use real UUID
+                            // Allow capacity overwrite from real DB if numeric
+                            if (typeof realEntry.capacity === 'number' && realEntry.capacity > 0) {
+                                updatedHall.capacity = realEntry.capacity;
+                            }
+                        }
+                    }
+
+                    return updatedHall;
                 });
-            }
+            });
+
         } catch (err) {
             console.error('Error loading halls:', err);
         }
