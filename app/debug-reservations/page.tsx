@@ -7,15 +7,25 @@ export default function DebugReservationsPublic() {
     const [reservations, setReservations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     useEffect(() => {
         const fetchReservations = async () => {
             const supabase = createSupabaseBrowserClient() as any;
-            if (!supabase) return;
+            if (!supabase) {
+                setErrorMsg("Supabase client not initialized");
+                setLoading(false);
+                return;
+            }
 
             const { data, error } = await supabase.rpc('debug_get_reservations');
 
-            if (error) console.error(error);
-            else setReservations(data || []);
+            if (error) {
+                console.error(error);
+                setErrorMsg(error.message || JSON.stringify(error));
+            } else {
+                setReservations(data || []);
+            }
             setLoading(false);
         };
 
@@ -23,6 +33,22 @@ export default function DebugReservationsPublic() {
     }, []);
 
     if (loading) return <div className="p-8 bg-black min-h-screen text-white">Loading debug data...</div>;
+
+    if (errorMsg) return (
+        <div className="p-8 bg-black min-h-screen text-red-500">
+            <h1 className="text-2xl font-bold mb-4">Error Loading Data</h1>
+            <pre className="bg-red-900/20 p-4 rounded border border-red-500">{errorMsg}</pre>
+            <p className="mt-4 text-white">Please check console for more details.</p>
+        </div>
+    );
+
+    if (reservations.length === 0) return (
+        <div className="p-8 bg-black min-h-screen text-white">
+            <h1 className="text-2xl font-bold mb-4 text-amber-400">Public Reservation Debugger</h1>
+            <p className="text-neutral-400">No reservations found (or permission denied).</p>
+            <p className="text-sm mt-2">Did you run the <code className="text-amber-400">supa_comprehensive_fix.sql</code> script?</p>
+        </div>
+    );
 
     return (
         <div className="p-8 bg-black min-h-screen text-white font-sans">
