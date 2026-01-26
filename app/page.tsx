@@ -395,7 +395,7 @@ export default function Page() {
             setWaitlistMode(true);
             setBookingMessage({
               type: 'error',
-              text: `К сожалению, на это время нет мест${avail.remaining_capacity !== undefined ? ` (осталось: ${avail.remaining_capacity})` : ''}. Хотите записаться в лист ожидания? Нажмите "Отправить" повторно, чтобы встать в очередь.`
+              text: `К сожалению, на это время нет мест${avail.remaining_capacity !== undefined ? ` (осталось: ${avail.remaining_capacity})` : ''}. (Debug: Hall=${String(hallId).substring(0, 8)}, Avail=${avail.is_available}, Rem=${avail.remaining_capacity}). Хотите записаться в лист ожидания? Нажмите "Отправить" повторно, чтобы встать в очередь.`
             });
             setBookingLoading(false);
             return;
