@@ -13,14 +13,8 @@ type CreateReservationData = BookingData & {
     name?: string; // legacy support
     guests_count: number;
     comments?: string;
-    status?: string;
-    table_id?: string;
 };
 
-
-/**
- * Создает бронирование напрямую в базе данных CRM Supabase
- */
 
 /**
  * Создает бронирование напрямую в базе данных CRM Supabase
@@ -68,9 +62,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_time: timeStr,
             p_guests_count: data.guests_count,
             p_hall_id: hallIdParam,
-            p_comments: data.comments || undefined,
-            p_status: data.status || undefined,
-            p_table_id: data.table_id || undefined
+            p_comments: data.comments || undefined
         };
 
         const { data: responseData, error } = await supabase.rpc('create_public_reservation', rpcParams);
@@ -112,93 +104,3 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         };
     }
 }
-
-/**
- * Проверка доступности зала через RPC
- */
-export async function checkHallAvailability(
-    hallId: string,
-    date: string,
-    time: string,
-    duration: string = '02:00'
-): Promise<{ success: boolean; remaining_capacity?: number; is_available?: boolean; error?: string }> {
-    const supabaseUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-        return { success: false, error: 'Configuration error' };
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    let timeStr = time;
-    if (timeStr && timeStr.length === 5) {
-        timeStr += ':00';
-    }
-
-    console.log(`Checking availability for Hall: ${hallId}, Date: ${date}, Time: ${timeStr}`);
-
-    try {
-        const { data, error } = await supabase.rpc('get_hall_availability', {
-            p_hall_id: hallId,
-            p_date: date,
-            p_time: timeStr,
-            p_duration: duration
-        });
-
-        console.log('Availability Check Result:', { data, error });
-
-        if (error) {
-            console.error('Error checking availability:', error);
-            return { success: false, error: error.message };
-        }
-
-        // RPC returns an array (of one record) usually
-        const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
-
-        // If returned empty array or null
-        if (!result) {
-            return { success: false, error: 'Empty response from availability check' };
-        }
-
-        return {
-            success: true,
-            remaining_capacity: result.remaining_capacity,
-            is_available: result.is_available
-        };
-    } catch (err: any) {
-        return { success: false, error: err.message };
-    }
-}
-
-/**
- * Получение списка комнат для банкетного зала
- */
-export async function getBanquetRooms(hallId: string): Promise<any[]> {
-    const supabaseUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) return [];
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    try {
-        const { data, error } = await supabase
-            .from('tables')
-            .select('*')
-            .eq('hall_id', hallId)
-            .eq('type', 'room');
-
-        if (error) {
-            console.error('Error fetching rooms:', error);
-            return [];
-        }
-
-        return data || [];
-    } catch (err) {
-        console.error('Error in getBanquetRooms:', err);
-        return [];
-    }
-}
-
-

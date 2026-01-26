@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { X, Save, Upload, Trash2, Plus } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { uploadImage, isSupabaseStorageUrl } from '@/lib/supabase/storage';
-import { generateSlug } from '@/lib/utils/string';
 
 export type HallData = {
     id: string; // The hardcoded ID or DB ID
@@ -118,10 +117,8 @@ export default function HallEditor({ hall, isOpen, onClose, onSave }: HallEditor
                 return;
             }
 
-
-
             // Prepare data
-            const slug = generateSlug(formData.name);
+            const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             const postData = {
                 category: 'halls',
                 title: formData.name, // This is key for mapping!
@@ -149,12 +146,12 @@ export default function HallEditor({ hall, isOpen, onClose, onSave }: HallEditor
                 error = err;
             } else {
                 // Check if already exists by title to avoid duplicates (safeguard)
-                const { data: existing, error: searchError } = await supabase
+                const { data: existing } = await supabase
                     .from('content_posts')
                     .select('id')
                     .eq('category', 'halls')
                     .eq('title', formData.name)
-                    .maybeSingle(); // Use maybeSingle to avoid 406/error on 0 rows
+                    .single();
 
                 if (existing) {
                     const { error: err } = await supabase

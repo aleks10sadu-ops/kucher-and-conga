@@ -18,13 +18,11 @@ import DeliverySettings from './components/DeliverySettings';
 import DeliveryStatusBanner from './components/DeliveryStatusBanner';
 import DateTimePicker from './components/DateTimePicker';
 import useAdminCheck from '../lib/hooks/useAdminCheck';
-import { createReservation, checkHallAvailability, getBanquetRooms } from '../lib/reservations';
+import { createReservation } from '../lib/reservations';
 import ReservationSettings from './components/ReservationSettings';
 import { createSupabaseBrowserClient } from '../lib/supabase/client';
 import HallSelector from './components/HallSelector';
 import { User, UserPlus } from 'lucide-react';
-
-const BANQUET_HALL_ID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 
 // Зоны доставки для определения по координатам
 import { useCart } from '../lib/hooks/useCart';
@@ -87,12 +85,6 @@ interface DeliveryForm {
 
 export default function Page() {
   const [guests, setGuests] = useState(2);
-  const [banquetRooms, setBanquetRooms] = useState<any[]>([]);
-  const [waitlistMode, setWaitlistMode] = useState(false);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [isBanquetSelected, setIsBanquetSelected] = useState(false);
-
-
 
   const [cartOpen, setCartOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
@@ -161,26 +153,6 @@ export default function Page() {
     comment: '',
     hallId: null
   });
-
-  // Effect to load banquet rooms
-  useEffect(() => {
-    // Check if ID matches banquet hall
-    if (String(bookingData.hallId) === BANQUET_HALL_ID) {
-      getBanquetRooms(BANQUET_HALL_ID).then(setBanquetRooms);
-    } else {
-      setBanquetRooms([]);
-      setSelectedRoomId(null);
-    }
-  }, [bookingData.hallId]);
-
-  // Reset waitlist mode when parameters change
-  useEffect(() => {
-    setWaitlistMode(false);
-    // Optional: Clear error message if it's about availability
-    if (bookingMessage?.type === 'error' && bookingMessage.text.includes('нет мест')) {
-      setBookingMessage(null);
-    }
-  }, [bookingData.date, bookingData.time, bookingData.guests, bookingData.hallId]);
 
   const [bookingPrivacyConsent, setBookingPrivacyConsent] = useState(false);
   const [deliveryPrivacyConsent, setDeliveryPrivacyConsent] = useState(false);
@@ -363,49 +335,6 @@ export default function Page() {
       }
     }
 
-    // BANQUET HALL CHECKS
-    if (String(hallId) === BANQUET_HALL_ID) {
-      const selectedDate = new Date(date);
-      const minDate = new Date();
-      minDate.setDate(minDate.getDate() + 2);
-      minDate.setHours(0, 0, 0, 0);
-
-      // Reset time part of selectedDate for comparison if needed, but date string is usually YYYY-MM-DD
-      const selectedDateObj = new Date(date);
-      selectedDateObj.setHours(0, 0, 0, 0);
-
-      if (selectedDateObj < minDate) {
-        setBookingMessage({ type: 'error', text: 'Банкетные залы можно бронировать минимум за 2 дня.' });
-        setBookingLoading(false);
-        return;
-      }
-      if (!selectedRoomId && banquetRooms.length > 0) {
-        setBookingMessage({ type: 'error', text: 'Пожалуйста, выберите конкретный зал/комнату.' });
-        setBookingLoading(false);
-        return;
-      }
-    }
-
-    // AVAILABILITY CHECK (Skip if already agreed to waitlist)
-    if (!waitlistMode && hallId) {
-      try {
-        const avail = await checkHallAvailability(String(hallId), date, time);
-        if (avail.success) {
-          if (!avail.is_available || (avail.remaining_capacity !== undefined && guestsValue > avail.remaining_capacity)) {
-            setWaitlistMode(true);
-            setBookingMessage({
-              type: 'error',
-              text: `К сожалению, на это время нет мест${avail.remaining_capacity !== undefined ? ` (осталось: ${avail.remaining_capacity})` : ''}. Хотите записаться в лист ожидания? Нажмите "Отправить" повторно, чтобы встать в очередь.`
-            });
-            setBookingLoading(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error('Availability check failed', err);
-      }
-    }
-
     // URL API сайта бронирований из переменной окружения
     // Настройте переменную NEXT_PUBLIC_RESERVATIONS_API_URL в .env.local
     // Пример: NEXT_PUBLIC_RESERVATIONS_API_URL=https://your-reservations-site.vercel.app
@@ -425,9 +354,7 @@ export default function Page() {
           guests_count: Number(guestsValue) || guests,
           comment: comment || undefined,
           comments: comment || undefined,
-          hallId: hallId || undefined,
-          status: waitlistMode ? 'waitlist' : undefined,
-          table_id: selectedRoomId || undefined
+          hallId: hallId || undefined
         };
 
 
@@ -438,7 +365,7 @@ export default function Page() {
           const res = result as any;
           const message = res.warning
             ? 'Бронирование успешно создано!'
-            : result.message || (waitlistMode ? 'Вы добавлены в лист ожидания!' : 'Бронирование успешно создано! Мы свяжемся с вами для подтверждения.');
+            : result.message || 'Бронирование успешно создано! Мы свяжемся с вами для подтверждения.';
 
           setBookingMessage({
             type: 'success',
@@ -915,32 +842,8 @@ export default function Page() {
                   <div className="md:col-span-2">
                     <HallSelector
                       selectedHallId={bookingData.hallId ? String(bookingData.hallId) : null}
-                      onSelect={(hall: any) => {
-                        setBookingData(prev => ({ ...prev, hallId: hall?.id || null }));
-                        setIsBanquetSelected(!!hall?.isBanquet || hall?.name?.toLowerCase().includes('банкет'));
-                      }}
+                      onSelect={(id) => setBookingData(prev => ({ ...prev, hallId: id }))}
                     />
-                    {/* Banquet Rooms Selection */}
-                    {isBanquetSelected && banquetRooms.length > 0 && (
-                      <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                        <label className="block text-sm font-medium text-amber-400 mb-2">Выберите конкретный зал:</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {banquetRooms.map(room => (
-                            <button
-                              key={room.id}
-                              type="button"
-                              onClick={() => setSelectedRoomId(room.id === selectedRoomId ? null : room.id)}
-                              className={`p-3 rounded-lg border text-sm transition-all duration-200 ${selectedRoomId === room.id
-                                ? 'bg-amber-400 text-black border-amber-400 font-bold shadow-[0_0_15px_rgba(251,191,36,0.5)]'
-                                : 'bg-white/5 border-white/10 text-neutral-300 hover:bg-white/10 hover:border-amber-400/50'
-                                }`}
-                            >
-                              {room.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Контакты: Имя и Фамилия */}

@@ -9,18 +9,16 @@ import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import HallEditor, { HallData } from './HallEditor';
 import HallViewer from './HallViewer';
 
-export type Hall = {
-    id: string; // The hardcoded ID or REAL ID
+type Hall = {
+    id: string; // The hardcoded ID
     name: string;
     capacity: number | string;
     description: string;
     image: string;
     gallery?: string[];
-    dbId?: number | string; // The ID in Supabase content_posts
-    isBanquet?: boolean; // New flag for logic
+    dbId?: number | string; // The ID in Supabase if exists
 };
 
-// ... initialHalls with isBanquet flags where appropriate
 // Данные залов из CRM (Hardcoded base data)
 const initialHalls: Hall[] = [
     {
@@ -46,38 +44,37 @@ const initialHalls: Hall[] = [
     },
     {
         id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        name: 'Летка', // Updated name
+        name: 'Летняя веранда',
         capacity: 50,
-        description: 'Летняя веранда с кальянами', // Updated desc
+        description: 'Веранда с кальянной зоной',
         image: '/halls/letka.jpg' // Placeholder path
     },
     {
         id: 'baf64959-fecf-4bd6-a9a8-a2889f36d146',
         name: 'Веранда (Кучер)',
         capacity: 20,
-        description: 'Летняя веранда ресторана Кучер', // Updated desc
+        description: 'Веранда ресторана Кучер',
         image: '/halls/veranda.jpg' // Placeholder path
     },
     {
         id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
         name: 'Банкетные залы',
-        capacity: 30, // Updated capacity
+        capacity: 25,
         description: 'Шоколад, Рубин, Изумруд',
-        image: '/halls/banquet.jpg',
-        isBanquet: true
+        image: '/halls/banquet.jpg' // Placeholder path
     },
     {
         id: 'ce1818f1-3e9f-4e2b-b373-ac273451b8ae',
         name: 'Беседки',
-        capacity: 30, // Updated capacity
-        description: 'Беседки с первой по пятую', // Updated desc
+        capacity: '6-8',
+        description: 'Беседки с первой по четвертую',
         image: '/halls/gazebo.jpg' // Placeholder path
     }
 ];
 
 type HallSelectorProps = {
     selectedHallId: string | null;
-    onSelect: (hall: Hall | null) => void;
+    onSelect: (id: string | null) => void;
 };
 
 export default function HallSelector({ selectedHallId, onSelect }: HallSelectorProps) {
@@ -87,40 +84,43 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
     const [editingHall, setEditingHall] = useState<Hall | null>(null);
     const [viewingHall, setViewingHall] = useState<Hall | null>(null);
 
-    // Fetch halls from Supabase content_posts (Only Images/Description updates)
+    // Fetch halls from Supabase content_posts
     const loadHallsFromDB = async () => {
         try {
             const supabase = createSupabaseBrowserClient() as any;
             if (!supabase) return;
 
-            // 1. Fetch content (images, descriptions)
-            const { data: contentData } = await supabase
+            const { data, error } = await supabase
                 .from('content_posts')
                 .select('*')
                 .eq('category', 'halls');
 
-            setHalls(prevHalls => {
-                return prevHalls.map(hall => {
-                    let updatedHall = { ...hall };
+            if (error) {
+                console.error('Error fetching halls:', error);
+                return;
+            }
 
-                    // Merge content data
-                    if (contentData && contentData.length > 0) {
-                        const dbEntry = contentData.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
+            if (data && data.length > 0) {
+                // Merge DB data with initialHalls based on Name
+                setHalls(prevHalls => {
+                    return prevHalls.map(hall => {
+                        // Find matching DB entry by title (case insensitive)
+                        const dbEntry = data.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
+
                         if (dbEntry) {
-                            updatedHall = {
-                                ...updatedHall,
-                                description: dbEntry.content || hall.description,
+                            return {
+                                ...hall,
+                                description: dbEntry.content || hall.description, // Use content as description
                                 image: dbEntry.image_url || hall.image,
                                 capacity: dbEntry.metadata?.capacity || hall.capacity,
                                 gallery: dbEntry.metadata?.gallery || [],
                                 dbId: dbEntry.id
                             };
                         }
-                    }
-                    return updatedHall;
+                        return hall;
+                    });
                 });
-            });
-
+            }
         } catch (err) {
             console.error('Error loading halls:', err);
         }
@@ -252,7 +252,7 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                 {/* Select Button */}
                 <button
                     type="button"
-                    onClick={() => isSelected ? onSelect(null) : onSelect(currentHall)}
+                    onClick={() => isSelected ? onSelect(null) : onSelect(currentHall.id)}
                     className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${isSelected
                         ? 'bg-amber-400 text-black ring-2 ring-amber-400 ring-offset-2 ring-offset-black'
                         : 'bg-white/10 text-white hover:bg-white/20'
