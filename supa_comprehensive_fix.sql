@@ -1,9 +1,9 @@
--- COMPREHENSIVE FIX SCRIPT
--- 1. Fixes the Debug Page (Grants permissions)
+-- COMPREHENSIVE FIX SCRIPT (v2)
+-- 1. Fixes the Debug Page (Grants permissions & Fixes "halls not found" error)
 -- 2. Fixes the Banquet Menu issue (Ensures Trigger is active)
 
--- PART 1: DEBUG RPC (With Permissions)
-CREATE OR REPLACE FUNCTION debug_get_reservations()
+-- PART 1: DEBUG RPC (With Permissions & Qualified Names)
+CREATE OR REPLACE FUNCTION public.debug_get_reservations()
 RETURNS TABLE (
   id uuid,
   created_at timestamptz,
@@ -16,6 +16,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, extensions -- CRITICAL: Set search path
 AS $$
 BEGIN
   RETURN QUERY
@@ -28,16 +29,16 @@ BEGIN
     (g.first_name || ' ' || g.last_name)::text as guest_name,
     g.phone as guest_phone,
     h.name as hall_name
-  FROM reservations r
-  LEFT JOIN guests g ON r.guest_id = g.id
-  LEFT JOIN halls h ON r.hall_id = h.id
+  FROM public.reservations r
+  LEFT JOIN public.guests g ON r.guest_id = g.id
+  LEFT JOIN public.halls h ON r.hall_id = h.id
   ORDER BY r.created_at DESC
   LIMIT 10;
 END;
 $$;
 
--- CRITICAL: Grant permission to public users (anon)
-GRANT EXECUTE ON FUNCTION debug_get_reservations TO anon, authenticated, service_role;
+-- Grant permission to all
+GRANT EXECUTE ON FUNCTION public.debug_get_reservations TO anon, authenticated, service_role;
 
 
 -- PART 2: FORCE MAIN MENU TRIGGER

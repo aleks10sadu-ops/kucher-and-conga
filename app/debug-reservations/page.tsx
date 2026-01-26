@@ -18,7 +18,7 @@ export default function DebugReservationsPublic() {
                 return;
             }
 
-            const { data, error } = await supabase.rpc('debug_get_reservations');
+            const { data, error } = await supabase.rpc('debug_get_reservations_simple');
 
             if (error) {
                 console.error(error);
@@ -64,20 +64,15 @@ export default function DebugReservationsPublic() {
                     <thead className="bg-white/10 uppercase text-xs">
                         <tr>
                             <th className="px-4 py-3">Time</th>
-                            <th className="px-4 py-3">Guest</th>
                             <th className="px-4 py-3 text-amber-400 font-bold border-l border-white/10">MENU TYPE</th>
                             <th className="px-4 py-3 border-r border-white/10">Source</th>
-                            <th className="px-4 py-3">Hall</th>
+                            <th className="px-4 py-3">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {reservations.map((r) => (
                             <tr key={r.id} className="border-b border-white/10 hover:bg-white/5">
                                 <td className="px-4 py-3">{new Date(r.created_at).toLocaleString('ru-RU')}</td>
-                                <td className="px-4 py-3">
-                                    {r.guest_name} <br />
-                                    <span className="text-xs text-gray-500">{r.guest_phone}</span>
-                                </td>
                                 <td className="px-4 py-3 font-mono text-lg font-bold border-l border-r border-white/10">
                                     {r.menu_type === 'main_menu' ? (
                                         <span className="text-green-400">{r.menu_type}</span>
@@ -92,7 +87,7 @@ export default function DebugReservationsPublic() {
                                         <span>{r.created_via}</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-3">{r.hall_name}</td>
+                                <td className="px-4 py-3">{r.status}</td>
                             </tr>
                         ))}
                     </tbody>
