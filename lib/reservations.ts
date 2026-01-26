@@ -71,7 +71,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_comments: data.comments || undefined,
             p_status: data.status || undefined,
             p_table_id: data.table_id || undefined,
-            p_menu_type: 'main_menu' // Force main menu for site reservations
+            p_menu_type: 'main_menu' // Custom request to force main menu
         };
 
         const { data: responseData, error } = await supabase.rpc('create_public_reservation', rpcParams);
