@@ -1,6 +1,5 @@
--- Run this in your Supabase SQL Editor to update the function signature
--- This adds the p_menu_type parameter with a default value of 'banquet' for backward compatibility,
--- but allows the frontend to override it to 'main_menu'.
+-- Rewriting the function to force 'main_menu' without changing the signature used by the frontend.
+-- This prevents the 404 error (Signature Mismatch) while ensuring bookings are not 'banquet'.
 
 CREATE OR REPLACE FUNCTION create_public_reservation(
     p_hall_id uuid,
@@ -11,8 +10,8 @@ CREATE OR REPLACE FUNCTION create_public_reservation(
     p_name text,
     p_comments text DEFAULT NULL::text,
     p_status text DEFAULT 'new'::text,
-    p_table_id uuid DEFAULT NULL::uuid,
-    p_menu_type text DEFAULT 'banquet'::text   -- <--- NEW PARAMETER
+    p_table_id uuid DEFAULT NULL::uuid
+    -- Removed p_menu_type from signature to match frontend call
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -25,7 +24,7 @@ DECLARE
   v_first_name text;
   v_last_name text;
 BEGIN
-  -- 1. Parse name (Simple split)
+  -- 1. Parse name
   v_names := string_to_array(trim(p_name), ' ');
   v_first_name := v_names[1];
   v_last_name := array_to_string(v_names[2:], ' ');
@@ -40,13 +39,14 @@ BEGIN
   END IF;
 
   -- 3. Create Reservation
+  -- HARDCODED 'main_menu' here to fix the issue
   INSERT INTO reservations (
     date, time, hall_id, table_id, guest_id, guests_count, 
     status, comments, created_via, menu_type
   )
   VALUES (
     p_date, p_time, p_hall_id, p_table_id, v_guest_id, p_guests_count, 
-    p_status, p_comments, 'website', p_menu_type
+    p_status, p_comments, 'website', 'main_menu'
   )
   RETURNING id INTO v_reservation_id;
 
