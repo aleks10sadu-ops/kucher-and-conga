@@ -154,10 +154,18 @@ export async function checkHallAvailability(
             return { success: false, error: error.message };
         }
 
+        // RPC returns an array (of one record) usually
+        const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+
+        // If returned empty array or null
+        if (!result) {
+            return { success: false, error: 'Empty response from availability check' };
+        }
+
         return {
             success: true,
-            remaining_capacity: data.remaining_capacity,
-            is_available: data.is_available
+            remaining_capacity: result.remaining_capacity,
+            is_available: result.is_available
         };
     } catch (err: any) {
         return { success: false, error: err.message };
