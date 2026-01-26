@@ -90,6 +90,7 @@ export default function Page() {
   const [banquetRooms, setBanquetRooms] = useState<any[]>([]);
   const [waitlistMode, setWaitlistMode] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [isBanquetSelected, setIsBanquetSelected] = useState(false);
 
 
 
@@ -914,10 +915,13 @@ export default function Page() {
                   <div className="md:col-span-2">
                     <HallSelector
                       selectedHallId={bookingData.hallId ? String(bookingData.hallId) : null}
-                      onSelect={(id) => setBookingData(prev => ({ ...prev, hallId: id }))}
+                      onSelect={(hall: any) => {
+                        setBookingData(prev => ({ ...prev, hallId: hall?.id || null }));
+                        setIsBanquetSelected(!!hall?.isBanquet || hall?.name?.toLowerCase().includes('банкет'));
+                      }}
                     />
                     {/* Banquet Rooms Selection */}
-                    {String(bookingData.hallId) === BANQUET_HALL_ID && banquetRooms.length > 0 && (
+                    {isBanquetSelected && banquetRooms.length > 0 && (
                       <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
                         <label className="block text-sm font-medium text-amber-400 mb-2">Выберите конкретный зал:</label>
                         <div className="grid grid-cols-2 gap-2">

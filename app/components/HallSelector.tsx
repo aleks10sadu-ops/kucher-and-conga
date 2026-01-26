@@ -9,16 +9,18 @@ import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import HallEditor, { HallData } from './HallEditor';
 import HallViewer from './HallViewer';
 
-type Hall = {
-    id: string; // The hardcoded ID
+export type Hall = {
+    id: string; // The hardcoded ID or REAL ID
     name: string;
     capacity: number | string;
     description: string;
     image: string;
     gallery?: string[];
-    dbId?: number | string; // The ID in Supabase if exists
+    dbId?: number | string; // The ID in Supabase content_posts
+    isBanquet?: boolean; // New flag for logic
 };
 
+// ... initialHalls with isBanquet flags where appropriate
 // Данные залов из CRM (Hardcoded base data)
 const initialHalls: Hall[] = [
     {
@@ -44,37 +46,38 @@ const initialHalls: Hall[] = [
     },
     {
         id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        name: 'Летняя веранда',
+        name: 'Летка', // Updated name
         capacity: 50,
-        description: 'Веранда с кальянной зоной',
+        description: 'Летняя веранда с кальянами', // Updated desc
         image: '/halls/letka.jpg' // Placeholder path
     },
     {
         id: 'baf64959-fecf-4bd6-a9a8-a2889f36d146',
         name: 'Веранда (Кучер)',
         capacity: 20,
-        description: 'Веранда ресторана Кучер',
+        description: 'Летняя веранда ресторана Кучер', // Updated desc
         image: '/halls/veranda.jpg' // Placeholder path
     },
     {
         id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
         name: 'Банкетные залы',
-        capacity: 25,
+        capacity: 30, // Updated capacity
         description: 'Шоколад, Рубин, Изумруд',
-        image: '/halls/banquet.jpg' // Placeholder path
+        image: '/halls/banquet.jpg',
+        isBanquet: true
     },
     {
         id: 'ce1818f1-3e9f-4e2b-b373-ac273451b8ae',
         name: 'Беседки',
-        capacity: '6-8',
-        description: 'Беседки с первой по четвертую',
+        capacity: 30, // Updated capacity
+        description: 'Беседки с первой по пятую', // Updated desc
         image: '/halls/gazebo.jpg' // Placeholder path
     }
 ];
 
 type HallSelectorProps = {
     selectedHallId: string | null;
-    onSelect: (id: string | null) => void;
+    onSelect: (hall: Hall | null) => void;
 };
 
 export default function HallSelector({ selectedHallId, onSelect }: HallSelectorProps) {
@@ -84,7 +87,7 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
     const [editingHall, setEditingHall] = useState<Hall | null>(null);
     const [viewingHall, setViewingHall] = useState<Hall | null>(null);
 
-    // Fetch halls from Supabase content_posts AND halls table
+    // Fetch halls from Supabase content_posts (Only Images/Description updates)
     const loadHallsFromDB = async () => {
         try {
             const supabase = createSupabaseBrowserClient() as any;
@@ -95,11 +98,6 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                 .from('content_posts')
                 .select('*')
                 .eq('category', 'halls');
-
-            // 2. Fetch REAL IDs from halls table for availability checks
-            const { data: realHalls } = await supabase
-                .from('halls')
-                .select('id, name, capacity');
 
             setHalls(prevHalls => {
                 return prevHalls.map(hall => {
@@ -119,25 +117,6 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                             };
                         }
                     }
-
-                    // Merge REAL ID from halls table
-                    if (realHalls && realHalls.length > 0) {
-                        // Loose matching by name
-                        const realEntry = realHalls.find((h: any) =>
-                            h.name.toLowerCase().trim() === hall.name.toLowerCase().trim() ||
-                            (hall.name.includes(h.name)) ||
-                            (h.name.includes('Кучер') && hall.name.includes('Кучер') && h.name.includes(hall.name.split(' ')[0]))
-                        );
-
-                        if (realEntry) {
-                            updatedHall.id = realEntry.id; // CRITICAL: Use real UUID
-                            // Allow capacity overwrite from real DB if numeric
-                            if (typeof realEntry.capacity === 'number' && realEntry.capacity > 0) {
-                                updatedHall.capacity = realEntry.capacity;
-                            }
-                        }
-                    }
-
                     return updatedHall;
                 });
             });
@@ -273,7 +252,7 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                 {/* Select Button */}
                 <button
                     type="button"
-                    onClick={() => isSelected ? onSelect(null) : onSelect(currentHall.id)}
+                    onClick={() => isSelected ? onSelect(null) : onSelect(currentHall)}
                     className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${isSelected
                         ? 'bg-amber-400 text-black ring-2 ring-amber-400 ring-offset-2 ring-offset-black'
                         : 'bg-white/10 text-white hover:bg-white/20'

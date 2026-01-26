@@ -137,6 +137,8 @@ export async function checkHallAvailability(
         timeStr += ':00';
     }
 
+    console.log(`Checking availability for Hall: ${hallId}, Date: ${date}, Time: ${timeStr}`);
+
     try {
         const { data, error } = await supabase.rpc('get_hall_availability', {
             p_hall_id: hallId,
@@ -144,6 +146,8 @@ export async function checkHallAvailability(
             p_time: timeStr,
             p_duration: duration
         });
+
+        console.log('Availability Check Result:', { data, error });
 
         if (error) {
             console.error('Error checking availability:', error);
