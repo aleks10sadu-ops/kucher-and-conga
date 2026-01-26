@@ -12,19 +12,7 @@ export default function DebugReservationsPublic() {
             const supabase = createSupabaseBrowserClient() as any;
             if (!supabase) return;
 
-            const { data, error } = await supabase
-                .from('reservations')
-                .select(`
-                    id, 
-                    created_at, 
-                    menu_type, 
-                    created_via, 
-                    status,
-                    guests(first_name, last_name, phone),
-                    halls(name)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(10);
+            const { data, error } = await supabase.rpc('debug_get_reservations');
 
             if (error) console.error(error);
             else setReservations(data || []);
@@ -61,8 +49,8 @@ export default function DebugReservationsPublic() {
                             <tr key={r.id} className="border-b border-white/10 hover:bg-white/5">
                                 <td className="px-4 py-3">{new Date(r.created_at).toLocaleString('ru-RU')}</td>
                                 <td className="px-4 py-3">
-                                    {r.guests?.first_name} {r.guests?.last_name} <br />
-                                    <span className="text-xs text-gray-500">{r.guests?.phone}</span>
+                                    {r.guest_name} <br />
+                                    <span className="text-xs text-gray-500">{r.guest_phone}</span>
                                 </td>
                                 <td className="px-4 py-3 font-mono text-lg font-bold border-l border-r border-white/10">
                                     {r.menu_type === 'main_menu' ? (
@@ -78,7 +66,7 @@ export default function DebugReservationsPublic() {
                                         <span>{r.created_via}</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-3">{r.halls?.name}</td>
+                                <td className="px-4 py-3">{r.hall_name}</td>
                             </tr>
                         ))}
                     </tbody>
