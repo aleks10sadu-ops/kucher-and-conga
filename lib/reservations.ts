@@ -110,7 +110,8 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         console.error('[DEBUG] Unexpected error in createReservation:', error);
         return {
             success: false,
-            error: 'Произошла ошибка при создании бронирования. Попробуйте позже или позвоните нам.',
+            // Show the actual error message to the user for debugging
+            error: `Ошибка: ${error.message || JSON.stringify(error) || 'Неизвестная ошибка'}. Попробуйте позже.`,
             details: error.message
         };
     }
