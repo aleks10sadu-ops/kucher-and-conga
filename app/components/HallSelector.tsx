@@ -4,71 +4,73 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Check, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import HallEditor, { HallData } from './HallEditor';
 import HallViewer from './HallViewer';
 
 type Hall = {
-    id: string; // The hardcoded ID
+    id: string; // The ID to use for API (from CRM or fallback)
     name: string;
     capacity: number | string;
     description: string;
     image: string;
     gallery?: string[];
-    dbId?: number | string; // The ID in Supabase if exists
+    dbId?: number | string; // The ID in local Supabase for content
 };
 
 // Данные залов из CRM (Hardcoded base data)
+// Used as fallback if CRM is unreachable or for initial render
 const initialHalls: Hall[] = [
     {
-        id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        id: 'fallback-1', // These IDs should be replaced by real ones from CRM
         name: 'Conga',
         capacity: 140,
         description: 'Главный зал ресторана Conga',
-        image: '/halls/conga.jpg' // Placeholder path
+        image: '/halls/conga.jpg'
     },
     {
-        id: 'beb2bc56-1cba-465c-bb9e-f2eba1b4d516',
+        id: 'fallback-2',
         name: 'Морской (Кучер)',
         capacity: 52,
         description: 'Морской зал ресторана Кучер',
-        image: '/halls/morskoy.jpg' // Placeholder path
+        image: '/halls/morskoy.jpg'
     },
     {
-        id: 'ab07a708-20c0-4f76-a81b-00dae310e665',
+        id: 'fallback-3',
         name: 'Барный (Кучер)',
         capacity: 36,
         description: 'Уютный барный зал',
-        image: '/halls/bar.jpg' // Placeholder path
+        image: '/halls/bar.jpg'
     },
     {
-        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        id: 'fallback-4',
         name: 'Летняя веранда',
         capacity: 50,
         description: 'Веранда с кальянной зоной',
-        image: '/halls/letka.jpg' // Placeholder path
+        image: '/halls/letka.jpg'
     },
     {
-        id: 'baf64959-fecf-4bd6-a9a8-a2889f36d146',
+        id: 'fallback-5',
         name: 'Веранда (Кучер)',
         capacity: 20,
         description: 'Веранда ресторана Кучер',
-        image: '/halls/veranda.jpg' // Placeholder path
+        image: '/halls/veranda.jpg'
     },
     {
-        id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+        id: 'fallback-6',
         name: 'Банкетные залы',
         capacity: 25,
         description: 'Шоколад, Рубин, Изумруд',
-        image: '/halls/banquet.jpg' // Placeholder path
+        image: '/halls/banquet.jpg'
     },
     {
-        id: 'ce1818f1-3e9f-4e2b-b373-ac273451b8ae',
+        id: 'fallback-7',
         name: 'Беседки',
         capacity: '6-8',
         description: 'Беседки с первой по четвертую',
-        image: '/halls/gazebo.jpg' // Placeholder path
+        image: '/halls/gazebo.jpg'
     }
 ];
 
@@ -84,33 +86,81 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
     const [editingHall, setEditingHall] = useState<Hall | null>(null);
     const [viewingHall, setViewingHall] = useState<Hall | null>(null);
 
-    // Fetch halls from Supabase content_posts
+    // Fetch halls from:
+    // 1. CRM Supabase (for real IDs)
+    // 2. Local Supabase (for rich content like images)
     const loadHallsFromDB = async () => {
         try {
-            const supabase = createSupabaseBrowserClient() as any;
-            if (!supabase) return;
+            // 1. Fetch real hall IDs from CRM
+            const crmUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
+            const crmKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
+            let crmHalls: any[] = [];
 
-            const { data, error } = await supabase
-                .from('content_posts')
-                .select('*')
-                .eq('category', 'halls');
+            if (crmUrl && crmKey) {
+                const crmSupabase = createClient(crmUrl, crmKey);
+                const { data: remoteHalls, error: remoteError } = await crmSupabase
+                    .from('halls')
+                    .select('id, name, capacity');
 
-            if (error) {
-                console.error('Error fetching halls:', error);
-                return;
+                if (remoteError) {
+                    console.error('Error fetching halls from CRM:', remoteError);
+                } else {
+                    crmHalls = remoteHalls || [];
+                }
             }
 
-            if (data && data.length > 0) {
-                // Merge DB data with initialHalls based on Name
+            // 2. Fetch rich content from local DB
+            const supabase = createSupabaseBrowserClient() as any;
+            let localContent: any[] = [];
+
+            if (supabase) {
+                const { data, error } = await supabase
+                    .from('content_posts')
+                    .select('*')
+                    .eq('category', 'halls');
+
+                if (error) {
+                    console.error('Error fetching local hall content:', error);
+                } else {
+                    localContent = data || [];
+                }
+            }
+
+            // 3. Merge data
+            // If we have CRM data, use it as the source of truth for halls list
+            if (crmHalls.length > 0) {
+                const mergedHalls = crmHalls.map(crmHall => {
+                    // Try to find matching local content by name
+                    const localEntry = localContent.find(
+                        (p: any) => p.title.toLowerCase() === crmHall.name.toLowerCase()
+                    );
+
+                    // Or finding matching initial hall for fallback image
+                    const initialEntry = initialHalls.find(
+                        h => h.name.toLowerCase() === crmHall.name.toLowerCase()
+                    );
+
+                    return {
+                        id: crmHall.id, // REAL ID from CRM
+                        name: crmHall.name,
+                        capacity: crmHall.capacity || localEntry?.metadata?.capacity || initialEntry?.capacity || 0,
+                        description: localEntry?.content || initialEntry?.description || '',
+                        image: localEntry?.image_url || initialEntry?.image || '/halls/placeholder.jpg',
+                        gallery: localEntry?.metadata?.gallery || [],
+                        dbId: localEntry?.id
+                    };
+                });
+                setHalls(mergedHalls);
+            } else if (localContent.length > 0) {
+                // If CRM failed but we have local content, try to use it with initialHalls IDs (fallback)
+                // This scenario is less likely to fix the bug but keeps UI working
                 setHalls(prevHalls => {
                     return prevHalls.map(hall => {
-                        // Find matching DB entry by title (case insensitive)
-                        const dbEntry = data.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
-
+                        const dbEntry = localContent.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
                         if (dbEntry) {
                             return {
                                 ...hall,
-                                description: dbEntry.content || hall.description, // Use content as description
+                                description: dbEntry.content || hall.description,
                                 image: dbEntry.image_url || hall.image,
                                 capacity: dbEntry.metadata?.capacity || hall.capacity,
                                 gallery: dbEntry.metadata?.gallery || [],
