@@ -68,7 +68,9 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_time: timeStr,
             p_guests_count: data.guests_count,
             p_hall_id: hallIdParam,
-            p_comments: data.comments || undefined
+            p_comments: data.comments || undefined,
+            // Explicitly pass menu_type to resolve postgres function ambiguity (discriminator)
+            p_menu_type: null
         };
 
         console.log('[DEBUG] Calling RPC create_public_reservation with params:', JSON.stringify(rpcParams, null, 2));
