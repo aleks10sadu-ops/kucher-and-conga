@@ -97,7 +97,13 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
             let crmHalls: any[] = [];
 
             if (crmUrl && crmKey) {
-                const crmSupabase = createClient(crmUrl, crmKey);
+                const crmSupabase = createClient(crmUrl, crmKey, {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                });
                 const { data: remoteHalls, error: remoteError } = await crmSupabase
                     .from('halls')
                     .select('id, name, capacity');

@@ -32,7 +32,13 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         };
     }
 
-    const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+    const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+        }
+    });
 
     try {
         const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : '') || data.name || '';
