@@ -135,20 +135,33 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
             // 3. Merge data
             // If we have CRM data, use it as the source of truth for halls list
             if (crmHalls.length > 0) {
+                // Map CRM names to Local names to fix discrepancies
+                const nameMapping: Record<string, string> = {
+                    'Летка': 'Летняя веранда',
+                    // Add other mappings if needed
+                };
+
                 const mergedHalls = crmHalls.map(crmHall => {
-                    // Try to find matching local content by name
+                    // Normalize name using mapping or keep original
+                    const normalizedName = nameMapping[crmHall.name] || crmHall.name;
+
+                    // Try to find matching local content by normalized name
                     const localEntry = localContent.find(
+                        (p: any) => p.title.toLowerCase() === normalizedName.toLowerCase()
+                    ) || localContent.find(
                         (p: any) => p.title.toLowerCase() === crmHall.name.toLowerCase()
                     );
 
                     // Or finding matching initial hall for fallback image
                     const initialEntry = initialHalls.find(
+                        h => h.name.toLowerCase() === normalizedName.toLowerCase()
+                    ) || initialHalls.find(
                         h => h.name.toLowerCase() === crmHall.name.toLowerCase()
                     );
 
                     return {
                         id: crmHall.id, // REAL ID from CRM
-                        name: crmHall.name,
+                        name: normalizedName, // Use normalized name for UI consistency
                         capacity: crmHall.capacity || localEntry?.metadata?.capacity || initialEntry?.capacity || 0,
                         description: localEntry?.content || initialEntry?.description || '',
                         image: localEntry?.image_url || initialEntry?.image || '/halls/placeholder.jpg',
@@ -223,6 +236,11 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                     <label className="block text-sm font-medium text-neutral-400 uppercase tracking-wider">
                         Выберите зал
                     </label>
+                    <div className="text-[10px] bg-black/50 p-1 rounded border border-white/10 font-mono text-neutral-500">
+                        DEBUG: Source: {halls[0]?.id.length > 20 ? <span className="text-green-400">✅ CRM (Real IDs)</span> : <span className="text-red-400">❌ Fallback (Fake IDs)</span>}
+                        <br />
+                        Selected ID: {selectedHallId || 'None'}
+                    </div>
                     <span className="text-xs text-neutral-500">
                         {currentIndex + 1} / {halls.length}
                     </span>
