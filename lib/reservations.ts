@@ -20,12 +20,12 @@ type CreateReservationData = BookingData & {
  * Создает бронирование напрямую в базе данных CRM Supabase
  */
 export async function createReservation(data: CreateReservationData): Promise<CreateReservationResponse> {
-    console.log('Using RPC for public reservation');
+    console.log('[DEBUG] Starting createReservation with data:', JSON.stringify(data, null, 2));
     const supabaseUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-        console.error('CRM Supabase credentials are missing. Check NEXT_PUBLIC_CRM_SUPABASE_URL and NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY');
+        console.error('[DEBUG] CRM Supabase credentials are missing.', { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
         return {
             success: false,
             error: 'Ошибка конфигурации сервера (CRM). Пожалуйста, свяжитесь с администратором.',
@@ -35,8 +35,6 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
     const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
     try {
-        console.log('Creating reservation via RPC:', data);
-
         const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : '') || data.name || '';
         const lastName = data.lastName || (data.name && data.name.includes(' ') ? data.name.split(' ').slice(1).join(' ') : '') || '';
 
@@ -50,8 +48,10 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         // Validate hallId - must be UUID string, not number
         let hallIdParam = undefined;
         if (typeof data.hallId === 'string' && data.hallId.length > 10) {
-            // Simple length check to filter out empty strings or short IDs, RPC validation will handle the rest
+            // Simple length check to filter out empty strings or short IDs
             hallIdParam = data.hallId;
+        } else {
+            console.log('[DEBUG] Hall ID is invalid or not provided, skipping:', data.hallId);
         }
 
         const rpcParams = {
@@ -65,10 +65,15 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_comments: data.comments || undefined
         };
 
-        const { data: responseData, error } = await supabase.rpc('create_public_reservation', rpcParams);
+        console.log('[DEBUG] Calling RPC create_public_reservation with params:', JSON.stringify(rpcParams, null, 2));
+
+        const result = await supabase.rpc('create_public_reservation', rpcParams);
+        const { data: responseData, error } = result;
+
+        console.log('[DEBUG] RPC Raw Result:', JSON.stringify(result, null, 2));
 
         if (error) {
-            console.error('Error creating reservation via RPC:', error);
+            console.error('[DEBUG] Error creating reservation via RPC:', error);
             // Проверка на черный список (ошибку может вернуть и RPC если внутри raise exception)
             if (error.message && error.message.includes('blacklist')) {
                 return {
@@ -80,14 +85,14 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         }
 
         if (responseData && responseData.success) {
-            console.log('Reservation created successfully via RPC:', responseData);
+            console.log('[DEBUG] Reservation created successfully via RPC:', responseData);
             return {
                 success: true,
                 reservation: { id: responseData.reservation_id }, // minimal mock object
                 message: 'Ваша заявка принята!',
             };
         } else {
-            console.error('RPC returned failure:', responseData);
+            console.error('[DEBUG] RPC returned failure:', responseData);
             return {
                 success: false,
                 error: responseData?.error || 'Не удалось отправить бронь',
@@ -96,7 +101,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         }
 
     } catch (error: any) {
-        console.error('Unexpected error in createReservation:', error);
+        console.error('[DEBUG] Unexpected error in createReservation:', error);
         return {
             success: false,
             error: 'Произошла ошибка при создании бронирования. Попробуйте позже или позвоните нам.',
