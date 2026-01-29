@@ -318,9 +318,17 @@ export default function Page() {
     setBookingLoading(true);
     setBookingMessage(null);
 
-    setBookingMessage(null);
-
     const { phone, date, time, guests: guestsValue, comment, firstName, lastName, hallId } = bookingData;
+
+    // Check if hall is selected
+    if (!hallId) {
+      setBookingMessage({
+        type: 'error',
+        text: 'Пожалуйста, выберите зал для бронирования.',
+      });
+      setBookingLoading(false);
+      return;
+    }
 
     // Проверка времени бронирования
     if (date && time) {

@@ -236,11 +236,6 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                     <label className="block text-sm font-medium text-neutral-400 uppercase tracking-wider">
                         Выберите зал
                     </label>
-                    <div className="text-[10px] bg-black/50 p-1 rounded border border-white/10 font-mono text-neutral-500">
-                        DEBUG: Source: {halls[0]?.id.length > 20 ? <span className="text-green-400">✅ CRM (Real IDs)</span> : <span className="text-red-400">❌ Fallback (Fake IDs)</span>}
-                        <br />
-                        Selected ID: {selectedHallId || 'None'}
-                    </div>
                     <span className="text-xs text-neutral-500">
                         {currentIndex + 1} / {halls.length}
                     </span>
