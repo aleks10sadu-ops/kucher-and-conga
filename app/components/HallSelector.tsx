@@ -9,6 +9,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import HallEditor, { HallData } from './HallEditor';
 import HallViewer from './HallViewer';
+import { createCrmBrowserClient } from '@/lib/supabase/crm-client';
 
 type Hall = {
     id: string; // The ID to use for API (from CRM or fallback)
@@ -97,21 +98,17 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
             let crmHalls: any[] = [];
 
             if (crmUrl && crmKey) {
-                const crmSupabase = createClient(crmUrl, crmKey, {
-                    auth: {
-                        persistSession: false,
-                        autoRefreshToken: false,
-                        detectSessionInUrl: false
-                    }
-                });
-                const { data: remoteHalls, error: remoteError } = await crmSupabase
-                    .from('halls')
-                    .select('id, name, capacity');
+                const crmSupabase = createCrmBrowserClient();
+                if (crmSupabase) {
+                    const { data: remoteHalls, error: remoteError } = await crmSupabase
+                        .from('halls')
+                        .select('id, name, capacity');
 
-                if (remoteError) {
-                    console.error('Error fetching halls from CRM:', remoteError);
-                } else {
-                    crmHalls = remoteHalls || [];
+                    if (remoteError) {
+                        console.error('Error fetching halls from CRM:', remoteError);
+                    } else {
+                        crmHalls = remoteHalls || [];
+                    }
                 }
             }
 
@@ -257,6 +254,7 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                             src={currentHall.image}
                             alt={currentHall.name}
                             fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                     )}

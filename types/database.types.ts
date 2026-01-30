@@ -208,9 +208,33 @@ export interface Database {
             }
         }
         Functions: {
-            [_: string]: {
+            get_hall_month_availability: {
                 Args: {
-                    [key: string]: Json
+                    p_hall_id: string
+                    p_date_start: string
+                    p_date_end: string
+                    p_guests_count: number
+                }
+                Returns: {
+                    date: string
+                    total_capacity: number
+                    reserved_count: number
+                    remaining_capacity: number
+                    is_full: boolean
+                }[]
+            }
+            create_public_reservation: {
+                Args: {
+                    p_phone: string
+                    p_first_name: string
+                    p_last_name?: string
+                    p_date: string
+                    p_time: string
+                    p_guests_count: number
+                    p_hall_id?: number
+                    p_comments?: string
+                    p_menu_type?: string | null
+                    p_status?: string
                 }
                 Returns: Json
             }

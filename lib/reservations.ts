@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { BookingData } from '@/types/index';
+import { createCrmBrowserClient } from '@/lib/supabase/crm-client';
 
 type CreateReservationResponse = {
     success: boolean;
@@ -13,6 +14,7 @@ type CreateReservationData = BookingData & {
     name?: string; // legacy support
     guests_count: number;
     comments?: string;
+    status?: 'new' | 'waitlist';
 };
 
 
@@ -20,24 +22,15 @@ type CreateReservationData = BookingData & {
  * Создает бронирование напрямую в базе данных CRM Supabase
  */
 export async function createReservation(data: CreateReservationData): Promise<CreateReservationResponse> {
-    const supabaseUrl = process.env.NEXT_PUBLIC_CRM_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_CRM_SUPABASE_ANON_KEY;
+    const supabase = createCrmBrowserClient();
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabase) {
         console.error('CRM Supabase credentials are missing.');
         return {
             success: false,
             error: 'Ошибка конфигурации сервера (CRM). Пожалуйста, свяжитесь с администратором.',
         };
     }
-
-    const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false
-        }
-    });
 
     try {
         const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : '') || data.name || '';
@@ -46,6 +39,12 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         // Prepare RPC parameters
         // Ensure time has seconds: HH:mm -> HH:mm:00
         let timeStr = data.time;
+
+        // If waitlist and no time selected, use a default placeholder time
+        if (!timeStr && data.status === 'waitlist') {
+            timeStr = '00:00';
+        }
+
         if (timeStr && timeStr.length === 5) {
             timeStr += ':00';
         }
@@ -66,6 +65,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_guests_count: data.guests_count,
             p_hall_id: hallIdParam,
             p_comments: data.comments || undefined,
+            p_status: data.status || 'new',
             // Explicitly pass menu_type to resolve postgres function ambiguity (discriminator)
             p_menu_type: null
         };
@@ -74,7 +74,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         const { data: responseData, error } = result;
 
         if (error) {
-            console.error('Error creating reservation via RPC:', error);
+            console.error('Error creating reservation via RPC:', JSON.stringify(error, null, 2), error);
             // Проверка на черный список (ошибку может вернуть и RPC если внутри raise exception)
             if (error.message && error.message.includes('blacklist')) {
                 return {
@@ -101,7 +101,7 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         }
 
     } catch (error: any) {
-        console.error('Unexpected error in createReservation:', error);
+        console.error('Unexpected error in createReservation:', JSON.stringify(error, null, 2), error);
         return {
             success: false,
             error: 'Произошла ошибка при создании бронирования. Попробуйте позже или позвоните нам.',
