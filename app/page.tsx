@@ -861,7 +861,7 @@ export default function Page() {
                 <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-wider text-center mb-3 sm:mb-4 lg:mb-5 break-words">Забронировать стол</h2>
                 <p className="mt-1.5 sm:mt-2 text-sm sm:text-base lg:text-lg text-neutral-300 text-center mb-2 sm:mb-3 lg:mb-4">Оставьте контакты — администратор подтвердит бронь.</p>
                 <p className="text-xs sm:text-sm text-amber-400 text-center mb-4 sm:mb-6 lg:mb-8">
-                  🕐 Бронирование столов доступно с {restaurantSettings.startTime} до {restaurantSettings.endTime}
+                  📅 Бронирование столов доступно с {restaurantSettings.startTime} до {restaurantSettings.endTime}
                 </p>
                 <form onSubmit={submitBooking} className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
