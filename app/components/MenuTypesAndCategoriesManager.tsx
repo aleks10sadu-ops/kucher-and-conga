@@ -9,6 +9,7 @@ type MenuType = {
     name: string;
     slug: string;
     description?: string | null;
+    is_delivery_available: boolean;
     created_at?: string;
 };
 
@@ -32,7 +33,12 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
     const [editingMenuType, setEditingMenuType] = useState<MenuType | null>(null);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [expandedMenuTypes, setExpandedMenuTypes] = useState<Record<string | number, boolean>>({});
-    const [newMenuType, setNewMenuType] = useState<{ name: string; slug: string; description: string }>({ name: '', slug: '', description: '' });
+    const [newMenuType, setNewMenuType] = useState<{ name: string; slug: string; description: string; is_delivery_available: boolean }>({
+        name: '',
+        slug: '',
+        description: '',
+        is_delivery_available: true
+    });
     // @ts-ignore
     const [newCategory, setNewCategory] = useState<{ name: string; note: string; menu_type_id: string | number }>({ name: '', note: '', menu_type_id: '' });
 
@@ -105,6 +111,7 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
                         name: menuType.name,
                         slug: menuType.slug,
                         description: menuType.description || null,
+                        is_delivery_available: menuType.is_delivery_available,
                     })
                     .eq('id', menuType.id);
 
@@ -120,6 +127,7 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
                         name: menuType.name,
                         slug: menuType.slug,
                         description: menuType.description || null,
+                        is_delivery_available: menuType.is_delivery_available ?? true,
                     });
 
                 if (error) {
@@ -286,10 +294,22 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
                                         placeholder="Описание (необязательно)"
                                         className="w-full bg-black/40 border border-white/20 rounded px-3 py-2 text-sm outline-none focus:border-amber-400"
                                     />
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="new_is_delivery_available"
+                                            checked={newMenuType.is_delivery_available}
+                                            onChange={(e) => setNewMenuType({ ...newMenuType, is_delivery_available: e.target.checked })}
+                                            className="w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400"
+                                        />
+                                        <label htmlFor="new_is_delivery_available" className="text-sm text-neutral-300">
+                                            Доступно для доставки
+                                        </label>
+                                    </div>
                                     <button
                                         onClick={() => {
                                             handleSaveMenuType(newMenuType);
-                                            setNewMenuType({ name: '', slug: '', description: '' });
+                                            setNewMenuType({ name: '', slug: '', description: '', is_delivery_available: true });
                                         }}
                                         className="w-full px-4 py-2 rounded bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
                                     >
@@ -328,6 +348,15 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
                                                         onChange={(e) => setEditingMenuType({ ...editingMenuType, slug: e.target.value })}
                                                         className="w-full bg-black/40 border border-white/20 rounded px-2 py-1 text-sm outline-none focus:border-amber-400"
                                                     />
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={editingMenuType.is_delivery_available}
+                                                            onChange={(e) => setEditingMenuType({ ...editingMenuType, is_delivery_available: e.target.checked })}
+                                                            className="w-4 h-4 rounded border-white/20 bg-black/40 text-amber-400 focus:ring-amber-400"
+                                                        />
+                                                        <span className="text-sm text-neutral-300">Доступно для доставки</span>
+                                                    </div>
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => {
@@ -353,6 +382,9 @@ export default function MenuTypesAndCategoriesManager({ isOpen, onClose }: MenuT
                                                         <div className="text-xs text-neutral-400">slug: {menuType.slug}</div>
                                                         {menuType.description && (
                                                             <div className="text-sm text-neutral-300 mt-1">{menuType.description}</div>
+                                                        )}
+                                                        {!menuType.is_delivery_available && (
+                                                            <div className="text-xs text-red-400 mt-1">⚠️ Только в ресторане (без доставки)</div>
                                                         )}
                                                     </div>
                                                     <div className="flex gap-2">

@@ -77,6 +77,7 @@ export interface Database {
                     name: string
                     slug: string
                     description: string | null
+                    is_delivery_available: boolean
                 }
                 Insert: {
                     id?: string | number
@@ -84,6 +85,7 @@ export interface Database {
                     name: string
                     slug: string
                     description?: string | null
+                    is_delivery_available?: boolean
                 }
                 Update: {
                     id?: string | number
@@ -91,6 +93,7 @@ export interface Database {
                     name?: string
                     slug?: string
                     description?: string | null
+                    is_delivery_available?: boolean
                 }
             }
             dish_variants: {

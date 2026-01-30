@@ -26,6 +26,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType, CartItem, MenuCategory } from '@/types/index';
+import BanquetMenuModal from './BanquetMenuModal';
 
 type EnhancedMenuSectionProps = {
     onAddToCart: (item: CartItem) => void;
@@ -39,6 +40,7 @@ type MenuTypeInfo = {
     name: string;
     description?: string;
     slug?: string;
+    isDeliveryAvailable?: boolean;
 };
 
 export default function EnhancedMenuSection({
@@ -55,6 +57,7 @@ export default function EnhancedMenuSection({
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MenuItemType | any | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [isBanquetModalOpen, setIsBanquetModalOpen] = useState(false);
     const [menuExpanded, setMenuExpanded] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -348,8 +351,14 @@ export default function EnhancedMenuSection({
 
     // Используем типы меню из Supabase, если они загружены, иначе статические
     const availableMenuTypes: MenuTypeInfo[] = supabaseMenuTypes.length > 0
-        ? supabaseMenuTypes.map(mt => ({ id: mt.slug || String(mt.id), name: mt.name, description: mt.description || undefined }))
-        : menuTypes.map((mt: any) => ({ ...mt, id: mt.id }));
+        ? supabaseMenuTypes.map(mt => ({
+            id: mt.slug || String(mt.id),
+            name: mt.name,
+            description: mt.description || undefined,
+            // @ts-ignore
+            isDeliveryAvailable: mt.is_delivery_available ?? true
+        }))
+        : menuTypes.map((mt: any) => ({ ...mt, id: mt.id, isDeliveryAvailable: true }));
 
     // Функция для поиска блюд во всех типах меню
     const searchAllMenuTypes = useMemo(() => {
@@ -509,6 +518,10 @@ export default function EnhancedMenuSection({
     };
 
     const handleMenuTypeChange = (typeId: string) => {
+        if (typeId === 'banquet') {
+            setIsBanquetModalOpen(true);
+            return;
+        }
         setSelectedMenuType(typeId);
         setActiveMenuType(typeId);
         setSelectedCategory('all');
@@ -556,9 +569,9 @@ export default function EnhancedMenuSection({
         setSelectedItem(null);
     };
 
-    const selectedMenuTypeData = availableMenuTypes.find(type => type.id === selectedMenuType) ||
+    const selectedMenuTypeData = (availableMenuTypes.find(type => type.id === selectedMenuType) ||
         // @ts-ignore
-        menuTypes.find(type => type.id === selectedMenuType);
+        menuTypes.find(type => type.id === selectedMenuType)) as MenuTypeInfo | undefined;
 
     return (
         <section id="menu" className="py-8 sm:py-12 md:py-16 border-t border-white/10">
@@ -621,13 +634,10 @@ export default function EnhancedMenuSection({
                         {availableMenuTypes.map((type) => (
                             <button
                                 key={type.id}
-                                onClick={() => type.id !== 'banquet' && handleMenuTypeChange(type.id)}
-                                disabled={type.id === 'banquet'}
-                                className={`px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 ${type.id === 'banquet'
-                                    ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed opacity-50'
-                                    : selectedMenuType === type.id
-                                        ? 'bg-amber-400 text-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
-                                        : 'bg-white/5 text-white hover:bg-white/10 hover:border-amber-400/30 border border-white/10 hover:scale-105 active:scale-95'
+                                onClick={() => handleMenuTypeChange(type.id)}
+                                className={`px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 ${selectedMenuType === type.id
+                                    ? 'bg-amber-400 text-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+                                    : 'bg-white/5 text-white hover:bg-white/10 hover:border-amber-400/30 border border-white/10 hover:scale-105 active:scale-95'
                                     }`}
                             >
                                 {type.name}
@@ -638,6 +648,14 @@ export default function EnhancedMenuSection({
                     {selectedMenuTypeData && (
                         <div className="text-center text-neutral-400 text-sm mt-3">
                             <p>{selectedMenuTypeData.description}</p>
+                        </div>
+                    )}
+
+                    {selectedMenuTypeData && selectedMenuTypeData.isDeliveryAvailable === false && (
+                        <div className="mt-4 mx-auto max-w-2xl bg-amber-400/10 border border-amber-400/20 rounded-lg p-4 text-center">
+                            <p className="text-amber-300 font-medium">
+                                ℹ️ Блюда из этого меню доступны только при заказе в ресторане
+                            </p>
                         </div>
                     )}
                 </div>
@@ -844,6 +862,7 @@ export default function EnhancedMenuSection({
                                                             editMode={editMode}
                                                             allCategories={currentMenuDataForFilter.categories || []} // Assuming default structure compatibility
                                                             priority={isPriority}
+                                                            isDeliveryAvailable={selectedMenuTypeData?.isDeliveryAvailable ?? true}
                                                         />
                                                     );
                                                 })}
@@ -878,26 +897,32 @@ export default function EnhancedMenuSection({
             </div>
 
             {/* Food Detail Modal */}
-            {selectedItem && (
-                <FoodDetailModal
-                    item={selectedItem}
-                    isOpen={isDetailModalOpen}
-                    onClose={handleCloseModal}
-                    onAddToCart={onAddToCart}
-                    cartItems={cartItems}
-                    isAdmin={enableAdminEditing && isAdmin}
-                    // @ts-ignore
-                    categories={allCategories.length > 0 ? allCategories : (currentMenuDataForFilter.categories || [])}
-                    onUpdate={() => {
-                        // Перезагружаем страницу для обновления данных
-                        window.location.reload();
-                    }}
-                    onDelete={() => {
-                        // Перезагружаем страницу для обновления данных
-                        window.location.reload();
-                    }}
-                />
-            )}
+            {/* Модальное окно с деталями блюда */}
+            <FoodDetailModal
+                item={selectedItem}
+                isOpen={isDetailModalOpen}
+                onClose={handleCloseModal}
+                onAddToCart={onAddToCart}
+                cartItems={cartItems}
+                isAdmin={enableAdminEditing && isAdmin}
+                categories={allCategories.length > 0 ? allCategories : (currentMenuDataForFilter.categories || []).map((c: any) => ({ id: c.id, name: c.name }))}
+                onUpdate={(updatedDish) => {
+                    // Обновляем данные на клиенте (в идеале нужно обновлять стейт)
+                    console.log('Dish updated:', updatedDish);
+                    // window.location.reload(); // Пока просто перезагружаем
+                }}
+                onDelete={(deletedId) => {
+                    console.log('Dish deleted:', deletedId);
+                    // window.location.reload();
+                }}
+            />
+
+            {/* Модальное окно банкетного меню */}
+            <BanquetMenuModal
+                isOpen={isBanquetModalOpen}
+                onClose={() => setIsBanquetModalOpen(false)}
+            />
         </section>
     );
 }
+

@@ -51,6 +51,7 @@ type MenuItemProps = {
     editMode?: boolean;
     allCategories?: { id: string | number; name: string }[];
     priority?: boolean;
+    isDeliveryAvailable?: boolean;
 };
 
 /**
@@ -65,6 +66,7 @@ export default function MenuItem({
     editMode = false,
     allCategories = [],
     priority = false,
+    isDeliveryAvailable = true,
 }: MenuItemProps) {
     // Получаем количество из корзины напрямую (без локального состояния)
     const cartItem = cartItems.find(ci => ci.id === item.id);
@@ -342,6 +344,7 @@ export default function MenuItem({
                         getVariantQuantity={getVariantQuantity}
                         handleAdd={handleAdd}
                         handleRemove={handleRemove}
+                        isDeliveryAvailable={isDeliveryAvailable}
                     />
                 )}
 
@@ -352,6 +355,7 @@ export default function MenuItem({
                             quantity={quantity}
                             onAdd={() => handleAdd()}
                             onRemove={() => handleRemove()}
+                            isDeliveryAvailable={isDeliveryAvailable}
                         />
                     </div>
                 )}
@@ -421,9 +425,10 @@ type VariantsListProps = {
     getVariantQuantity: (id: string | number) => number;
     handleAdd: (variant: MenuItemVariant) => void;
     handleRemove: (variant: MenuItemVariant) => void;
+    isDeliveryAvailable?: boolean;
 };
 
-function VariantsList({ item, variants, getVariantQuantity, handleAdd, handleRemove }: VariantsListProps) {
+function VariantsList({ item, variants, getVariantQuantity, handleAdd, handleRemove, isDeliveryAvailable = true }: VariantsListProps) {
     return (
         <div className="mb-2 sm:mb-3 lg:mb-4">
             <div className="text-[10px] sm:text-xs lg:text-sm text-neutral-400 mb-1.5 sm:mb-2 lg:mb-3">Выберите вариант:</div>
@@ -456,6 +461,7 @@ function VariantsList({ item, variants, getVariantQuantity, handleAdd, handleRem
                                         handleRemove(variant);
                                     }}
                                     compact
+                                    isDeliveryAvailable={isDeliveryAvailable}
                                 />
                             </div>
                         </div>
@@ -471,9 +477,10 @@ type QuantityControlsProps = {
     onAdd: (e?: React.MouseEvent) => void;
     onRemove: (e?: React.MouseEvent) => void;
     compact?: boolean;
+    isDeliveryAvailable?: boolean;
 };
 
-function QuantityControls({ quantity, onAdd, onRemove, compact = false }: QuantityControlsProps) {
+function QuantityControls({ quantity, onAdd, onRemove, compact = false, isDeliveryAvailable = true }: QuantityControlsProps) {
     const buttonSize = compact ? 'p-1' : 'p-1.5 sm:p-2';
     const iconSize = compact ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4';
     const textSize = compact ? 'w-6 text-sm' : 'w-6 sm:w-8 text-sm sm:text-base';
@@ -489,6 +496,14 @@ function QuantityControls({ quantity, onAdd, onRemove, compact = false }: Quanti
             >
                 Добавить
             </button>
+        );
+    }
+
+    if (!isDeliveryAvailable) {
+        return (
+            <div className={`${compact ? 'text-[9px] sm:text-xs' : 'text-xs sm:text-sm'} text-neutral-400 italic`}>
+                Только в зале
+            </div>
         );
     }
 
