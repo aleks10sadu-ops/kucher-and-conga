@@ -59,13 +59,15 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         const rpcParams = {
             p_phone: data.phone,
             p_first_name: firstName,
-            p_last_name: lastName || '',  // ✅ Пустая строка вместо undefined
+            p_last_name: lastName || undefined,
             p_date: data.date,
             p_time: timeStr,
             p_guests_count: data.guests_count,
-            p_hall_id: hallIdParam || null,  // ✅ null явно
-            p_comments: data.comments || null,  // ✅ null явно
-            p_status: data.status || 'new'
+            p_hall_id: hallIdParam,
+            p_comments: data.comments || undefined,
+            p_status: data.status || 'new',
+            // Explicitly pass menu_type to resolve postgres function ambiguity (discriminator)
+            p_menu_type: null
         };
 
         const result = await supabase.rpc('create_public_reservation', rpcParams);
