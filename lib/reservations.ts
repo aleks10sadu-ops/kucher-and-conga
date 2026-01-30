@@ -59,14 +59,13 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         const rpcParams = {
             p_phone: data.phone,
             p_first_name: firstName,
-            p_last_name: lastName || undefined,
+            p_last_name: lastName || '',  // ✅ Пустая строка вместо undefined
             p_date: data.date,
             p_time: timeStr,
             p_guests_count: data.guests_count,
-            p_hall_id: hallIdParam,
-            p_comments: data.comments || undefined,
+            p_hall_id: hallIdParam || null,  // ✅ null явно
+            p_comments: data.comments || null,  // ✅ null явно
             p_status: data.status || 'new'
-            // p_menu_id НЕ передаём - бронь создаётся с Основным меню
         };
 
         const result = await supabase.rpc('create_public_reservation', rpcParams);
