@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { MenuItem as MenuItemType, CartItem, MenuItemVariant } from '@/types/index';
 import { Database } from '@/types/database.types';
 import { SupabaseClient } from '@supabase/supabase-js';
+import Image from 'next/image';
 
 
 // Иконка загрузки - пульсирующий круг с анимацией
@@ -281,22 +282,23 @@ export default function MenuItem({
                 {/* Показываем плейсхолдер при ошибке загрузки */}
                 {hasImage && imageError && <ImagePlaceholder />}
 
-                {/* Само изображение - оптимизированное для быстрой загрузки */}
-                {hasImage && (
-                    <img
-                        src={optimizeSupabaseImageUrl(imageUrl, 400) || ''}
+                {/* Само изображение - оптимизированное для быстрой загрузки и проксирования через Next.js */}
+                {hasImage && !imageError && (
+                    <Image
+                        src={optimizeSupabaseImageUrl(imageUrl, 600) || ''}
                         alt={item.name}
-                        className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${imageLoading || imageError ? 'opacity-0' : 'opacity-100'
-                            }`}
+                        fill
+                        className={`object-cover transition-all duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
                         loading={priority ? "eager" : "lazy"}
                         // @ts-ignore
                         fetchPriority={priority ? "high" : "auto"}
-                        decoding={priority ? "sync" : "async"}
                         onLoad={() => setImageLoading(false)}
                         onError={() => {
+                            console.warn(`Failed to load image for ${item.name}: ${imageUrl}`);
                             setImageLoading(false);
                             setImageError(true);
                         }}
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
                 )}
             </div>

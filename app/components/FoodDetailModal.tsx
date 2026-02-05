@@ -48,6 +48,26 @@ export default function FoodDetailModal({
     const [uploadingImage, setUploadingImage] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+    // Получаем правильное изображение (фильтруем Unsplash)
+    // Вычисляем это здесь, так как оно используется в useState ниже
+    const rawDisplayImage = editImageUrl || item?.image_url || item?.image || null;
+    const displayImage = rawDisplayImage && !rawDisplayImage.includes('unsplash.com') ? rawDisplayImage : null;
+    const hasDisplayImage = !!displayImage;
+
+    // Состояние загрузки изображения - эти хуки были причиной ошибки, так как находились после return
+    const [modalImageLoading, setModalImageLoading] = useState(hasDisplayImage);
+    const [modalImageError, setModalImageError] = useState(false);
+
+    useEffect(() => {
+        if (displayImage) {
+            setModalImageLoading(true);
+            setModalImageError(false);
+        } else {
+            setModalImageLoading(false);
+            setModalImageError(false);
+        }
+    }, [displayImage]);
+
     useEffect(() => {
         if (item) {
             setEditName(item.name || '');
@@ -225,25 +245,7 @@ export default function FoodDetailModal({
         }
     };
 
-    // Получаем правильное изображение (фильтруем Unsplash)
-    const rawDisplayImage = editImageUrl || item?.image_url || item?.image || null;
-    const displayImage = rawDisplayImage && !rawDisplayImage.includes('unsplash.com') ? rawDisplayImage : null;
-    const hasDisplayImage = !!displayImage;
 
-    // Состояние загрузки изображения
-    const [modalImageLoading, setModalImageLoading] = useState(hasDisplayImage);
-    const [modalImageError, setModalImageError] = useState(false);
-
-    // Сброс состояния при изменении изображения
-    useEffect(() => {
-        if (displayImage) {
-            setModalImageLoading(true);
-            setModalImageError(false);
-        } else {
-            setModalImageLoading(false);
-            setModalImageError(false);
-        }
-    }, [displayImage]);
 
     // Оптимизация URL изображений Supabase
     const optimizeSupabaseImageUrl = (url: string | null, width = 600) => {

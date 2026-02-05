@@ -2,25 +2,18 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, X, ChevronDown, Plus } from 'lucide-react';
-import { menuData as staticMenuData, searchMenuItems } from '../data/menu';
 import { menuTypes, getActiveMenuType, setActiveMenuType } from '../data/menuTypes';
 import { getFoodImage } from '../data/foodImages';
 import FoodDetailModal from './FoodDetailModal';
 import { Database } from '@/types/database.types';
+import MenuSkeleton from './MenuSkeleton';
 
 // Supabase row types
 type MenuTypeRow = Database['public']['Tables']['menu_types']['Row'];
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
 type DishRow = Database['public']['Tables']['dishes']['Row'];
 
-// @ts-ignore
-import { promotionsData as staticPromotionsData } from '../data/promotionsData';
-// @ts-ignore
-import { kidsMenuData as staticKidsMenuData } from '../data/kidsMenuData';
-// @ts-ignore
-import { barMenuData as staticBarMenuData } from '../data/barMenuData';
-// @ts-ignore
-import { wineMenuData as staticWineMenuData } from '../data/wineMenuData';
+// Static data imports removed as we now fetch from Supabase
 import BusinessLunchBuilder from './BusinessLunchBuilder';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
@@ -372,16 +365,13 @@ export default function EnhancedMenuSection({
             ? allMenuDataByType
             : ssrMenuDataByType || clientMenuData || {};
 
-        // Если данных нет, используем статические
+        if (Object.keys(allData).length === 0 && clientMenuLoading) {
+            return [];
+        }
+
         const dataToSearch = Object.keys(allData).length > 0
             ? allData
-            : {
-                main: staticMenuData,
-                promotions: staticPromotionsData,
-                kids: staticKidsMenuData,
-                bar: staticBarMenuData,
-                wine: staticWineMenuData,
-            };
+            : {};
 
         // Ищем во всех типах меню
         Object.entries(dataToSearch).forEach(([menuTypeSlug, menuData]) => {
@@ -434,18 +424,10 @@ export default function EnhancedMenuSection({
 
         // 3) Иначе используем локальные статики как fallback
         switch (menuType) {
-            case 'main':
-                return staticMenuData;
-            case 'promotions':
-                return staticPromotionsData;
-            case 'kids':
-                return staticKidsMenuData;
-            case 'bar':
-                return staticBarMenuData;
-            case 'wine':
-                return staticWineMenuData;
             default:
-                return staticMenuData;
+                // If data is loading, return null to show skeleton.
+                // If not loading and no data, return empty object or null.
+                return null;
         }
     };
 
@@ -464,8 +446,12 @@ export default function EnhancedMenuSection({
     };
 
     // Фильтрация меню
+    // Фильтрация меню
     const filteredMenu: any[] = useMemo(() => {
         const currentMenuData = getMenuDataByType(selectedMenuType);
+
+        if (!currentMenuData) return [];
+
         let categories = currentMenuData.categories || [];
 
         // Поиск по тексту
@@ -537,7 +523,7 @@ export default function EnhancedMenuSection({
     const allDishNames = useMemo(() => {
         const currentMenuData = getMenuDataByType(selectedMenuType);
         // @ts-ignore
-        const categories: any[] = currentMenuData.categories || [];
+        const categories: any[] = currentMenuData?.categories || [];
         const names: string[] = [];
         categories.forEach(category => {
             // @ts-ignore
@@ -593,7 +579,7 @@ export default function EnhancedMenuSection({
                                         price: 0,
                                         weight: '',
                                         image_url: '',
-                                        categoryId: allCategories.length > 0 ? allCategories[0]?.id : (currentMenuDataForFilter.categories?.[0]?.id || ''),
+                                        categoryId: allCategories.length > 0 ? allCategories[0]?.id : (currentMenuDataForFilter?.categories?.[0]?.id || ''),
                                     } as MenuItemType);
                                     setIsDetailModalOpen(true);
                                 }}
@@ -725,7 +711,7 @@ export default function EnhancedMenuSection({
                                 >
                                     <Filter className="w-4 h-4" />
                                     <span className="flex-1 text-left">
-                                        {selectedCategory === 'all' ? 'Все категории' : currentMenuDataForFilter.categories?.find((c: any) => c.id === selectedCategory)?.name}
+                                        {selectedCategory === 'all' ? 'Все категории' : currentMenuDataForFilter?.categories?.find((c: any) => c.id === selectedCategory)?.name}
                                     </span>
                                     <ChevronDown className={`w-4 h-4 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                                 </button>
@@ -743,7 +729,7 @@ export default function EnhancedMenuSection({
                                             Все категории
                                         </button>
                                         {/* @ts-ignore */}
-                                        {currentMenuDataForFilter.categories?.map((category: any) => (
+                                        {currentMenuDataForFilter?.categories?.map((category: any) => (
                                             <button
                                                 key={category.id}
                                                 onClick={() => {
@@ -783,7 +769,7 @@ export default function EnhancedMenuSection({
                         <p className="text-neutral-300">
                             Найдено {filteredMenu.reduce((total: number, cat: any) => total + cat.items.length, 0)} блюд
                             {/* @ts-ignore */}
-                            {selectedCategory !== 'all' && ` в категории "${currentMenuDataForFilter.categories?.find((c: any) => c.id === selectedCategory)?.name}"`}
+                            {selectedCategory !== 'all' && ` в категории "${currentMenuDataForFilter?.categories?.find((c: any) => c.id === selectedCategory)?.name}"`}
                         </p>
                     </div>
                 )}
@@ -797,7 +783,9 @@ export default function EnhancedMenuSection({
                     />
                 ) : (
                     <div className="space-y-16">
-                        {filteredMenu.length === 0 ? (
+                        {clientMenuLoading && filteredMenu.length === 0 ? (
+                            <MenuSkeleton />
+                        ) : filteredMenu.length === 0 ? (
                             <div className="text-center py-12">
                                 <div className="text-6xl mb-4">🍽️</div>
                                 <p className="text-neutral-400 text-lg mb-2">Блюда не найдены</p>
@@ -860,7 +848,7 @@ export default function EnhancedMenuSection({
                                                             cartItems={cartItems}
                                                             isAdmin={enableAdminEditing && isAdmin}
                                                             editMode={editMode}
-                                                            allCategories={currentMenuDataForFilter.categories || []} // Assuming default structure compatibility
+                                                            allCategories={currentMenuDataForFilter?.categories || []} // Assuming default structure compatibility
                                                             priority={isPriority}
                                                             isDeliveryAvailable={selectedMenuTypeData?.isDeliveryAvailable ?? true}
                                                         />
@@ -905,7 +893,7 @@ export default function EnhancedMenuSection({
                 onAddToCart={onAddToCart}
                 cartItems={cartItems}
                 isAdmin={enableAdminEditing && isAdmin}
-                categories={allCategories.length > 0 ? allCategories : (currentMenuDataForFilter.categories || []).map((c: any) => ({ id: c.id, name: c.name }))}
+                categories={allCategories.length > 0 ? allCategories : (currentMenuDataForFilter?.categories || []).map((c: any) => ({ id: c.id, name: c.name }))}
                 onUpdate={(updatedDish) => {
                     // Обновляем данные на клиенте (в идеале нужно обновлять стейт)
                     console.log('Dish updated:', updatedDish);
