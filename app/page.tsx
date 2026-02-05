@@ -615,12 +615,7 @@ export default function Page() {
               </button>
 
               <div className="flex items-center gap-3">
-                <a
-                  href="tel:+74992299222"
-                  className="flex items-center gap-2 text-sm hover:text-amber-400 hover:scale-105 active:scale-95 transition-all duration-200"
-                >
-                  <Phone className="w-4 h-4" /> +7 (499) 229-92-22
-                </a>
+
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
                   className={`p-2 rounded-lg border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all duration-200 ${menuOpen ? 'scale-95 bg-white/10' : 'hover:scale-110 active:scale-95'
@@ -1098,7 +1093,15 @@ export default function Page() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               <div className="rounded-2xl bg-white/5 p-6 border border-white/10 hover:bg-white/10 hover:border-amber-400/30 hover:scale-105 active:scale-95 transition-all duration-300">
                 <div className="uppercase text-xs tracking-widest text-neutral-400">Телефон</div>
-                <a href="tel:+74992299222" className="mt-2 block text-lg hover:text-amber-400 hover:scale-105 transition-all duration-200"><Phone className="inline w-4 h-4 mr-2" />+7 (499) 229-92-22</a>
+                <div className="mt-2 space-y-1">
+                  <div className="text-sm text-neutral-400 mb-1">Администрация:</div>
+                  <a href="tel:+79162977887" className="block text-lg hover:text-amber-400 hover:scale-105 transition-all duration-200">
+                    <Phone className="inline w-4 h-4 mr-2" />+7 (916) 297-78-87
+                  </a>
+                  <a href="tel:+79163177887" className="block text-lg hover:text-amber-400 hover:scale-105 transition-all duration-200">
+                    <Phone className="inline w-4 h-4 mr-2" />+7 (916) 317-78-87
+                  </a>
+                </div>
               </div>
               <div className="rounded-2xl bg-white/5 p-6 border border-white/10 hover:bg-white/10 hover:border-amber-400/30 hover:scale-105 active:scale-95 transition-all duration-300">
                 <div className="uppercase text-xs tracking-widest text-neutral-400">Адрес</div>
