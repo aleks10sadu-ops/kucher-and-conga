@@ -16,6 +16,7 @@ type DishRow = Database['public']['Tables']['dishes']['Row'];
 // Static data imports removed as we now fetch from Supabase
 import BusinessLunchBuilder from './BusinessLunchBuilder';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { getMenuData } from '@/app/actions/getMenu';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType, CartItem, MenuCategory } from '@/types/index';
@@ -210,128 +211,21 @@ export default function EnhancedMenuSection({
         };
     }, []);
 
-    // Загрузка данных из Supabase на клиенте, если ssrMenuDataByType не передан
+    // Загрузка данных через Server Action (Proxy) для обхода блокировок и ускорения
     useEffect(() => {
-        if (ssrMenuDataByType) return; // Если данные уже есть с сервера, не загружаем
+        if (ssrMenuDataByType) return;
 
         const loadMenuData = async () => {
             setClientMenuLoading(true);
             try {
-                const supabase = createSupabaseBrowserClient();
-                if (!supabase) {
-                    setClientMenuLoading(false);
-                    return;
+                // Использование Server Action позволяет запросу идти от сервера к Supabase,
+                // что обходит блокировки провайдеров (РФ) и ускоряет загрузку.
+                const data = await getMenuData();
+
+                if (data) {
+                    setClientMenuData(data as any);
+                    setAllMenuDataByType(data as any);
                 }
-
-                // Загружаем все типы меню из Supabase
-                const { data: allMenuTypesRaw } = await supabase
-                    .from('menu_types')
-                    .select('id, slug')
-                    .neq('slug', 'business')
-                    .neq('slug', 'banquet');
-
-                const allMenuTypes = allMenuTypesRaw as unknown as MenuTypeRow[];
-
-
-
-                if (!allMenuTypes || allMenuTypes.length === 0) {
-                    setClientMenuLoading(false);
-                    return;
-                }
-
-                const menuTypesToLoad = allMenuTypes.map(mt => mt.slug);
-                const loadedData: Record<string, { categories: MenuCategory[] }> = {};
-
-                for (const menuTypeSlug of menuTypesToLoad) {
-                    if (!menuTypeSlug) continue;
-                    try {
-                        // Находим menu_type по slug
-                        const menuType = allMenuTypes.find(mt => mt.slug === menuTypeSlug);
-                        if (!menuType) continue;
-
-                        // Загружаем категории
-                        const { data: categoriesRaw } = await supabase
-                            .from('categories')
-                            .select('id, name, sort_order, note')
-                            .eq('menu_type_id', menuType.id)
-                            .order('sort_order', { ascending: true });
-
-                        const categories = (categoriesRaw || []) as unknown as CategoryRow[];
-
-
-                        if (!categories?.length) continue;
-
-                        // Загружаем блюда
-                        const categoryIds = categories.map((c) => c.id);
-                        const { data: dishesRaw } = await supabase
-                            .from('dishes')
-                            .select('id, name, description, price, weight, image_url, category_id, is_active')
-                            .in('category_id', categoryIds)
-                            .eq('is_active', true);
-
-                        const dishes = (dishesRaw || []) as unknown as DishRow[];
-
-
-                        if (!dishes?.length) continue;
-
-                        // Загружаем варианты
-                        const dishIds = dishes.map((d) => d.id);
-                        const { data: variantsRaw } = await supabase
-                            .from('dish_variants')
-                            .select('id, dish_id, name, price, weight')
-                            .in('dish_id', dishIds);
-
-                        // Cast variants
-                        const variants = (variantsRaw || []) as any[];
-
-                        const variantsByDish: Record<string | number, any[]> = {};
-                        variants.forEach((v) => {
-                            if (!variantsByDish[v.dish_id]) variantsByDish[v.dish_id] = [];
-                            variantsByDish[v.dish_id].push({
-                                id: v.id,
-                                name: v.name,
-                                price: Number(v.price),
-                                weight: v.weight || null,
-                            });
-                        });
-
-
-                        const itemsByCategory: Record<string | number, MenuItemType[]> = {};
-                        dishes.forEach((d) => {
-                            if (d.category_id !== null) {
-                                if (!itemsByCategory[d.category_id]) itemsByCategory[d.category_id] = [];
-                                itemsByCategory[d.category_id].push({
-                                    id: d.id,
-                                    name: d.name,
-                                    description: d.description || '',
-                                    price: Number(d.price),
-                                    weight: d.weight || null,
-                                    image: d.image_url || undefined,
-                                    variants: variantsByDish[d.id] || [],
-                                    categoryId: d.category_id
-                                });
-                            }
-                        });
-
-
-                        loadedData[menuTypeSlug] = {
-                            categories: categories.map((c) => ({
-                                id: c.id,
-                                name: c.name,
-                                note: c.note || undefined,
-                                items: (itemsByCategory[c.id] || []).map((item) => ({
-                                    ...item,
-                                    image: item.image || null,
-                                })),
-                            })),
-                        };
-                    } catch (err) {
-                        console.error(`Error loading menu type ${menuTypeSlug}:`, err);
-                    }
-                }
-
-                setClientMenuData(loadedData);
-                setAllMenuDataByType(loadedData); // Сохраняем все данные для глобального поиска
             } catch (err) {
                 console.error('Error loading menu data:', err);
             } finally {
@@ -340,7 +234,7 @@ export default function EnhancedMenuSection({
         };
 
         loadMenuData();
-    }, [ssrMenuDataByType, supabaseMenuTypes]); // Перезагружаем данные при изменении типов меню
+    }, [ssrMenuDataByType]);
 
     // Используем типы меню из Supabase, если они загружены, иначе статические
     const availableMenuTypes: MenuTypeInfo[] = supabaseMenuTypes.length > 0
