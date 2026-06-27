@@ -38,7 +38,10 @@ export type BookingData = {
     phone: string;
     date: string;
     time: string;
-    guests: number;
+    adults: number;
+    children: number;
+    bookingType: 'onsite' | 'preorder' | 'banquet';
+    banquetPackageId?: string | null;
     comment?: string;
     hallId?: string | number | null;
 };
