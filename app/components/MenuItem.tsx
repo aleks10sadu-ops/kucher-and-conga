@@ -324,6 +324,23 @@ export default function MenuItem({
                                 {item.weight && (
                                     <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400">{item.weight}</div>
                                 )}
+                                {item.nutrition && (
+                                    <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                                        {item.nutrition.calories != null && (
+                                            <span>{Math.round(item.nutrition.calories)} ккал</span>
+                                        )}
+                                        {item.nutrition.proteins != null && (
+                                            <span>Б {item.nutrition.proteins}</span>
+                                        )}
+                                        {item.nutrition.fats != null && (
+                                            <span>Ж {item.nutrition.fats}</span>
+                                        )}
+                                        {item.nutrition.carbs != null && (
+                                            <span>У {item.nutrition.carbs}</span>
+                                        )}
+                                        <span className="opacity-60">/ 100 г</span>
+                                    </div>
+                                )}
                             </div>
                         </>
                     )}

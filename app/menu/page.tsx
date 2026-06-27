@@ -4,10 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { menuData } from '../data/menu';
-import { wineMenuData } from '../data/wineMenuData';
-import { promotionsData } from '../data/promotionsData';
-import { useSearchParams } from 'next/navigation';
+import { getMenuData } from '../actions/getMenu';
 
 // Type definitions based on data files
 interface MenuItemVariant {
@@ -32,76 +29,28 @@ interface MenuCategory {
     items: MenuItem[];
 }
 
-interface WineItem {
-    id: string;
-    name: string;
-    description: string;
-    type?: string;
-    strength?: string;
-    grape?: string;
-    price: number;
-    volume: number;
-    volume_unit: string;
-    image?: string;
-    price_750?: number;
-    price_125?: number;
-    variants?: any[]; // Adjust if wine variants structure is known
-}
-
-interface WineCategory {
-    id: string;
-    name: string;
-    items: WineItem[];
-}
-
-interface PromotionItem {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    oldPrice?: number;
-    image?: string;
-    conditions?: string;
-    weight?: string;
-}
-
-interface PromotionCategory {
-    id: string;
-    name: string;
-    items: PromotionItem[];
-}
-
-type MenuType = 'kitchen' | 'bar' | 'promotions';
 
 function MenuContent() {
-    const searchParams = useSearchParams();
-    const initialCategory = searchParams?.get('category') || 'kitchen';
-    const [activeTab, setActiveTab] = useState<MenuType>(initialCategory as MenuType);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Определение данных для текущей вкладки
-    const getCurrentData = () => {
-        switch (activeTab) {
-            case 'kitchen':
-                return menuData.categories;
-            case 'bar':
-                return wineMenuData.categories;
-            case 'promotions':
-                return promotionsData.categories;
-            default:
-                return [];
-        }
-    };
-
-    const categories = getCurrentData();
-
     useEffect(() => {
-        // Установка первой категории при смене вкладки
-        if (categories && categories.length > 0) {
-            setActiveCategory(categories[0].id);
-        }
-    }, [activeTab]); // Removed categories active dependency to avoid infinite loop if reference changes
+        let active = true;
+        getMenuData()
+            .then((data: any) => {
+                if (!active) return;
+                const cats = data?.main?.categories || [];
+                setCategories(cats);
+                if (cats.length > 0) setActiveCategory(cats[0].id);
+            })
+            .catch((e) => console.error('menu load error', e))
+            .finally(() => active && setLoading(false));
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const scrollToCategory = (categoryId: string) => {
         setActiveCategory(categoryId);
@@ -122,36 +71,6 @@ function MenuContent() {
             {/* Фиксированная шапка с навигацией по типам меню */}
             <div className="fixed top-0 left-0 right-0 z-40 bg-neutral-950/80 backdrop-blur-md border-b border-white/10 pt-20">
                 <div className="container mx-auto px-4">
-                    <div className="flex justify-center space-x-2 md:space-x-8 mb-4 overflow-x-auto pb-2 scrollbar-none">
-                        <button
-                            onClick={() => setActiveTab('kitchen')}
-                            className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-semibold whitespace-nowrap transition-all ${activeTab === 'kitchen'
-                                ? 'bg-amber-400 text-black'
-                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
-                                }`}
-                        >
-                            🥗 Кухня
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('bar')}
-                            className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-semibold whitespace-nowrap transition-all ${activeTab === 'bar'
-                                ? 'bg-amber-400 text-black'
-                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
-                                }`}
-                        >
-                            🍷 Бар
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('promotions')}
-                            className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-semibold whitespace-nowrap transition-all ${activeTab === 'promotions'
-                                ? 'bg-amber-400 text-black'
-                                : 'bg-white/5 text-neutral-400 hover:bg-white/10'
-                                }`}
-                        >
-                            🎁 Акции
-                        </button>
-                    </div>
-
                     {/* Навигация по категориям (десктоп) */}
                     <div className="hidden md:flex justify-center space-x-6 pb-4 overflow-x-auto scrollbar-none">
                         {categories.map((category: any) => (
@@ -270,12 +189,24 @@ function MenuContent() {
 
                                                 <div className="flex items-center gap-4 text-xs md:text-sm text-neutral-500">
                                                     {item.weight && (
-                                                        <span>⚖️ {item.weight}</span>
+                                                        <span>⚖️ {item.weight} г</span>
                                                     )}
                                                     {item.volume && item.volume_unit && (
                                                         <span>🥛 {item.volume} {item.volume_unit}</span>
                                                     )}
                                                 </div>
+
+                                                {item.nutrition && (
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs md:text-sm text-neutral-500 mt-1">
+                                                        {item.nutrition.calories != null && (
+                                                            <span>{Math.round(item.nutrition.calories)} ккал</span>
+                                                        )}
+                                                        {item.nutrition.proteins != null && <span>Б {item.nutrition.proteins}</span>}
+                                                        {item.nutrition.fats != null && <span>Ж {item.nutrition.fats}</span>}
+                                                        {item.nutrition.carbs != null && <span>У {item.nutrition.carbs}</span>}
+                                                        <span className="opacity-60">/ 100 г</span>
+                                                    </div>
+                                                )}
 
                                                 {/* Варианты блюд/напитков */}
                                                 {item.variants && item.variants.length > 0 && (
