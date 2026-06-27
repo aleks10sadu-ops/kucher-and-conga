@@ -322,7 +322,7 @@ export default function MenuItem({
                                     {item.price ? item.price.toLocaleString('ru-RU') : '0'} ₽
                                 </div>
                                 {item.weight && (
-                                    <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400">{item.weight}</div>
+                                    <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400">{item.weight} г</div>
                                 )}
                                 {item.nutrition && (
                                     <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">

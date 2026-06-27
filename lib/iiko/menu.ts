@@ -31,7 +31,10 @@ export async function fetchExternalMenu(): Promise<IikoExternalMenu> {
     lastGood = data;
     return data;
   } catch (e) {
-    if (lastGood) return lastGood; // stale-while-error
+    if (lastGood) {
+      console.warn('[iiko] serving stale menu after fetch failure', e);
+      return lastGood; // stale-while-error
+    }
     throw e;
   }
 }

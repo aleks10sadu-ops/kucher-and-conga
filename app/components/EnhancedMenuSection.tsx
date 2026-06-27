@@ -71,53 +71,8 @@ export default function EnhancedMenuSection({
         }
     }, [ssrMenuDataByType]);
 
-    // Realtime синхронизация для автоматического обновления данных
-    useEffect(() => {
-        // Работает только если используются данные из Supabase (либо с сервера, либо загружены на клиенте)
-        if (!ssrMenuDataByType && !clientMenuData) return;
-
-        const supabase = createSupabaseBrowserClient();
-        if (!supabase) return;
-
-        // Подписка на изменения в таблице dishes
-        const dishesChannel = supabase
-            .channel('dishes-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // INSERT, UPDATE, DELETE
-                    schema: 'public',
-                    table: 'dishes',
-                },
-                () => {
-                    // При любом изменении перезагружаем страницу для получения актуальных данных
-                    // В production можно было бы обновлять только конкретные элементы
-                    window.location.reload();
-                }
-            )
-            .subscribe();
-
-        // Подписка на изменения в таблице categories
-        const categoriesChannel = supabase
-            .channel('categories-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'categories',
-                },
-                () => {
-                    window.location.reload();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(dishesChannel);
-            supabase.removeChannel(categoriesChannel);
-        };
-    }, [ssrMenuDataByType, clientMenuData]);
+    // Realtime subscriptions for dishes/categories removed — menu data now comes from
+    // iiko (not Supabase dishes/categories tables) so these subscriptions are disconnected.
 
     // Загрузка типов меню из Supabase
     useEffect(() => {
@@ -165,7 +120,7 @@ export default function EnhancedMenuSection({
         };
     }, []);
 
-    // Загрузка всех категорий для выбора при добавлении блюда
+    // Загрузка всех категорий для выбора при добавлении блюда (admin only, one-time)
     useEffect(() => {
         const loadAllCategories = async () => {
             try {
@@ -186,29 +141,7 @@ export default function EnhancedMenuSection({
         };
 
         loadAllCategories();
-
-        // Realtime синхронизация для категорий
-        const supabase = createSupabaseBrowserClient();
-        if (!supabase) return;
-
-        const categoriesChannel = supabase
-            .channel('all-categories-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'categories',
-                },
-                () => {
-                    loadAllCategories();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(categoriesChannel);
-        };
+        // Realtime subscription for categories-changes removed — iiko is now the source of truth.
     }, []);
 
     // Загрузка данных через Server Action (Proxy) для обхода блокировок и ускорения
@@ -236,16 +169,18 @@ export default function EnhancedMenuSection({
         loadMenuData();
     }, [ssrMenuDataByType]);
 
-    // Используем типы меню из Supabase, если они загружены, иначе статические
-    const availableMenuTypes: MenuTypeInfo[] = supabaseMenuTypes.length > 0
-        ? supabaseMenuTypes.map(mt => ({
-            id: mt.slug || String(mt.id),
-            name: mt.name,
-            description: mt.description || undefined,
-            // @ts-ignore
-            isDeliveryAvailable: mt.is_delivery_available ?? true
-        }))
-        : menuTypes.map((mt: any) => ({ ...mt, id: mt.id, isDeliveryAvailable: true }));
+    // Derive available menu types from the iiko data keys only (iiko yields only `main`).
+    // Supabase menu_types are no longer used to drive the tab selector.
+    const iikoMenuKeys = Object.keys(
+        (ssrMenuDataByType && Object.keys(ssrMenuDataByType).length > 0)
+            ? ssrMenuDataByType
+            : clientMenuData || {}
+    );
+    const availableMenuTypes: MenuTypeInfo[] = (iikoMenuKeys.length > 0 ? iikoMenuKeys : ['main']).map(key => ({
+        id: key,
+        name: key === 'main' ? 'Основное меню' : key,
+        isDeliveryAvailable: true,
+    }));
 
     // Функция для поиска блюд во всех типах меню
     const searchAllMenuTypes = useMemo(() => {
@@ -508,22 +443,24 @@ export default function EnhancedMenuSection({
                     )}
                 </div>
 
-                {/* Выбор типа меню */}
+                {/* Выбор типа меню — скрыт когда доступен только один тип */}
                 <div className="max-w-6xl mx-auto mb-6 sm:mb-8">
-                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                        {availableMenuTypes.map((type) => (
-                            <button
-                                key={type.id}
-                                onClick={() => handleMenuTypeChange(type.id)}
-                                className={`px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 ${selectedMenuType === type.id
-                                    ? 'bg-amber-400 text-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
-                                    : 'bg-white/5 text-white hover:bg-white/10 hover:border-amber-400/30 border border-white/10 hover:scale-105 active:scale-95'
-                                    }`}
-                            >
-                                {type.name}
-                            </button>
-                        ))}
-                    </div>
+                    {availableMenuTypes.length > 1 && (
+                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                            {availableMenuTypes.map((type) => (
+                                <button
+                                    key={type.id}
+                                    onClick={() => handleMenuTypeChange(type.id)}
+                                    className={`px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 ${selectedMenuType === type.id
+                                        ? 'bg-amber-400 text-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-95'
+                                        : 'bg-white/5 text-white hover:bg-white/10 hover:border-amber-400/30 border border-white/10 hover:scale-105 active:scale-95'
+                                        }`}
+                                >
+                                    {type.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {selectedMenuTypeData && (
                         <div className="text-center text-neutral-400 text-sm mt-3">

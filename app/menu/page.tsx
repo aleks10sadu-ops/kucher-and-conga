@@ -66,6 +66,14 @@ function MenuContent() {
         setIsMenuOpen(false);
     };
 
+    if (loading && categories.length === 0) {
+        return (
+            <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-white text-xl">
+                Загрузка меню…
+            </div>
+        );
+    }
+
     return (
         <div className="bg-neutral-950 min-h-screen text-white pb-20">
             {/* Фиксированная шапка с навигацией по типам меню */}

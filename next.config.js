@@ -14,6 +14,10 @@ const nextConfig = {
         hostname: 'mmyfglktqvojwpycreko.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**.selstorage.ru',
+      },
     ],
     formats: ['image/webp', 'image/avif'],
     qualities: [70, 75, 80, 85, 90],

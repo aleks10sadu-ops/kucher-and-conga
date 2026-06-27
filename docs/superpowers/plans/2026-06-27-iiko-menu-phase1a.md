@@ -202,7 +202,7 @@ Expected: PASS (2 passed).
 Дописать в конец `.env.local` (НЕ коммитится):
 ```
 # iiko Cloud API
-IIKO_API_LOGIN=c547814490384a059920ff297d86bc2a
+IIKO_API_LOGIN=<your-iiko-apiLogin>
 IIKO_ORGANIZATION_ID=2418cf7b-1870-4e84-a181-4afc3d2d2506
 IIKO_EXTERNAL_MENU_ID=79802
 ```

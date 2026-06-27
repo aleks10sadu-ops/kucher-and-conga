@@ -771,7 +771,7 @@ export default function Page() {
         <EnhancedMenuSection
           onAddToCart={add}
           cartItems={items}
-          enableAdminEditing={true}
+          enableAdminEditing={false}
         />
 
         {/* Админ-панель управления контентом */}
