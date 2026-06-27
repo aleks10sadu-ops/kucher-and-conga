@@ -635,6 +635,33 @@ export default function FoodDetailModal({
                                 )}
                             </div>
 
+                            {/* КБЖУ — пищевая ценность (на 100 г) */}
+                            {!isEditing && (item as any).nutrition && (() => {
+                                const n = (item as any).nutrition;
+                                const cells = [
+                                    { label: 'Ккал', value: n.calories != null ? Math.round(n.calories) : null },
+                                    { label: 'Белки', value: n.proteins },
+                                    { label: 'Жиры', value: n.fats },
+                                    { label: 'Углеводы', value: n.carbs },
+                                ].filter((c) => c.value != null);
+                                if (!cells.length) return null;
+                                return (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-3">
+                                            Пищевая ценность <span className="text-sm font-normal text-neutral-500">на 100 г</span>
+                                        </h3>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {cells.map((c) => (
+                                                <div key={c.label} className="bg-white/5 rounded-lg p-3 text-center">
+                                                    <div className="text-base lg:text-lg font-bold text-amber-400">{c.value}</div>
+                                                    <div className="text-[11px] lg:text-xs text-neutral-400 mt-0.5">{c.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             {/* Category (only in edit mode) */}
                             {isEditing && categories.length > 0 && (
                                 <div>
