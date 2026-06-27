@@ -34,7 +34,6 @@ import { isPointInPolygon } from '../lib/utils/geo';
 import { useAppSettings } from '../lib/hooks/useAppSettings';
 import { useBookingLogic } from '../lib/hooks/useBookingLogic';
 import { useDeliveryLogic } from '../lib/hooks/useDeliveryLogic';
-import { useHallAvailability } from '../hooks/useHallAvailability';
 
 
 
@@ -154,12 +153,6 @@ export default function Page() {
     comment: '',
     hallId: null
   });
-
-  const { availability } = useHallAvailability(
-    bookingData.hallId ? String(bookingData.hallId) : null,
-    bookingData.date ? new Date(bookingData.date) : new Date(),
-    bookingData.guests
-  );
 
   const [bookingPrivacyConsent, setBookingPrivacyConsent] = useState(false);
   const [deliveryPrivacyConsent, setDeliveryPrivacyConsent] = useState(false);
@@ -350,16 +343,7 @@ export default function Page() {
       }
     }
 
-    // Check availability for Waitlist
-    let status = 'new';
-    if (date && availability && availability[date]) {
-      const confirmWaitlist = window.confirm('К сожалению, на эту дату мест нет. Хотите встать в лист ожидания?');
-      if (!confirmWaitlist) {
-        setBookingLoading(false);
-        return;
-      }
-      status = 'waitlist';
-    }
+    const status = 'new';
 
     // URL API сайта бронирований из переменной окружения
     // Настройте переменную NEXT_PUBLIC_RESERVATIONS_API_URL в .env.local
@@ -915,7 +899,6 @@ export default function Page() {
                       value={bookingData.date}
                       onChange={(date) => setBookingData(prev => ({ ...prev, date }))}
                       disablePastDates
-                      availability={availability}
                     />
 
                     {/* Time Selector */}

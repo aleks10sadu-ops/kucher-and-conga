@@ -24,7 +24,6 @@ type DateTimePickerProps = {
     todayOnly?: boolean;
     availableTimeRange?: AvailableTimeRange | null;
     disablePastDates?: boolean;
-    availability?: Record<string, boolean>; // { 'YYYY-MM-DD': isFull }
 };
 
 type Restrictions = {
@@ -51,7 +50,6 @@ export default function DateTimePicker({
     todayOnly = false,
     availableTimeRange = null,
     disablePastDates = false,
-    availability = {},
 }: DateTimePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState('');
@@ -393,7 +391,6 @@ export default function DateTimePicker({
                                         const isToday = day.toDateString() === new Date().toDateString();
                                         const isRestricted = restrictions.dates.includes(dayFormatted);
                                         const isDisabled = (min && day < new Date(min)) || (max && day > new Date(max)) || (todayOnly && !isToday) || (disablePastDates && day.getTime() < new Date().setHours(0, 0, 0, 0)) || isRestricted;
-                                        const isFull = availability?.[dayFormatted];
 
                                         return (
                                             <button
@@ -418,13 +415,11 @@ export default function DateTimePicker({
                                                 }}
                                                 className={`text-center py-2 text-sm rounded ${isSelected
                                                     ? 'bg-amber-400 text-black font-semibold'
-                                                    : isFull
-                                                        ? 'bg-yellow-600 text-white'
-                                                        : isToday
-                                                            ? 'bg-neutral-700 text-white'
-                                                            : isCurrentMonth && !isDisabled
-                                                                ? 'hover:bg-neutral-700 text-white'
-                                                                : 'text-neutral-500'
+                                                    : isToday
+                                                        ? 'bg-neutral-700 text-white'
+                                                        : isCurrentMonth && !isDisabled
+                                                            ? 'hover:bg-neutral-700 text-white'
+                                                            : 'text-neutral-500'
                                                     } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 disabled={isDisabled}
                                             >
@@ -433,13 +428,7 @@ export default function DateTimePicker({
                                         );
                                     })}
 
-                                    {/* Легенда */}
-                                    <div className="col-span-7 flex flex-wrap gap-2 text-[10px] text-neutral-400 mt-2 px-1">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
-                                            <span>Лист ожидания</span>
-                                        </div>
-                                    </div>
+
                                 </div>
                             </>
                         )}
