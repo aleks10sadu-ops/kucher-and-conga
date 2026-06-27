@@ -1,0 +1,95 @@
+import { describe, it, expect } from 'vitest';
+import { mapExternalMenu } from './mapMenu';
+import type { IikoExternalMenu } from './types';
+
+const raw: IikoExternalMenu = {
+  itemCategories: [
+    {
+      id: 'cat-1',
+      name: 'САЛАТЫ',
+      items: [
+        {
+          itemId: 'i1',
+          sku: '001',
+          name: 'Цезарь',
+          description: '  Классический  ',
+          itemSizes: [
+            {
+              sku: '001',
+              portionWeightGrams: 250,
+              buttonImageUrl: 'http://img/1.png',
+              prices: [{ organizationId: 'o', price: 450 }],
+              nutritionPerHundredGrams: { fats: 10, proteins: 8, carbs: 5, energy: 150 },
+            },
+          ],
+        },
+        {
+          itemId: 'i2',
+          name: 'Скрытый',
+          isHidden: true,
+          itemSizes: [{ prices: [{ organizationId: 'o', price: 300 }] }],
+        },
+        {
+          itemId: 'i3',
+          name: 'Без цены',
+          itemSizes: [{ prices: [{ organizationId: 'o', price: 0 }] }],
+        },
+      ],
+    },
+    {
+      id: 'cat-2',
+      name: 'СУПЫ',
+      items: [
+        {
+          itemId: 'i4',
+          name: 'Борщ',
+          description: '',
+          itemSizes: [
+            {
+              portionWeightGrams: 350,
+              prices: [{ organizationId: 'o', price: 380 }],
+              nutritionPerHundredGrams: { fats: null, proteins: null, carbs: null, energy: null },
+            },
+          ],
+        },
+      ],
+    },
+    { id: 'cat-empty', name: 'ПУСТО', items: [] },
+  ],
+};
+
+describe('mapExternalMenu', () => {
+  const result = mapExternalMenu(raw);
+  const cats = result.main.categories;
+
+  it('returns under main slug and drops empty categories', () => {
+    expect(Object.keys(result)).toEqual(['main']);
+    expect(cats.map((c) => c.name)).toEqual(['САЛАТЫ', 'СУПЫ']);
+  });
+
+  it('maps fields and trims description', () => {
+    const cezar = cats[0].items.find((i) => i.id === 'i1')!;
+    expect(cezar.name).toBe('Цезарь');
+    expect(cezar.description).toBe('Классический');
+    expect(cezar.price).toBe(450);
+    expect(cezar.weight).toBe(250);
+    expect(cezar.image).toBe('http://img/1.png');
+    expect(cezar.nutrition).toEqual({
+      calories: 150,
+      proteins: 8,
+      fats: 10,
+      carbs: 5,
+      per: 'per100g',
+    });
+  });
+
+  it('filters hidden and zero-price items', () => {
+    expect(cats[0].items.map((i) => i.id)).toEqual(['i1']);
+  });
+
+  it('returns null nutrition when all values are null', () => {
+    const borsch = cats[1].items[0];
+    expect(borsch.description).toBe('');
+    expect(borsch.nutrition).toBeNull();
+  });
+});

@@ -66,6 +66,14 @@ export type MenuItemVariant = {
     weight: string | number | null;
 };
 
+export type Nutrition = {
+    calories: number | null; // ккал на 100 г (energy)
+    proteins: number | null;
+    fats: number | null;
+    carbs: number | null;
+    per: 'per100g';
+};
+
 export type MenuItem = {
     id: string | number;
     name: string;
@@ -77,6 +85,8 @@ export type MenuItem = {
     variants?: MenuItemVariant[];
     categoryId?: string | number;
     category_id?: string | number | null;
+    sku?: string | null;
+    nutrition?: Nutrition | null;
     [key: string]: any;
 };
 
