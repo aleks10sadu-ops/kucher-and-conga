@@ -1,4 +1,14 @@
+import net from 'node:net';
 import { getIikoConfig } from './config';
+
+// Отключаем Happy Eyeballs (autoSelectFamily, включён по умолчанию в Node 20+):
+// на некоторых маршрутах/VPN к РФ-хосту iiko параллельные connect-попытки undici
+// зависают и fetch падает с UND_ERR_CONNECT_TIMEOUT, хотя прямое TLS-соединение
+// проходит. Отключение возвращает последовательный connect и чинит обращения к iiko.
+// Безопасно и на сервере Vercel (Linux) — там это поведение по умолчанию до Node 20.
+if (typeof net.setDefaultAutoSelectFamily === 'function') {
+  net.setDefaultAutoSelectFamily(false);
+}
 
 export class IikoError extends Error {
   constructor(
