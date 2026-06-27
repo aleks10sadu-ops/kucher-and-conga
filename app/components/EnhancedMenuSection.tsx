@@ -15,6 +15,7 @@ type DishRow = Database['public']['Tables']['dishes']['Row'];
 
 // Static data imports removed as we now fetch from Supabase
 import BusinessLunchBuilder from './BusinessLunchBuilder';
+import BusinessLunchConstructor from './BusinessLunchConstructor';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getMenuData } from '@/app/actions/getMenu';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
@@ -169,18 +170,24 @@ export default function EnhancedMenuSection({
         loadMenuData();
     }, [ssrMenuDataByType]);
 
-    // Derive available menu types from the iiko data keys only (iiko yields only `main`).
-    // Supabase menu_types are no longer used to drive the tab selector.
-    const iikoMenuKeys = Object.keys(
+    // Fixed ordered menu type definitions — always show in this order, filtered to keys with data.
+    // 'banquet' is always included (opens modal, has no iiko data).
+    const MENU_TYPE_DEFS: { id: string; name: string }[] = [
+        { id: 'main', name: 'Кухня' },
+        { id: 'business', name: 'Бизнес-ланч' },
+        { id: 'bar', name: 'Бар' },
+        { id: 'wine', name: 'Винная карта' },
+        { id: 'banquet', name: 'Банкетное меню' },
+        { id: 'kids', name: 'Детское' },
+        { id: 'promotions', name: 'Акции' },
+    ];
+    const loadedMenuData: Record<string, { categories: MenuCategory[] }> =
         (ssrMenuDataByType && Object.keys(ssrMenuDataByType).length > 0)
             ? ssrMenuDataByType
-            : clientMenuData || {}
-    );
-    const availableMenuTypes: MenuTypeInfo[] = (iikoMenuKeys.length > 0 ? iikoMenuKeys : ['main']).map(key => ({
-        id: key,
-        name: key === 'main' ? 'Основное меню' : key,
-        isDeliveryAvailable: true,
-    }));
+            : (clientMenuData || {});
+    const availableMenuTypes: MenuTypeInfo[] = MENU_TYPE_DEFS
+        .filter((d) => d.id === 'banquet' || (loadedMenuData[d.id]?.categories?.length ?? 0) > 0)
+        .map((d) => ({ id: d.id, name: d.name, isDeliveryAvailable: true }));
 
     // Функция для поиска блюд во всех типах меню
     const searchAllMenuTypes = useMemo(() => {
@@ -607,10 +614,9 @@ export default function EnhancedMenuSection({
 
                 {/* Меню по категориям или конструктор бизнес-ланча */}
                 {selectedMenuType === 'business' ? (
-                    <BusinessLunchBuilder
+                    <BusinessLunchConstructor
+                        sets={(loadedMenuData.business?.categories || []).flatMap((c) => c.items)}
                         onAddToCart={onAddToCart}
-                        isAdmin={enableAdminEditing && isAdmin}
-                        enableAdminEditing={enableAdminEditing}
                     />
                 ) : (
                     <div className="space-y-16">
