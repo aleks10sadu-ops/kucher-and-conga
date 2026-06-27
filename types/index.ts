@@ -77,6 +77,20 @@ export type Nutrition = {
     per: 'per100g';
 };
 
+export type ModifierOption = {
+    id: string;
+    name: string;
+    price: number;
+};
+
+export type ModifierGroup = {
+    id: string;
+    name: string;
+    min: number;
+    max: number;
+    options: ModifierOption[];
+};
+
 export type MenuItem = {
     id: string | number;
     name: string;
@@ -90,6 +104,7 @@ export type MenuItem = {
     category_id?: string | number | null;
     sku?: string | null;
     nutrition?: Nutrition | null;
+    modifierGroups?: ModifierGroup[];
     [key: string]: any;
 };
 

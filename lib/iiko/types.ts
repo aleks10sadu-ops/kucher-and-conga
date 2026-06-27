@@ -12,6 +12,28 @@ export interface IikoPrice {
   price: number | null;
 }
 
+export interface IikoModifierItem {
+  sku?: string;
+  name: string;
+  itemId?: string;
+  prices?: IikoPrice[];
+}
+
+export interface IikoModifierRestrictions {
+  minQuantity?: number;
+  maxQuantity?: number;
+  byDefault?: number;
+}
+
+export interface IikoModifierGroup {
+  name: string;
+  description?: string;
+  restrictions?: IikoModifierRestrictions;
+  items?: IikoModifierItem[];
+  itemGroupId?: string;
+  sku?: string;
+}
+
 export interface IikoItemSize {
   sku?: string;
   sizeName?: string;
@@ -19,7 +41,7 @@ export interface IikoItemSize {
   prices?: IikoPrice[];
   buttonImageUrl?: string | null;
   nutritionPerHundredGrams?: IikoNutrition | null;
-  itemModifierGroups?: unknown[];
+  itemModifierGroups?: IikoModifierGroup[];
 }
 
 export interface IikoItem {

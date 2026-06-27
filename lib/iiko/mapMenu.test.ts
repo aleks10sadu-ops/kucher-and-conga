@@ -93,3 +93,77 @@ describe('mapExternalMenu', () => {
     expect(borsch.nutrition).toBeNull();
   });
 });
+
+import { describe as describe2, it as it2, expect as expect2 } from 'vitest';
+
+describe2('mapExternalMenu — business split + modifiers', () => {
+  const raw = {
+    itemCategories: [
+      {
+        id: 'cat-food',
+        name: 'САЛАТЫ',
+        items: [
+          {
+            itemId: 'f1',
+            name: 'Цезарь',
+            itemSizes: [{ prices: [{ organizationId: 'o', price: 450 }] }],
+          },
+        ],
+      },
+      {
+        id: 'cat-bl',
+        name: 'БИЗНЕС ЛАНЧ',
+        items: [
+          {
+            itemId: 'set1',
+            name: 'Сет №1',
+            itemSizes: [
+              {
+                prices: [{ organizationId: 'o', price: 580 }],
+                itemModifierGroups: [
+                  {
+                    name: 'Суп на сегодня',
+                    itemGroupId: 'g-soup',
+                    restrictions: { minQuantity: 0, maxQuantity: 1 },
+                    items: [
+                      { itemId: 'o1', name: 'Окрошка', prices: [{ organizationId: 'o', price: 0 }] },
+                      { itemId: 'o2', name: 'Солянка', prices: [{ organizationId: 'o', price: 0 }] },
+                    ],
+                  },
+                  { name: 'Пустая группа', itemGroupId: 'g-empty', items: [] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } as any;
+
+  const result = mapExternalMenu(raw);
+
+  it2('splits БИЗНЕС ЛАНЧ into the business key, food stays in main', () => {
+    expect2(result.main.categories.map((c) => c.name)).toEqual(['САЛАТЫ']);
+    expect2(result.business?.categories.map((c) => c.name)).toEqual(['БИЗНЕС ЛАНЧ']);
+  });
+
+  it2('maps modifier groups, drops empty groups', () => {
+    const set = result.business!.categories[0].items[0];
+    expect2(set.modifierGroups?.length).toBe(1);
+    const g = set.modifierGroups![0];
+    expect2(g).toEqual({
+      id: 'g-soup',
+      name: 'Суп на сегодня',
+      min: 0,
+      max: 1,
+      options: [
+        { id: 'o1', name: 'Окрошка', price: 0 },
+        { id: 'o2', name: 'Солянка', price: 0 },
+      ],
+    });
+  });
+
+  it2('plain food items have no modifierGroups', () => {
+    expect2(result.main.categories[0].items[0].modifierGroups).toBeUndefined();
+  });
+});
