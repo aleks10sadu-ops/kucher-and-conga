@@ -1,12 +1,12 @@
 'use server';
 
-import { getIikoMenu } from '@/lib/iiko';
+import { getFullMenu } from '@/lib/menu/getFullMenu';
 
 export async function getMenuData() {
   try {
-    return await getIikoMenu();
+    return await getFullMenu();
   } catch (error) {
-    console.error('Server Action getMenuData (iiko) error:', error);
+    console.error('Server Action getMenuData (full menu) error:', error);
     throw error;
   }
 }
