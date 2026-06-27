@@ -21,21 +21,43 @@ export class IikoError extends Error {
   }
 }
 
+// Маршрут к РФ-хосту iiko (часто через VPN) периодически зависает на connect.
+// Поэтому: жёсткий таймаут на попытку + несколько ретраев на СЕТЕВЫЕ сбои.
+// HTTP-ответы с ошибкой (4xx/5xx) — это реальный ответ сервера, их не ретраим.
+const REQUEST_TIMEOUT_MS = 12_000;
+const MAX_ATTEMPTS = 3;
+
 export async function iikoPost<T>(path: string, body: unknown, token?: string): Promise<T> {
   const { baseUrl } = getIikoConfig();
-  const res = await fetch(baseUrl + path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body ?? {}),
-    cache: 'no-store',
-  });
+  let lastError: unknown;
 
-  const text = await res.text();
-  if (!res.ok) {
-    throw new IikoError(`iiko ${path} -> ${res.status}`, res.status, text.slice(0, 500));
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(baseUrl + path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body ?? {}),
+        cache: 'no-store',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+      const text = await res.text();
+      if (!res.ok) {
+        // Реальный ответ сервера — не ретраим, отдаём наверх.
+        throw new IikoError(`iiko ${path} -> ${res.status}`, res.status, text.slice(0, 500));
+      }
+      return JSON.parse(text) as T;
+    } catch (e) {
+      if (e instanceof IikoError) throw e; // HTTP-ошибка — без ретраев
+      lastError = e; // сетевой сбой / таймаут — пробуем ещё раз
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 300 * attempt));
+      }
+    }
   }
-  return JSON.parse(text) as T;
+
+  throw lastError;
 }
