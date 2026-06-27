@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMenuData } from '../actions/getMenu';
+import BanquetMenuModal from '../components/BanquetMenuModal';
 
 // Type definitions based on data files
 interface MenuItemVariant {
@@ -31,7 +32,9 @@ interface MenuCategory {
 
 
 function MenuContent() {
-    const [categories, setCategories] = useState<any[]>([]);
+    const [menuByType, setMenuByType] = useState<Record<string, { categories: any[] }>>({});
+    const [activeType, setActiveType] = useState<string>('main');
+    const [isBanquetOpen, setIsBanquetOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,16 +44,35 @@ function MenuContent() {
         getMenuData()
             .then((data: any) => {
                 if (!active) return;
-                const cats = data?.main?.categories || [];
-                setCategories(cats);
+                setMenuByType(data || {});
+                const firstKey = ['main', 'business', 'bar', 'wine', 'kids', 'promotions'].find((k) => data?.[k]?.categories?.length) || 'main';
+                setActiveType(firstKey);
+                const cats = data?.[firstKey]?.categories || [];
                 if (cats.length > 0) setActiveCategory(cats[0].id);
             })
             .catch((e) => console.error('menu load error', e))
             .finally(() => active && setLoading(false));
-        return () => {
-            active = false;
-        };
+        return () => { active = false; };
     }, []);
+
+    const TYPE_DEFS: { id: string; name: string }[] = [
+        { id: 'main', name: 'Кухня' },
+        { id: 'business', name: 'Бизнес-ланч' },
+        { id: 'bar', name: 'Бар' },
+        { id: 'wine', name: 'Винная карта' },
+        { id: 'banquet', name: 'Банкетное меню' },
+        { id: 'kids', name: 'Детское' },
+        { id: 'promotions', name: 'Акции' },
+    ];
+    const availableTypes = TYPE_DEFS.filter((t) => t.id === 'banquet' || (menuByType[t.id]?.categories?.length ?? 0) > 0);
+    const categories = menuByType[activeType]?.categories || [];
+
+    const selectType = (id: string) => {
+        if (id === 'banquet') { setIsBanquetOpen(true); return; }
+        setActiveType(id);
+        const cats = menuByType[id]?.categories || [];
+        setActiveCategory(cats[0]?.id || '');
+    };
 
     const scrollToCategory = (categoryId: string) => {
         setActiveCategory(categoryId);
@@ -79,6 +101,24 @@ function MenuContent() {
             {/* Фиксированная шапка с навигацией по типам меню */}
             <div className="fixed top-0 left-0 right-0 z-40 bg-neutral-950/80 backdrop-blur-md border-b border-white/10 pt-20">
                 <div className="container mx-auto px-4">
+                    {/* Таб-бар типов меню */}
+                    {availableTypes.length > 1 && (
+                        <div className="flex flex-wrap justify-center gap-2 mb-3">
+                            {availableTypes.map((t) => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => selectType(t.id)}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                                        activeType === t.id && t.id !== 'banquet'
+                                            ? 'bg-amber-400 text-black'
+                                            : 'bg-white/5 text-neutral-300 hover:bg-white/10 border border-white/10'
+                                    }`}
+                                >
+                                    {t.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {/* Навигация по категориям (десктоп) */}
                     <div className="hidden md:flex justify-center space-x-6 pb-4 overflow-x-auto scrollbar-none">
                         {categories.map((category: any) => (
@@ -138,125 +178,145 @@ function MenuContent() {
 
             {/* Основной контент */}
             <div className="container mx-auto px-4 pt-48 md:pt-48">
-                <div className="max-w-4xl mx-auto space-y-16 md:space-y-24">
-                    {categories.map((category: any) => (
-                        <div
-                            key={category.id}
-                            id={category.id}
-                            className="scroll-mt-48 pointer-events-auto"
-                        >
-                            <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-amber-400 border-b border-white/10 pb-4">
-                                {category.name}
-                            </h2>
-
-                            <div className="grid gap-6 md:gap-8">
-                                {category.items.map((item: any) => (
-                                    <div
-                                        key={item.id}
-                                        className="group bg-white/5 rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-colors border border-white/5 hover:border-amber-400/20"
-                                    >
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-baseline justify-between gap-4 mb-2">
-                                                    <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
-                                                        {item.name}
-                                                    </h3>
-                                                    {item.price && (
-                                                        <span className="text-lg md:text-xl font-bold text-amber-400 whitespace-nowrap">
-                                                            {item.price} ₽
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {item.description && (
-                                                    <p className="text-sm md:text-base text-neutral-400 mb-2 leading-relaxed">
-                                                        {item.description}
-                                                    </p>
-                                                )}
-
-                                                {/* Характеристики для вина */}
-                                                {(item.type || item.grape || item.strength) && (
-                                                    <div className="flex flex-wrap gap-2 mb-2 text-xs text-neutral-500">
-                                                        {item.type && (
-                                                            <span className="bg-white/5 px-2 py-1 rounded">
-                                                                {item.type}
-                                                            </span>
-                                                        )}
-                                                        {item.grape && (
-                                                            <span className="bg-white/5 px-2 py-1 rounded">
-                                                                🍇 {item.grape}
-                                                            </span>
-                                                        )}
-                                                        {item.strength && (
-                                                            <span className="bg-white/5 px-2 py-1 rounded">
-                                                                💪 {item.strength}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-center gap-4 text-xs md:text-sm text-neutral-500">
-                                                    {item.weight && (
-                                                        <span>⚖️ {item.weight} г</span>
-                                                    )}
-                                                    {item.volume && item.volume_unit && (
-                                                        <span>🥛 {item.volume} {item.volume_unit}</span>
-                                                    )}
-                                                </div>
-
-                                                {item.nutrition && (
-                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs md:text-sm text-neutral-500 mt-1">
-                                                        {item.nutrition.calories != null && (
-                                                            <span>{Math.round(item.nutrition.calories)} ккал</span>
-                                                        )}
-                                                        {item.nutrition.proteins != null && <span>Б {item.nutrition.proteins}</span>}
-                                                        {item.nutrition.fats != null && <span>Ж {item.nutrition.fats}</span>}
-                                                        {item.nutrition.carbs != null && <span>У {item.nutrition.carbs}</span>}
-                                                        <span className="opacity-60">/ 100 г</span>
-                                                    </div>
-                                                )}
-
-                                                {/* Варианты блюд/напитков */}
-                                                {item.variants && item.variants.length > 0 && (
-                                                    <div className="mt-4 space-y-2 border-t border-white/5 pt-3">
-                                                        {item.variants.map((variant: any, idx: number) => (
-                                                            <div key={idx} className="flex justify-between items-center text-sm">
-                                                                <span className="text-neutral-300">{variant.name}</span>
-                                                                <div className="flex items-center gap-3">
-                                                                    {variant.weight && (
-                                                                        <span className="text-neutral-500 text-xs">
-                                                                            {variant.weight}
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="font-semibold text-amber-400">
-                                                                        {variant.price} ₽
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Изображение (если есть) */}
-                                            {item.image && (
-                                                <div className="relative w-20 h-20 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900">
-                                                    <Image
-                                                        src={item.image}
-                                                        alt={item.name}
-                                                        fill
-                                                        unoptimized
-                                                        className="object-cover"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                {activeType === 'business' ? (
+                    <div className="max-w-3xl mx-auto space-y-8">
+                        {categories.flatMap((c: any) => c.items).map((set: any) => (
+                            <div key={set.id} className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <h3 className="text-xl font-bold">{set.name}</h3>
+                                    <span className="text-amber-400 font-bold whitespace-nowrap">{(set.price || 0).toLocaleString('ru-RU')} ₽</span>
+                                </div>
+                                {set.description && <p className="text-neutral-400 text-sm mt-1">{set.description}</p>}
+                                {(set.modifierGroups || []).map((g: any) => (
+                                    <div key={g.id} className="mt-3">
+                                        <div className="text-sm font-semibold text-neutral-300">{g.name}</div>
+                                        <div className="text-sm text-neutral-400">{g.options.map((o: any) => o.name).join(', ')}</div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="max-w-4xl mx-auto space-y-16 md:space-y-24">
+                        {categories.map((category: any) => (
+                            <div
+                                key={category.id}
+                                id={category.id}
+                                className="scroll-mt-48 pointer-events-auto"
+                            >
+                                <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-amber-400 border-b border-white/10 pb-4">
+                                    {category.name}
+                                </h2>
+
+                                <div className="grid gap-6 md:gap-8">
+                                    {category.items.map((item: any) => (
+                                        <div
+                                            key={item.id}
+                                            className="group bg-white/5 rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-colors border border-white/5 hover:border-amber-400/20"
+                                        >
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-baseline justify-between gap-4 mb-2">
+                                                        <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
+                                                            {item.name}
+                                                        </h3>
+                                                        {item.price && (
+                                                            <span className="text-lg md:text-xl font-bold text-amber-400 whitespace-nowrap">
+                                                                {item.price} ₽
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {item.description && (
+                                                        <p className="text-sm md:text-base text-neutral-400 mb-2 leading-relaxed">
+                                                            {item.description}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Характеристики для вина */}
+                                                    {(item.type || item.grape || item.strength) && (
+                                                        <div className="flex flex-wrap gap-2 mb-2 text-xs text-neutral-500">
+                                                            {item.type && (
+                                                                <span className="bg-white/5 px-2 py-1 rounded">
+                                                                    {item.type}
+                                                                </span>
+                                                            )}
+                                                            {item.grape && (
+                                                                <span className="bg-white/5 px-2 py-1 rounded">
+                                                                    🍇 {item.grape}
+                                                                </span>
+                                                            )}
+                                                            {item.strength && (
+                                                                <span className="bg-white/5 px-2 py-1 rounded">
+                                                                    💪 {item.strength}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex items-center gap-4 text-xs md:text-sm text-neutral-500">
+                                                        {item.weight && (
+                                                            <span>⚖️ {item.weight} г</span>
+                                                        )}
+                                                        {item.volume && item.volume_unit && (
+                                                            <span>🥛 {item.volume} {item.volume_unit}</span>
+                                                        )}
+                                                    </div>
+
+                                                    {item.nutrition && (
+                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs md:text-sm text-neutral-500 mt-1">
+                                                            {item.nutrition.calories != null && (
+                                                                <span>{Math.round(item.nutrition.calories)} ккал</span>
+                                                            )}
+                                                            {item.nutrition.proteins != null && <span>Б {item.nutrition.proteins}</span>}
+                                                            {item.nutrition.fats != null && <span>Ж {item.nutrition.fats}</span>}
+                                                            {item.nutrition.carbs != null && <span>У {item.nutrition.carbs}</span>}
+                                                            <span className="opacity-60">/ 100 г</span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Варианты блюд/напитков */}
+                                                    {item.variants && item.variants.length > 0 && (
+                                                        <div className="mt-4 space-y-2 border-t border-white/5 pt-3">
+                                                            {item.variants.map((variant: any, idx: number) => (
+                                                                <div key={idx} className="flex justify-between items-center text-sm">
+                                                                    <span className="text-neutral-300">{variant.name}</span>
+                                                                    <div className="flex items-center gap-3">
+                                                                        {variant.weight && (
+                                                                            <span className="text-neutral-500 text-xs">
+                                                                                {variant.weight}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="font-semibold text-amber-400">
+                                                                            {variant.price} ₽
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Изображение (если есть) */}
+                                                {item.image && (
+                                                    <div className="relative w-20 h-20 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900">
+                                                        <Image
+                                                            src={item.image}
+                                                            alt={item.name}
+                                                            fill
+                                                            unoptimized
+                                                            className="object-cover"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Кнопка "Наверх" */}
@@ -276,6 +336,8 @@ function MenuContent() {
                     ← На главную
                 </Link>
             </div>
+
+            <BanquetMenuModal isOpen={isBanquetOpen} onClose={() => setIsBanquetOpen(false)} />
         </div>
     );
 }
