@@ -36,7 +36,7 @@ import { useBookingLogic } from '../lib/hooks/useBookingLogic';
 import { useDeliveryLogic } from '../lib/hooks/useDeliveryLogic';
 
 import { evaluateBooking, classifyHall, banquetPackagesForHall, type BookingType } from '@/lib/booking/rules';
-import { BANQUET_PACKAGES } from '@/lib/booking/banquetPackages';
+import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquetPackages';
 import { composeReservationComment } from '@/lib/booking/composeReservation';
 import BookingTypeSelector from './components/BookingTypeSelector';
 import BanquetMenuModal from './components/BanquetMenuModal';
@@ -392,10 +392,10 @@ export default function Page() {
       setBookingLoading(false);
       return;
     }
-    if (bookingType === 'banquet' && !banquetPackageId) {
+    if (bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
       setBookingMessage({
         type: 'error',
-        text: 'Выберите банкетный пакет.',
+        text: 'Выберите банкетный пакет, совместимый с выбранным залом.',
       });
       setBookingLoading(false);
       return;
@@ -456,6 +456,11 @@ export default function Page() {
 
     const SUCCESS_TEXT = 'Заявка принята! Администратор свяжется с вами для подтверждения.';
 
+    // Best-effort: attempt both CRM and Telegram independently.
+    // Success is shown if EITHER channel received the request.
+    let crmOk = false;
+    let telegramOk = false;
+
     try {
       const result = await createReservation({
         firstName,
@@ -471,37 +476,32 @@ export default function Page() {
         hallId,
         composedComment,
       });
-
       if (result.success) {
-        setBookingMessage({ type: 'success', text: SUCCESS_TEXT });
-        resetBooking();
-
-        // Также уведомляем в Telegram
-        try {
-          await notifyTelegram(telegramPayload);
-        } catch (telegramError) {
-          console.warn('Failed to send to Telegram:', telegramError);
-        }
-
-        setBookingLoading(false);
-        return;
+        crmOk = true;
       } else {
-        setBookingMessage({
-          type: 'error',
-          text: result.error || 'Ошибка при создании бронирования. Попробуйте позже.',
-        });
-        setBookingLoading(false);
-        return;
+        console.warn('CRM reservation failed:', result.error);
       }
     } catch (error) {
-      console.error('Booking submission error:', error);
+      console.error('CRM reservation error:', error);
+    }
+
+    try {
+      await notifyTelegram(telegramPayload);
+      telegramOk = true;
+    } catch (telegramError) {
+      console.warn('Telegram notify failed:', telegramError);
+    }
+
+    if (crmOk || telegramOk) {
+      setBookingMessage({ type: 'success', text: SUCCESS_TEXT });
+      resetBooking();
+    } else {
       setBookingMessage({
         type: 'error',
         text: 'Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с нами по телефону.',
       });
-    } finally {
-      setBookingLoading(false);
     }
+    setBookingLoading(false);
   }
 
   // Проверка условий заказа бизнес-ланчей
@@ -883,7 +883,7 @@ export default function Page() {
                     <HallSelector
                       selectedHallId={bookingData.hallId ? String(bookingData.hallId) : null}
                       onSelect={(id, name) => {
-                        setBookingData(prev => ({ ...prev, hallId: id }));
+                        setBookingData(prev => ({ ...prev, hallId: id, banquetPackageId: null }));
                         setSelectedHallName(name ?? null);
                       }}
                     />
@@ -1097,7 +1097,7 @@ export default function Page() {
                       !bookingData.date ||
                       !bookingData.time ||
                       !isBookingTimeValid(`${bookingData.date}T${bookingData.time}:00`) ||
-                      (bookingData.bookingType === 'banquet' && !bookingData.banquetPackageId)
+                      (bookingData.bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), bookingData.banquetPackageId))
                     }
                     className="md:col-span-2 px-6 sm:px-8 lg:px-10 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >

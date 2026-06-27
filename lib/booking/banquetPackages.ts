@@ -18,3 +18,20 @@ export function packagesForFilter(filter: 'conga' | 'all' | null): BanquetPackag
   if (filter === 'conga') return BANQUET_PACKAGES.filter((p) => p.venue === 'conga');
   return BANQUET_PACKAGES;
 }
+
+/**
+ * Returns true iff the given packageId is a valid package permitted by hallFilter.
+ * - null hallFilter → always false (no hall selected / hall doesn't support banquets)
+ * - 'conga' filter → only packages with venue 'conga' are allowed
+ * - 'all' filter → any package is allowed
+ */
+export function isBanquetPackageAllowed(
+  hallFilter: 'conga' | 'all' | null,
+  packageId: string | null | undefined,
+): boolean {
+  if (!hallFilter || !packageId) return false;
+  const pkg = BANQUET_PACKAGES.find((p) => p.id === packageId);
+  if (!pkg) return false;
+  if (hallFilter === 'conga') return pkg.venue === 'conga';
+  return true; // 'all'
+}

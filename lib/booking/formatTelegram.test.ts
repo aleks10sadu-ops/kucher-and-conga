@@ -19,4 +19,27 @@ describe('formatBookingTelegram', () => {
     expect(msg).toMatch(/Стейк × 2/);
     expect(msg).toMatch(/3000/);
   });
+
+  it('escapes HTML special chars in user-provided values', () => {
+    const msg = formatBookingTelegram({
+      firstName: 'Анна<script>', lastName: 'Иванов&сын', phone: '+7 999 111-22-33',
+      date: '2026-08-01', time: '19:00',
+      adults: 2, children: 0, bookingType: 'banquet',
+      hallName: 'Conga & Кучер',
+      cartItems: [],
+      cartFoodSum: 0,
+      banquetPackageName: 'Пакет < Люкс >',
+      comment: 'стол < 5 & окно',
+    });
+    // Escaped sequences must appear
+    expect(msg).toContain('&lt;script&gt;');
+    expect(msg).toContain('Иванов&amp;сын');
+    expect(msg).toContain('Conga &amp; Кучер');
+    expect(msg).toContain('Пакет &lt; Люкс &gt;');
+    expect(msg).toContain('стол &lt; 5 &amp; окно');
+    // Raw user-supplied < and & must NOT appear in user-value positions
+    // (static labels like "🍽 Новая заявка" are fine — just check the dynamic parts)
+    expect(msg).not.toContain('<script>');
+    expect(msg).not.toContain('стол < 5');
+  });
 });
