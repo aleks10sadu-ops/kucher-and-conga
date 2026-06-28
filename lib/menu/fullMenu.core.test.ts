@@ -52,5 +52,6 @@ describe('assembleFullMenu', () => {
     expect(full.promotions).toBeUndefined();
     expect(full.main.categories[0].name).toBe('Кухня');
     expect(full.business.categories[0].items[0].price).toBe(580);
+    expect(full.bar.categories[0].items[0].id).toBe('bar-1');
   });
 });

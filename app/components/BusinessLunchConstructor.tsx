@@ -40,7 +40,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
       })
       .filter(Boolean) as { group: string; option: string }[];
 
-    const hash = chosen.map((c) => c.option).join('|');
+    const hash = Object.keys(choices).sort().map((g) => `${g}:${choices[g]}`).join('~');
     const composition = chosen.map((c) => `${c.group}: ${c.option}`).join('; ');
 
     onAddToCart({

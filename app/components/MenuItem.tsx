@@ -321,7 +321,7 @@ export default function MenuItem({
                         <h4 className="text-xs sm:text-sm lg:text-lg font-semibold leading-snug">{item.name}</h4>
                         {item.weight && (
                             <div className="mt-0.5 text-right text-[10px] sm:text-xs lg:text-sm text-neutral-400">
-                                {item.weight} г
+                                {typeof item.weight === 'number' ? `${item.weight} г` : item.weight}
                             </div>
                         )}
                     </div>

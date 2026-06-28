@@ -1,6 +1,6 @@
 import type { MenuCategory, MenuItem } from '../../types/index';
 
-export function normalizeStatic(data: { categories?: any[] } | null | undefined): MenuCategory[] {
+export function normalizeStatic(data: { categories?: any[] } | null | undefined, idPrefix?: string): MenuCategory[] {
   const cats = data?.categories || [];
   return cats.map((c: any) => ({
     id: c.id,
@@ -23,7 +23,7 @@ export function normalizeStatic(data: { categories?: any[] } | null | undefined)
             : '';
       return {
         ...it,
-        id: it.id,
+        id: idPrefix != null ? `${idPrefix}-${it.id}` : it.id,
         name: it.name,
         description,
         price: it.price ?? 0,
@@ -52,9 +52,9 @@ export function assembleFullMenu(
   };
   add('main', iikoMenu.main?.categories || []);
   add('business', iikoMenu.business?.categories || []);
-  add('bar', normalizeStatic(statics.bar));
-  add('wine', normalizeStatic(statics.wine));
-  add('kids', normalizeStatic(statics.kids));
-  add('promotions', normalizeStatic(statics.promotions));
+  add('bar', normalizeStatic(statics.bar, 'bar'));
+  add('wine', normalizeStatic(statics.wine, 'wine'));
+  add('kids', normalizeStatic(statics.kids, 'kids'));
+  add('promotions', normalizeStatic(statics.promotions, 'promotions'));
   return out;
 }

@@ -120,6 +120,7 @@ function MenuContent() {
                         </div>
                     )}
                     {/* Навигация по категориям (десктоп) */}
+                    {activeType !== 'business' && (
                     <div className="hidden md:flex justify-center space-x-6 pb-4 overflow-x-auto scrollbar-none">
                         {categories.map((category: any) => (
                             <button
@@ -134,8 +135,10 @@ function MenuContent() {
                             </button>
                         ))}
                     </div>
+                    )}
 
                     {/* Навигация по категориям (мобильная) */}
+                    {activeType !== 'business' && (
                     <div className="md:hidden pb-4 relative">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -173,6 +176,7 @@ function MenuContent() {
                             )}
                         </AnimatePresence>
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -256,7 +260,7 @@ function MenuContent() {
 
                                                     <div className="flex items-center gap-4 text-xs md:text-sm text-neutral-500">
                                                         {item.weight && (
-                                                            <span>⚖️ {item.weight} г</span>
+                                                            <span>⚖️ {typeof item.weight === 'number' ? `${item.weight} г` : item.weight}</span>
                                                         )}
                                                         {item.volume && item.volume_unit && (
                                                             <span>🥛 {item.volume} {item.volume_unit}</span>
