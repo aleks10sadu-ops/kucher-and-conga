@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Star, Clock, Scale, Edit2, Save, Trash2 } from 'lucide-react';
+import { X, Plus, Minus, Star, Clock, Scale, Edit2, Save, Trash2, Check } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { uploadDishImage, isSupabaseStorageUrl } from '@/lib/supabase/storage';
 import MenuTypesAndCategoriesManager from './MenuTypesAndCategoriesManager';
-import { MenuItem, CartItem, MenuItemVariant } from '@/types/index';
+import { MenuItem, CartItem, MenuItemVariant, ModifierGroup, ModifierOption } from '@/types/index';
 
 type FoodDetailModalProps = {
     item: MenuItem | null | { id: string; type?: string;[key: string]: any };
@@ -81,6 +81,44 @@ export default function FoodDetailModal({
             setError('');
         }
     }, [item, isAdmin]);
+
+    // --- Выбираемые модификаторы (гарнир/соус/мясо на выбор и т.п.) ---
+    const modifierGroups: ModifierGroup[] = ((item as any)?.modifierGroups as ModifierGroup[]) || [];
+    const hasModifiers = modifierGroups.length > 0;
+    const [modSel, setModSel] = useState<Record<string, string[]>>({});
+
+    // Предвыбор первой опции для обязательных одиночных групп при смене блюда
+    useEffect(() => {
+        const init: Record<string, string[]> = {};
+        for (const g of (((item as any)?.modifierGroups as ModifierGroup[]) || [])) {
+            if ((g.min ?? 0) > 0 && (g.max ?? 1) <= 1 && g.options[0]) {
+                init[g.id] = [g.options[0].id];
+            }
+        }
+        setModSel(init);
+    }, [item]);
+
+    const cleanOptName = (n: string) => String(n).replace(/^[-–—]\s*/, '');
+
+    const toggleMod = (g: ModifierGroup, optId: string) => {
+        setModSel((prev) => {
+            const cur = prev[g.id] || [];
+            const single = (g.max ?? 1) <= 1;
+            if (single) return { ...prev, [g.id]: [optId] };
+            if (cur.includes(optId)) return { ...prev, [g.id]: cur.filter((x) => x !== optId) };
+            if (cur.length >= (g.max ?? 99)) return prev; // достигнут максимум
+            return { ...prev, [g.id]: [...cur, optId] };
+        });
+    };
+
+    const selectedModOptions: ModifierOption[] = modifierGroups.flatMap((g) =>
+        (modSel[g.id] || []).map((oid) => g.options.find((o) => o.id === oid)).filter(Boolean) as ModifierOption[]
+    );
+    const modsExtraPrice = selectedModOptions.reduce((s, o) => s + (o.price || 0), 0);
+    const modsLabel = selectedModOptions.map((o) => cleanOptName(o.name)).join(', ');
+    const modsKey = modifierGroups.flatMap((g) => modSel[g.id] || []).join('-');
+    const requiredUnmet = modifierGroups.filter((g) => (g.min ?? 0) > 0 && (modSel[g.id]?.length ?? 0) < (g.min ?? 0));
+    const modsValid = requiredUnmet.length === 0;
 
     // Если это управление типами меню и категориями
     if (item?.id === 'manage-menu-types' && item?.type === 'menu-types') {
@@ -277,7 +315,13 @@ export default function FoodDetailModal({
                 qty: newQuantity
             });
         } else {
-            const cartItem = cartItems.find(ci => ci.id === item.id);
+            // Если у блюда есть модификаторы — учитываем выбор в id/названии/цене
+            if (hasModifiers && !modsValid) return;
+            const cartId = hasModifiers && modsKey ? `${item.id}__${modsKey}` : item.id;
+            const cartName = hasModifiers && modsLabel ? `${item.name} (${modsLabel})` : item.name;
+            const cartPrice = (item.price || 0) + (hasModifiers ? modsExtraPrice : 0);
+
+            const cartItem = cartItems.find(ci => ci.id === cartId);
             const currentQty = cartItem?.qty || 0;
 
             if (currentQty >= 99) return;
@@ -285,9 +329,9 @@ export default function FoodDetailModal({
             const newQuantity = currentQty + 1;
 
             onAddToCart({
-                id: item.id,
-                name: item.name,
-                price: item.price || 0,
+                id: cartId,
+                name: cartName,
+                price: cartPrice,
                 weight: item.weight || '',
                 description: item.description,
                 img: displayImage,
@@ -635,6 +679,99 @@ export default function FoodDetailModal({
                                 )}
                             </div>
 
+                            {/* КБЖУ — пищевая ценность (на 100 г) */}
+                            {!isEditing && (item as any).nutrition && (() => {
+                                const n = (item as any).nutrition;
+                                const cells = [
+                                    { label: 'Ккал', value: n.calories != null ? Math.round(n.calories) : null },
+                                    { label: 'Белки', value: n.proteins },
+                                    { label: 'Жиры', value: n.fats },
+                                    { label: 'Углеводы', value: n.carbs },
+                                ].filter((c) => c.value != null);
+                                if (!cells.length) return null;
+                                return (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-3">
+                                            Пищевая ценность <span className="text-sm font-normal text-neutral-500">на 100 г</span>
+                                        </h3>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {cells.map((c) => (
+                                                <div key={c.label} className="bg-white/5 rounded-lg p-3 text-center">
+                                                    <div className="text-base lg:text-lg font-bold text-amber-400">{c.value}</div>
+                                                    <div className="text-[11px] lg:text-xs text-neutral-400 mt-0.5">{c.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Выбираемые модификаторы (гарнир/соус/мясо на выбор и т.п.) */}
+                            {!isEditing && item.id !== 'new' && hasModifiers && (
+                                <div className="space-y-5">
+                                    {modifierGroups.map((g) => {
+                                        const single = (g.max ?? 1) <= 1;
+                                        const sel = modSel[g.id] || [];
+                                        const required = (g.min ?? 0) > 0;
+                                        return (
+                                            <div key={g.id}>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-base font-semibold">{cleanOptName(g.name)}</h3>
+                                                    {required ? (
+                                                        <span className="text-[11px] text-amber-400 bg-amber-400/10 rounded px-2 py-0.5">обязательно</span>
+                                                    ) : (
+                                                        <span className="text-[11px] text-neutral-500">не обязательно</span>
+                                                    )}
+                                                    {!single && <span className="text-[11px] text-neutral-500">можно до {g.max}</span>}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {g.options.map((opt) => {
+                                                        const checked = sel.includes(opt.id);
+                                                        return (
+                                                            <button
+                                                                key={opt.id}
+                                                                type="button"
+                                                                onClick={() => toggleMod(g, opt.id)}
+                                                                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ${checked ? 'border-amber-400 bg-amber-400/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                                                            >
+                                                                <span className="flex items-center gap-3">
+                                                                    <span className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${single ? 'rounded-full' : 'rounded'} border ${checked ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/30'}`}>
+                                                                        {checked && <Check className="w-3.5 h-3.5" />}
+                                                                    </span>
+                                                                    <span className="text-sm text-white">{cleanOptName(opt.name)}</span>
+                                                                </span>
+                                                                {opt.price > 0 && (
+                                                                    <span className="text-amber-400 text-sm font-medium whitespace-nowrap">+{opt.price} ₽</span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Добавить в корзину — для блюд с модификаторами */}
+                            {hasModifiers && !isEditing && item.id !== 'new' && (
+                                <div className="pt-4 border-t border-white/10">
+                                    {!modsValid && (
+                                        <p className="text-amber-300 text-sm mb-3">
+                                            Выберите: {requiredUnmet.map((g) => cleanOptName(g.name)).join(', ')}
+                                        </p>
+                                    )}
+                                    <button
+                                        onClick={() => handleAdd()}
+                                        disabled={!modsValid}
+                                        className="w-full px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        Добавить в корзину — {((item.price || 0) + modsExtraPrice).toLocaleString('ru-RU')} ₽
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Category (only in edit mode) */}
                             {isEditing && categories.length > 0 && (
                                 <div>
@@ -707,8 +844,8 @@ export default function FoodDetailModal({
                                 </div>
                             )}
 
-                            {/* Add to Cart - only for items without variants and not in edit mode, and not new items */}
-                            {(!item.variants || !Array.isArray(item.variants) || item.variants.length === 0) && !isEditing && item.id !== 'new' && (
+                            {/* Add to Cart - only for items without variants/modifiers and not in edit mode, and not new items */}
+                            {(!item.variants || !Array.isArray(item.variants) || item.variants.length === 0) && !hasModifiers && !isEditing && item.id !== 'new' && (
                                 <div className="pt-4 border-t border-white/10">
                                     <div className="flex items-center justify-between">
                                         <span className="text-lg font-semibold">Добавить в корзину</span>

@@ -12,9 +12,7 @@ type CreateReservationResponse = {
 
 type CreateReservationData = BookingData & {
     name?: string; // legacy support
-    guests_count: number;
-    comments?: string;
-    status?: 'new' | 'waitlist';
+    composedComment: string;
 };
 
 
@@ -40,11 +38,6 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
         // Ensure time has seconds: HH:mm -> HH:mm:00
         let timeStr = data.time;
 
-        // If waitlist and no time selected, use a default placeholder time
-        if (!timeStr && data.status === 'waitlist') {
-            timeStr = '00:00';
-        }
-
         if (timeStr && timeStr.length === 5) {
             timeStr += ':00';
         }
@@ -62,12 +55,11 @@ export async function createReservation(data: CreateReservationData): Promise<Cr
             p_last_name: lastName || undefined,
             p_date: data.date,
             p_time: timeStr,
-            p_guests_count: data.guests_count,
+            p_guests_count: data.adults + data.children,
             p_hall_id: hallIdParam,
-            p_comments: data.comments || undefined,
-            p_status: data.status || 'new',
-            // Explicitly pass menu_type to resolve postgres function ambiguity (discriminator)
-            p_menu_type: null
+            p_comments: data.composedComment,
+            p_status: 'new',
+            p_menu_type: data.bookingType
         };
 
         const result = await supabase.rpc('create_public_reservation', rpcParams);

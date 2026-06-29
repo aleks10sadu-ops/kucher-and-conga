@@ -77,7 +77,7 @@ const initialHalls: Hall[] = [
 
 type HallSelectorProps = {
     selectedHallId: string | null;
-    onSelect: (id: string | null) => void;
+    onSelect: (id: string | null, name?: string | null) => void;
 };
 
 export default function HallSelector({ selectedHallId, onSelect }: HallSelectorProps) {
@@ -319,7 +319,7 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                 {/* Select Button */}
                 <button
                     type="button"
-                    onClick={() => isSelected ? onSelect(null) : onSelect(currentHall.id)}
+                    onClick={() => isSelected ? onSelect(null, null) : onSelect(currentHall.id, currentHall.name)}
                     className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${isSelected
                         ? 'bg-amber-400 text-black ring-2 ring-amber-400 ring-offset-2 ring-offset-black'
                         : 'bg-white/10 text-white hover:bg-white/20'

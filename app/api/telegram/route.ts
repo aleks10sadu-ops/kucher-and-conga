@@ -1,5 +1,6 @@
 // app/api/telegram/route.ts
 import { NextResponse, NextRequest } from 'next/server';
+import { formatBookingTelegram } from '@/lib/booking/formatTelegram';
 
 const TG_API = (token: string) => `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -43,11 +44,17 @@ interface BasePayload {
 
 interface BookingPayload extends BasePayload {
   type: 'booking';
+  firstName: string;
+  lastName: string;
   date: string;
   time: string;
-  guests: string;
-  items?: OrderItem[];
-  total?: number;
+  adults: number;
+  children: number;
+  bookingType: 'onsite' | 'preorder' | 'banquet';
+  hallName: string | null;
+  cartItems: OrderItem[];
+  cartFoodSum: number;
+  banquetPackageName?: string | null;
 }
 
 interface DeliveryPayload extends BasePayload {
@@ -70,31 +77,16 @@ function buildMessage(payload: TelegramPayload): string {
   const { type } = payload; // "booking" | "delivery"
 
   if (type === 'booking') {
-    const { name, phone, date, time, guests, comment, items = [], total = 0 } = payload;
-
-    // Форматируем дату и время в московское время
-    let formattedDateTime = '';
-    if (date && time) {
-      const dateTimeString = `${date}T${time}`;
-      formattedDateTime = formatMoscowTime(dateTimeString);
-    } else {
-      formattedDateTime = `${date || '-'} ${time || '-'}`;
-    }
-
-    const itemsBlock = items.length
-      ? '\n<b>Заказ/пожелания (из корзины):</b>\n' +
-      items.map(i => `• ${escapeHtml(i.name)} × ${i.qty} = ${fmtCurrency(i.qty * i.price)} ₽`).join('\n') +
-      `\n<b>Итого:</b> ${fmtCurrency(total)} ₽`
-      : '';
-    return (
-      `<b>🟩 Заявка: Бронирование</b>\n` +
-      `<b>Имя:</b> ${escapeHtml(name)}\n` +
-      `<b>Телефон:</b> ${escapeHtml(phone)}\n` +
-      `<b>Дата и время:</b> ${formattedDateTime}\n` +
-      `<b>Гостей:</b> ${escapeHtml(guests || '-')}\n` +
-      (comment ? `<b>Комментарий:</b> ${escapeHtml(comment)}\n` : '') +
-      itemsBlock
-    );
+    const {
+      firstName, lastName, phone, date, time,
+      adults, children, bookingType, hallName,
+      cartItems, cartFoodSum, banquetPackageName, comment,
+    } = payload;
+    return formatBookingTelegram({
+      firstName, lastName, phone, date, time,
+      adults, children, bookingType, hallName,
+      cartItems, cartFoodSum, banquetPackageName, comment,
+    });
   }
 
   if (type === 'delivery') {

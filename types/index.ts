@@ -38,7 +38,10 @@ export type BookingData = {
     phone: string;
     date: string;
     time: string;
-    guests: number;
+    adults: number;
+    children: number;
+    bookingType: 'onsite' | 'preorder' | 'banquet';
+    banquetPackageId?: string | null;
     comment?: string;
     hallId?: string | number | null;
 };
@@ -66,6 +69,28 @@ export type MenuItemVariant = {
     weight: string | number | null;
 };
 
+export type Nutrition = {
+    calories: number | null; // ккал на 100 г (energy)
+    proteins: number | null;
+    fats: number | null;
+    carbs: number | null;
+    per: 'per100g';
+};
+
+export type ModifierOption = {
+    id: string;
+    name: string;
+    price: number;
+};
+
+export type ModifierGroup = {
+    id: string;
+    name: string;
+    min: number;
+    max: number;
+    options: ModifierOption[];
+};
+
 export type MenuItem = {
     id: string | number;
     name: string;
@@ -77,6 +102,9 @@ export type MenuItem = {
     variants?: MenuItemVariant[];
     categoryId?: string | number;
     category_id?: string | number | null;
+    sku?: string | null;
+    nutrition?: Nutrition | null;
+    modifierGroups?: ModifierGroup[];
     [key: string]: any;
 };
 

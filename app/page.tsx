@@ -34,7 +34,12 @@ import { isPointInPolygon } from '../lib/utils/geo';
 import { useAppSettings } from '../lib/hooks/useAppSettings';
 import { useBookingLogic } from '../lib/hooks/useBookingLogic';
 import { useDeliveryLogic } from '../lib/hooks/useDeliveryLogic';
-import { useHallAvailability } from '../hooks/useHallAvailability';
+
+import { evaluateBooking, classifyHall, banquetPackagesForHall, type BookingType } from '@/lib/booking/rules';
+import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquetPackages';
+import { composeReservationComment } from '@/lib/booking/composeReservation';
+import BookingTypeSelector from './components/BookingTypeSelector';
+import BanquetMenuModal from './components/BanquetMenuModal';
 
 
 
@@ -63,7 +68,10 @@ interface BookingData {
   phone: string;
   date: string;
   time: string;
-  guests: number;
+  adults: number;
+  children: number;
+  bookingType: BookingType;
+  banquetPackageId: string | null;
   comment: string;
   hallId: string | number | null;
 }
@@ -85,8 +93,6 @@ interface DeliveryForm {
 }
 
 export default function Page() {
-  const [guests, setGuests] = useState(2);
-
   const [cartOpen, setCartOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
@@ -150,20 +156,47 @@ export default function Page() {
     phone: '',
     date: '',
     time: '',
-    guests: 2,
+    adults: 2,
+    children: 0,
+    bookingType: 'onsite',
+    banquetPackageId: null,
     comment: '',
     hallId: null
   });
 
-  const { availability } = useHallAvailability(
-    bookingData.hallId ? String(bookingData.hallId) : null,
-    bookingData.date ? new Date(bookingData.date) : new Date(),
-    bookingData.guests
-  );
-
   const [bookingPrivacyConsent, setBookingPrivacyConsent] = useState(false);
   const [deliveryPrivacyConsent, setDeliveryPrivacyConsent] = useState(false);
   const { items, add, dec, remove, clear, count, total } = useCart();
+
+  // --- BOOKING: тип брони, валидация по правилам ---
+  const [selectedHallName, setSelectedHallName] = useState<string | null>(null);
+  const [banquetModalOpen, setBanquetModalOpen] = useState(false);
+
+  const cartFoodSum = items.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
+  const hallGroup = classifyHall(selectedHallName);
+  const validation = evaluateBooking({
+    adults: bookingData.adults,
+    children: bookingData.children,
+    eventDate: bookingData.date,
+    eventTime: bookingData.time,
+    now: new Date(),
+    hallGroup,
+    type: bookingData.bookingType,
+    cartFoodSum,
+  });
+  const allowedSignature = validation.availableTypes.map(t => (t.allowed ? '1' : '0')).join('');
+
+  // Авто-переключение типа брони, если выбранный стал недоступен
+  useEffect(() => {
+    const current = validation.availableTypes.find(t => t.type === bookingData.bookingType);
+    if (current && !current.allowed) {
+      const firstAllowed = validation.availableTypes.find(t => t.allowed);
+      if (firstAllowed) {
+        setBookingData(prev => ({ ...prev, bookingType: firstAllowed.type }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedSignature, bookingData.bookingType]);
 
 
   // Используем хук для проверки админа
@@ -325,7 +358,7 @@ export default function Page() {
     setBookingLoading(true);
     setBookingMessage(null);
 
-    const { phone, date, time, guests: guestsValue, comment, firstName, lastName, hallId } = bookingData;
+    const { phone, date, time, comment, firstName, lastName, hallId, adults, children, bookingType, banquetPackageId } = bookingData;
 
     // Check if hall is selected
     if (!hallId) {
@@ -350,140 +383,125 @@ export default function Page() {
       }
     }
 
-    // Check availability for Waitlist
-    let status = 'new';
-    if (date && availability && availability[date]) {
-      const confirmWaitlist = window.confirm('К сожалению, на эту дату мест нет. Хотите встать в лист ожидания?');
-      if (!confirmWaitlist) {
-        setBookingLoading(false);
-        return;
-      }
-      status = 'waitlist';
+    // Проверка доменных правил брони
+    if (!validation.canSubmit) {
+      setBookingMessage({
+        type: 'error',
+        text: validation.blocking[0] || 'Бронирование с такими параметрами недоступно. Свяжитесь с администратором.',
+      });
+      setBookingLoading(false);
+      return;
+    }
+    if (bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
+      setBookingMessage({
+        type: 'error',
+        text: 'Выберите банкетный пакет, совместимый с выбранным залом.',
+      });
+      setBookingLoading(false);
+      return;
     }
 
-    // URL API сайта бронирований из переменной окружения
-    // Настройте переменную NEXT_PUBLIC_RESERVATIONS_API_URL в .env.local
-    // Пример: NEXT_PUBLIC_RESERVATIONS_API_URL=https://your-reservations-site.vercel.app
-    const reservationsApiUrl = process.env.NEXT_PUBLIC_RESERVATIONS_API_URL || '';
+    // Общие данные брони
+    const banquetPackageName = BANQUET_PACKAGES.find(p => p.id === banquetPackageId)?.name ?? null;
+    const preorderItems = bookingType === 'preorder'
+      ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price }))
+      : [];
+    const preorderSum = bookingType === 'preorder' ? cartFoodSum : 0;
+    const composedComment = composeReservationComment({
+      adults,
+      children,
+      bookingType,
+      hallName: selectedHallName,
+      cartItems: preorderItems,
+      cartFoodSum: preorderSum,
+      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      comment,
+    });
+
+    const telegramPayload = {
+      type: 'booking' as const,
+      name: `${firstName} ${lastName}`.trim(),
+      firstName,
+      lastName: lastName || '',
+      phone,
+      date,
+      time,
+      adults,
+      children,
+      bookingType,
+      hallName: selectedHallName,
+      cartItems: preorderItems,
+      cartFoodSum: preorderSum,
+      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      comment,
+    };
+
+    const resetBooking = () => {
+      setBookingData({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        date: '',
+        time: '',
+        adults: 2,
+        children: 0,
+        bookingType: 'onsite',
+        banquetPackageId: null,
+        comment: '',
+        hallId: null,
+      });
+      setSelectedHallName(null);
+      setBookingPrivacyConsent(false);
+    };
+
+    const SUCCESS_TEXT = 'Заявка принята! Администратор свяжется с вами для подтверждения.';
+
+    // Best-effort: attempt both CRM and Telegram independently.
+    // Success is shown if EITHER channel received the request.
+    let crmOk = false;
+    let telegramOk = false;
 
     try {
-      // Если указан URL API бронирований, отправляем туда
-      if (reservationsApiUrl) {
-        const reservationData = {
-          // name: name, // Legacy
-          firstName: firstName,
-          lastName: lastName,
-          phone: phone,
-          date: date,
-          time: time,
-          guests: Number(guestsValue) || guests,
-          guests_count: Number(guestsValue) || guests,
-          comment: comment || undefined,
-          comments: comment || undefined,
-          hallId: hallId || undefined,
-          status: status as 'new' | 'waitlist'
-        };
-
-
-        const result = await createReservation(reservationData);
-
-        if (result.success) {
-          // Если есть предупреждение о CORS, но бронирование создано
-          const res = result as any;
-          const message = res.warning
-            ? 'Бронирование успешно создано!'
-            : result.message || 'Бронирование успешно создано! Мы свяжемся с вами для подтверждения.';
-
-          setBookingMessage({
-            type: 'success',
-            text: message,
-          });
-
-          try {
-            e.currentTarget.reset();
-            setGuests(2);
-            setBookingPrivacyConsent(false);
-          } catch (resetError) {
-            console.warn('Failed to reset form:', resetError);
-            // Игнорируем ошибки сброса формы, так как бронирование уже создано
-          }
-
-          // Также отправляем в Telegram как резервный вариант
-          try {
-            await notifyTelegram({
-              type: 'booking',
-              name: `${firstName} ${lastName}`.trim(),
-              phone,
-              date,
-              time,
-              guests: guestsValue,
-              comment,
-              items,
-              total,
-              hallId // Добавляем зал в telegram (нужна поддержка на бэке, но пока передадим)
-            });
-          } catch (telegramError) {
-            console.warn('Failed to send to Telegram:', telegramError);
-            // Не показываем ошибку пользователю, так как основное бронирование создано
-          }
-
-          // Выходим из функции, так как бронирование успешно создано
-          setBookingLoading(false);
-          return;
-        } else {
-          setBookingMessage({
-            type: 'error',
-            text: result.error || 'Ошибка при создании бронирования. Попробуйте позже.',
-          });
-          setBookingLoading(false);
-          return;
-        }
+      const result = await createReservation({
+        firstName,
+        lastName,
+        phone,
+        date,
+        time,
+        adults,
+        children,
+        bookingType,
+        banquetPackageId,
+        comment,
+        hallId,
+        composedComment,
+      });
+      if (result.success) {
+        crmOk = true;
       } else {
-        // Если URL API не указан, отправляем только в Telegram (старое поведение)
-        const payload = {
-          type: 'booking',
-          name: `${firstName} ${lastName}`.trim(),
-          phone,
-          date,
-          time,
-          guests: guestsValue,
-          comment,
-          items,
-          total,
-        };
-        await notifyTelegram(payload);
-        setBookingMessage({
-          type: 'success',
-          text: 'Заявка на бронирование отправлена! Мы свяжемся с вами.',
-        });
-        // Сбрасываем данные
-        // Сбрасываем данные
-        setBookingData({
-          firstName: '',
-          lastName: '',
-          phone: '',
-          date: '',
-          time: '',
-          guests: 2,
-          comment: '',
-          hallId: null
-        });
-        setGuests(2);
-        setBookingPrivacyConsent(false);
-        setBookingLoading(false);
-        return;
+        console.warn('CRM reservation failed:', result.error);
       }
     } catch (error) {
-      console.error('Booking submission error:', error);
-      // Показываем ошибку только если бронирование не было успешно создано
-      // (т.е. если мы не вышли из функции раньше через return)
+      console.error('CRM reservation error:', error);
+    }
+
+    try {
+      await notifyTelegram(telegramPayload);
+      telegramOk = true;
+    } catch (telegramError) {
+      console.warn('Telegram notify failed:', telegramError);
+    }
+
+    if (crmOk || telegramOk) {
+      setBookingMessage({ type: 'success', text: SUCCESS_TEXT });
+      resetBooking();
+    } else {
       setBookingMessage({
         type: 'error',
         text: 'Произошла ошибка при отправке заявки. Попробуйте позже или свяжитесь с нами по телефону.',
       });
-    } finally {
-      setBookingLoading(false);
     }
+    setBookingLoading(false);
   }
 
   // Проверка условий заказа бизнес-ланчей
@@ -771,7 +789,7 @@ export default function Page() {
         <EnhancedMenuSection
           onAddToCart={add}
           cartItems={items}
-          enableAdminEditing={true}
+          enableAdminEditing={false}
         />
 
         {/* Админ-панель управления контентом */}
@@ -864,7 +882,10 @@ export default function Page() {
                   <div className="md:col-span-2">
                     <HallSelector
                       selectedHallId={bookingData.hallId ? String(bookingData.hallId) : null}
-                      onSelect={(id) => setBookingData(prev => ({ ...prev, hallId: id }))}
+                      onSelect={(id, name) => {
+                        setBookingData(prev => ({ ...prev, hallId: id, banquetPackageId: null }));
+                        setSelectedHallName(name ?? null);
+                      }}
                     />
                   </div>
 
@@ -915,7 +936,6 @@ export default function Page() {
                       value={bookingData.date}
                       onChange={(date) => setBookingData(prev => ({ ...prev, date }))}
                       disablePastDates
-                      availability={availability}
                     />
 
                     {/* Time Selector */}
@@ -929,23 +949,93 @@ export default function Page() {
                   </div>
 
 
-                  {/* Guests Input */}
-                  <div className="md:col-span-2 relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                    <div className="absolute left-11 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-                      Гостей:
+                  {/* Гости: взрослые и дети */}
+                  <div className="md:col-span-2 grid md:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                      <div className="absolute left-11 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+                        Взрослых:
+                      </div>
+                      <input
+                        id="adults" name="adults" type="number" min={1}
+                        value={bookingData.adults}
+                        onChange={(e) => {
+                          const v = Math.max(1, Number(e.target.value) || 0);
+                          setBookingData(prev => ({ ...prev, adults: v }));
+                        }}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-32 focus:outline-none focus:border-amber-400 transition-colors text-white"
+                      />
                     </div>
-                    <input
-                      id="guests" name="guests" type="number" min={1}
-                      value={bookingData.guests}
-                      onChange={(e) => {
-                        const newValue = Number(e.target.value);
-                        setGuests(newValue);
-                        setBookingData(prev => ({ ...prev, guests: newValue }));
-                      }}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-28 focus:outline-none focus:border-amber-400 transition-colors text-white"
+                    <div className="relative">
+                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                      <div className="absolute left-11 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+                        Детей:
+                      </div>
+                      <input
+                        id="children" name="children" type="number" min={0}
+                        value={bookingData.children}
+                        onChange={(e) => {
+                          const v = Math.max(0, Number(e.target.value) || 0);
+                          setBookingData(prev => ({ ...prev, children: v }));
+                        }}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-28 focus:outline-none focus:border-amber-400 transition-colors text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Тип брони */}
+                  <div className="md:col-span-2">
+                    <BookingTypeSelector
+                      validation={validation}
+                      selectedType={bookingData.bookingType}
+                      onSelect={(t) => setBookingData(prev => ({ ...prev, bookingType: t }))}
                     />
                   </div>
+
+                  {/* Предзаказ: сводка корзины */}
+                  {bookingData.bookingType === 'preorder' && (
+                    <div className="md:col-span-2 rounded-xl border border-white/10 bg-white/5 p-4">
+                      {items.length === 0 ? (
+                        <p className="text-sm text-neutral-300">
+                          Наберите блюда в меню для предзаказа.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-sm font-semibold text-neutral-200">Состав предзаказа:</div>
+                          <ul className="space-y-1">
+                            {items.map((it) => (
+                              <li key={it.id} className="flex justify-between text-sm text-neutral-300">
+                                <span>{it.name} × {it.qty}</span>
+                                <span>{(it.price || 0) * (it.qty || 0)} ₽</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="flex justify-between text-sm font-semibold text-amber-300 pt-2 border-t border-white/10">
+                            <span>Сумма предзаказа</span>
+                            <span>{cartFoodSum} ₽</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Банкет: выбор пакета */}
+                  {bookingData.bookingType === 'banquet' && (
+                    <div className="md:col-span-2 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setBanquetModalOpen(true)}
+                        className="w-full py-3 rounded-xl font-semibold bg-white/10 text-white hover:bg-white/20 transition"
+                      >
+                        Выбрать банкетный пакет
+                      </button>
+                      {bookingData.banquetPackageId && (
+                        <p className="text-sm text-amber-300 text-center">
+                          Выбран пакет: {BANQUET_PACKAGES.find(p => p.id === bookingData.banquetPackageId)?.name}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Comment Input */}
                   <div className="md:col-span-2 relative">
@@ -997,12 +1087,36 @@ export default function Page() {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    disabled={bookingLoading}
+                    disabled={
+                      bookingLoading ||
+                      !validation.canSubmit ||
+                      !bookingPrivacyConsent ||
+                      !bookingData.firstName.trim() ||
+                      !bookingData.phone.trim() ||
+                      !bookingData.hallId ||
+                      !bookingData.date ||
+                      !bookingData.time ||
+                      !isBookingTimeValid(`${bookingData.date}T${bookingData.time}:00`) ||
+                      (bookingData.bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), bookingData.banquetPackageId))
+                    }
                     className="md:col-span-2 px-6 sm:px-8 lg:px-10 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     {bookingLoading ? 'Отправка...' : 'Отправить заявку'}
                   </button>
                 </form>
+
+                {/* Модалка выбора банкетного пакета */}
+                <BanquetMenuModal
+                  isOpen={banquetModalOpen}
+                  onClose={() => setBanquetModalOpen(false)}
+                  selectable
+                  hallFilter={banquetPackagesForHall(hallGroup)}
+                  selectedPackageId={bookingData.banquetPackageId}
+                  onSelectPackage={(id) => {
+                    setBookingData(prev => ({ ...prev, banquetPackageId: id }));
+                    setBanquetModalOpen(false);
+                  }}
+                />
 
 
               </div>

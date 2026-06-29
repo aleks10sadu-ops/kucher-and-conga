@@ -3,13 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { packagesForFilter } from '@/lib/booking/banquetPackages';
 
 type BanquetMenuModalProps = {
     isOpen: boolean;
     onClose: () => void;
+    selectable?: boolean;
+    selectedPackageId?: string | null;
+    onSelectPackage?: (id: string) => void;
+    hallFilter?: 'conga' | 'all' | null;
 };
 
-export default function BanquetMenuModal({ isOpen, onClose }: BanquetMenuModalProps) {
+export default function BanquetMenuModal({
+    isOpen,
+    onClose,
+    selectable,
+    selectedPackageId,
+    onSelectPackage,
+    hallFilter,
+}: BanquetMenuModalProps) {
     const [activeTab, setActiveTab] = useState<'conga' | 'kucher'>('conga');
     const [activeCongaMenu, setActiveCongaMenu] = useState<'7500' | '6000'>('7500');
 
@@ -28,6 +40,18 @@ export default function BanquetMenuModal({ isOpen, onClose }: BanquetMenuModalPr
     }, [isOpen]);
 
     if (!isOpen) return null;
+
+    // Derive which venues are visible in selectable mode
+    const visiblePackages = selectable ? packagesForFilter(hallFilter ?? null) : null;
+    const showConga = !selectable || (visiblePackages?.some((p) => p.venue === 'conga') ?? false);
+    const showKucher = !selectable || (visiblePackages?.some((p) => p.venue === 'kucher') ?? false);
+
+    // The id of the currently displayed conga sub-menu
+    const currentCongaId = activeCongaMenu === '7500' ? 'conga-7500' : 'conga-6000';
+    const currentCongaSelected = selectedPackageId === currentCongaId;
+    const kucherSelected = selectedPackageId === 'kucher-5000';
+
+    const showTabs = showConga || showKucher;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4">
@@ -54,31 +78,37 @@ export default function BanquetMenuModal({ isOpen, onClose }: BanquetMenuModalPr
                 </div>
 
                 {/* Hall Tabs */}
-                <div className="flex bg-stone-700 shrink-0">
-                    <button
-                        onClick={() => setActiveTab('conga')}
-                        className={`flex-1 py-3 md:py-4 text-center font-bold tracking-wider transition-all uppercase text-sm md:text-base ${activeTab === 'conga'
-                            ? 'bg-amber-50 text-stone-800'
-                            : 'text-stone-300 hover:bg-stone-600 hover:text-white'
-                            }`}
-                    >
-                        Зал Conga
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('kucher')}
-                        className={`flex-1 py-3 md:py-4 text-center font-bold tracking-wider transition-all uppercase text-sm md:text-base ${activeTab === 'kucher'
-                            ? 'bg-amber-50 text-stone-800'
-                            : 'text-stone-300 hover:bg-stone-600 hover:text-white'
-                            }`}
-                    >
-                        Зал Кучер
-                    </button>
-                </div>
+                {showTabs && (
+                    <div className="flex bg-stone-700 shrink-0">
+                        {showConga && (
+                            <button
+                                onClick={() => setActiveTab('conga')}
+                                className={`flex-1 py-3 md:py-4 text-center font-bold tracking-wider transition-all uppercase text-sm md:text-base ${activeTab === 'conga'
+                                    ? 'bg-amber-50 text-stone-800'
+                                    : 'text-stone-300 hover:bg-stone-600 hover:text-white'
+                                    }`}
+                            >
+                                Зал Conga
+                            </button>
+                        )}
+                        {showKucher && (
+                            <button
+                                onClick={() => setActiveTab('kucher')}
+                                className={`flex-1 py-3 md:py-4 text-center font-bold tracking-wider transition-all uppercase text-sm md:text-base ${activeTab === 'kucher'
+                                    ? 'bg-amber-50 text-stone-800'
+                                    : 'text-stone-300 hover:bg-stone-600 hover:text-white'
+                                    }`}
+                            >
+                                Зал Кучер
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto bg-amber-50">
                     <AnimatePresence mode="wait">
-                        {activeTab === 'conga' ? (
+                        {activeTab === 'conga' && showConga ? (
                             <motion.div
                                 key="conga"
                                 initial={{ opacity: 0 }}
@@ -109,34 +139,51 @@ export default function BanquetMenuModal({ isOpen, onClose }: BanquetMenuModalPr
                                     </button>
                                 </div>
 
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={activeCongaMenu}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        {/* Menu Header */}
-                                        <div className="text-center mb-6 pb-4 border-b-2 border-stone-300">
-                                            <h3 className="text-2xl md:text-3xl font-serif font-bold text-stone-800 mb-1">CONGA</h3>
-                                            <p className="text-stone-500 tracking-widest text-xs md:text-sm mb-3">БАНКЕТНОЕ МЕНЮ</p>
-                                            <div className="inline-block px-6 py-2 bg-emerald-700 rounded-lg">
-                                                <span className="text-xl md:text-2xl font-bold text-white">{activeCongaMenu} ₽</span>
-                                                <span className="text-emerald-100 ml-2 text-xs md:text-sm">/ 1460 гр./чел.</span>
+                                <div className={selectable ? `rounded-xl border-2 transition-all ${currentCongaSelected ? 'border-amber-400' : 'border-transparent'}` : ''}>
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={activeCongaMenu}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            {/* Menu Header */}
+                                            <div className="text-center mb-6 pb-4 border-b-2 border-stone-300">
+                                                <h3 className="text-2xl md:text-3xl font-serif font-bold text-stone-800 mb-1">CONGA</h3>
+                                                <p className="text-stone-500 tracking-widest text-xs md:text-sm mb-3">БАНКЕТНОЕ МЕНЮ</p>
+                                                <div className="inline-block px-6 py-2 bg-emerald-700 rounded-lg">
+                                                    <span className="text-xl md:text-2xl font-bold text-white">{activeCongaMenu} ₽</span>
+                                                    <span className="text-emerald-100 ml-2 text-xs md:text-sm">/ 1460 гр./чел.</span>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {/* Menu Content */}
-                                        {activeCongaMenu === '7500' ? (
-                                            <CongaMenu7500 />
-                                        ) : (
-                                            <CongaMenu6000 />
-                                        )}
-                                    </motion.div>
-                                </AnimatePresence>
+                                            {/* Menu Content */}
+                                            {activeCongaMenu === '7500' ? (
+                                                <CongaMenu7500 />
+                                            ) : (
+                                                <CongaMenu6000 />
+                                            )}
+                                        </motion.div>
+                                    </AnimatePresence>
+
+                                    {selectable && (
+                                        <div className="mt-4 mb-2 flex justify-center">
+                                            <button
+                                                onClick={() => onSelectPackage?.(currentCongaId)}
+                                                className={`px-6 py-3 rounded-lg font-bold text-sm transition-all ${
+                                                    currentCongaSelected
+                                                        ? 'bg-amber-400 text-stone-900 cursor-default'
+                                                        : 'bg-emerald-700 text-white hover:bg-emerald-600'
+                                                }`}
+                                            >
+                                                {currentCongaSelected ? 'Выбрано ✓' : 'Выбрать этот пакет'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </motion.div>
-                        ) : (
+                        ) : activeTab === 'kucher' && showKucher ? (
                             <motion.div
                                 key="kucher"
                                 initial={{ opacity: 0 }}
@@ -145,9 +192,26 @@ export default function BanquetMenuModal({ isOpen, onClose }: BanquetMenuModalPr
                                 transition={{ duration: 0.2 }}
                                 className="p-4 md:p-6"
                             >
-                                <KucherMenu />
+                                <div className={selectable ? `rounded-xl border-2 transition-all ${kucherSelected ? 'border-amber-400' : 'border-transparent'}` : ''}>
+                                    <KucherMenu />
+
+                                    {selectable && (
+                                        <div className="mt-4 mb-2 flex justify-center">
+                                            <button
+                                                onClick={() => onSelectPackage?.('kucher-5000')}
+                                                className={`px-6 py-3 rounded-lg font-bold text-sm transition-all ${
+                                                    kucherSelected
+                                                        ? 'bg-amber-400 text-stone-900 cursor-default'
+                                                        : 'bg-amber-600 text-white hover:bg-amber-500'
+                                                }`}
+                                            >
+                                                {kucherSelected ? 'Выбрано ✓' : 'Выбрать этот пакет'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </motion.div>
-                        )}
+                        ) : null}
                     </AnimatePresence>
                 </div>
             </motion.div>

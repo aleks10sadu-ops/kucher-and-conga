@@ -288,6 +288,7 @@ export default function MenuItem({
                         src={optimizeSupabaseImageUrl(imageUrl, 600) || ''}
                         alt={item.name}
                         fill
+                        unoptimized
                         className={`object-cover transition-all duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
                         loading={priority ? "eager" : "lazy"}
                         // @ts-ignore
@@ -304,8 +305,8 @@ export default function MenuItem({
             </div>
 
             <div className="p-2 sm:p-3 lg:p-6 flex flex-col flex-grow">
-                <div className="flex items-start justify-between gap-1.5 sm:gap-2 lg:gap-3 mb-1.5 sm:mb-2 lg:mb-3">
-                    {canEdit ? (
+                {canEdit ? (
+                    <div className="flex items-start justify-between gap-1.5 sm:gap-2 lg:gap-3 mb-1.5 sm:mb-2 lg:mb-3">
                         <AdminEditFields
                             adminName={adminName}
                             setAdminName={setAdminName}
@@ -314,20 +315,17 @@ export default function MenuItem({
                             adminWeight={adminWeight}
                             setAdminWeight={setAdminWeight}
                         />
-                    ) : (
-                        <>
-                            <h4 className="text-xs sm:text-sm lg:text-lg font-semibold leading-tight flex-1">{item.name}</h4>
-                            <div className="text-right flex-shrink-0">
-                                <div className="text-xs sm:text-sm lg:text-lg font-bold text-amber-400 whitespace-nowrap">
-                                    {item.price ? item.price.toLocaleString('ru-RU') : '0'} ₽
-                                </div>
-                                {item.weight && (
-                                    <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-400">{item.weight}</div>
-                                )}
+                    </div>
+                ) : (
+                    <div className="mb-1.5 sm:mb-2 lg:mb-3">
+                        <h4 className="text-xs sm:text-sm lg:text-lg font-semibold leading-snug">{item.name}</h4>
+                        {item.weight && (
+                            <div className="mt-0.5 text-right text-[10px] sm:text-xs lg:text-sm text-neutral-400">
+                                {typeof item.weight === 'number' ? `${item.weight} г` : item.weight}
                             </div>
-                        </>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Description with fixed height */}
                 <div className="flex-grow mb-1.5 sm:mb-2 lg:mb-4">
@@ -352,13 +350,29 @@ export default function MenuItem({
 
                 {/* Кнопки управления количеством - только для блюд без вариантов */}
                 {(!item.variants || !Array.isArray(item.variants) || item.variants.length === 0) && !canEdit && (
-                    <div className="mt-auto">
-                        <QuantityControls
-                            quantity={quantity}
-                            onAdd={() => handleAdd()}
-                            onRemove={() => handleRemove()}
-                            isDeliveryAvailable={isDeliveryAvailable}
-                        />
+                    <div className="mt-auto flex items-center justify-between gap-2">
+                        {item.modifierGroups && item.modifierGroups.length > 0 ? (
+                            // У блюда есть модификаторы — открываем модалку выбора
+                            <button
+                                onClick={() => onItemClick?.(item)}
+                                disabled={!isDeliveryAvailable}
+                                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-amber-400 text-black text-[11px] sm:text-sm font-semibold hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Выбрать
+                            </button>
+                        ) : (
+                            <QuantityControls
+                                quantity={quantity}
+                                onAdd={() => handleAdd()}
+                                onRemove={() => handleRemove()}
+                                isDeliveryAvailable={isDeliveryAvailable}
+                            />
+                        )}
+                        {item.price ? (
+                            <div className="text-sm sm:text-base lg:text-lg font-bold text-amber-400 whitespace-nowrap">
+                                {item.price.toLocaleString('ru-RU')} ₽
+                            </div>
+                        ) : null}
                     </div>
                 )}
 
