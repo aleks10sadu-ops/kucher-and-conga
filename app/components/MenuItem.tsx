@@ -351,12 +351,23 @@ export default function MenuItem({
                 {/* Кнопки управления количеством - только для блюд без вариантов */}
                 {(!item.variants || !Array.isArray(item.variants) || item.variants.length === 0) && !canEdit && (
                     <div className="mt-auto flex items-center justify-between gap-2">
-                        <QuantityControls
-                            quantity={quantity}
-                            onAdd={() => handleAdd()}
-                            onRemove={() => handleRemove()}
-                            isDeliveryAvailable={isDeliveryAvailable}
-                        />
+                        {item.modifierGroups && item.modifierGroups.length > 0 ? (
+                            // У блюда есть модификаторы — открываем модалку выбора
+                            <button
+                                onClick={() => onItemClick?.(item)}
+                                disabled={!isDeliveryAvailable}
+                                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-amber-400 text-black text-[11px] sm:text-sm font-semibold hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Выбрать
+                            </button>
+                        ) : (
+                            <QuantityControls
+                                quantity={quantity}
+                                onAdd={() => handleAdd()}
+                                onRemove={() => handleRemove()}
+                                isDeliveryAvailable={isDeliveryAvailable}
+                            />
+                        )}
                         {item.price ? (
                             <div className="text-sm sm:text-base lg:text-lg font-bold text-amber-400 whitespace-nowrap">
                                 {item.price.toLocaleString('ru-RU')} ₽

@@ -99,15 +99,29 @@ describe('timing', () => {
   });
 });
 
-describe('preorder minimum gating', () => {
-  it('conga below 4000 blocks submit', () => {
-    const v = evaluateBooking(base({ type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 1500 }));
+describe('preorder minimum gating (per adult)', () => {
+  it('conga: minimum is 4000 ₽ PER ADULT (2 adults -> 8000)', () => {
+    // 4000 in cart with 2 adults must be blocked: required = 4000*2 = 8000
+    const v = evaluateBooking(base({ adults: 2, type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 4000 }));
     expect(v.canSubmit).toBe(false);
-    expect(v.blocking.join(' ')).toMatch(/2500/); // доберите ещё 2500
+    expect(v.blocking.join(' ')).toMatch(/8000/); // требуется 8000
+    expect(v.blocking.join(' ')).toMatch(/4000/); // доберите ещё 4000
   });
-  it('conga at/above 4000 can submit', () => {
-    const v = evaluateBooking(base({ type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 4000 }));
+  it('conga: 6 adults need 24000 — 4000 must be blocked (reported bug)', () => {
+    const v = evaluateBooking(base({ adults: 6, type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 4000 }));
+    expect(v.canSubmit).toBe(false);
+    expect(v.blocking.join(' ')).toMatch(/24000/);
+  });
+  it('conga: cart meeting per-adult total can submit (2 adults, 8000)', () => {
+    const v = evaluateBooking(base({ adults: 2, type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 8000 }));
     expect(v.canSubmit).toBe(true);
+  });
+  it('kucher: minimum is 3000 ₽ PER ADULT (3 adults -> 9000)', () => {
+    const blocked = evaluateBooking(base({ adults: 3, type: 'preorder', hallGroup: 'kucher', eventDate: '2026-06-30', cartFoodSum: 8000 }));
+    expect(blocked.canSubmit).toBe(false);
+    expect(blocked.blocking.join(' ')).toMatch(/9000/);
+    const ok = evaluateBooking(base({ adults: 3, type: 'preorder', hallGroup: 'kucher', eventDate: '2026-06-30', cartFoodSum: 9000 }));
+    expect(ok.canSubmit).toBe(true);
   });
   it('other hall: no minimum, admin-contact info, can submit non-empty', () => {
     const v = evaluateBooking(base({ type: 'preorder', hallGroup: 'other', eventDate: '2026-06-30', cartFoodSum: 500 }));
@@ -119,7 +133,7 @@ describe('preorder minimum gating', () => {
     expect(v.canSubmit).toBe(false);
   });
   it('preorder shows the cart hint as info', () => {
-    const v = evaluateBooking(base({ type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 5000 }));
+    const v = evaluateBooking(base({ adults: 2, type: 'preorder', hallGroup: 'conga', eventDate: '2026-06-30', cartFoodSum: 8000 }));
     expect(v.info.join(' ')).toMatch(/корзин/i);
   });
 });

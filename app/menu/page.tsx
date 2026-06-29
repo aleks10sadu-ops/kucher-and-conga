@@ -299,6 +299,37 @@ function MenuContent() {
                                                             ))}
                                                         </div>
                                                     )}
+
+                                                    {/* Модификаторы из iiko (гарнир/мясо на выбор и т.п.) */}
+                                                    {item.modifierGroups && item.modifierGroups.length > 0 && (
+                                                        <div className="mt-4 space-y-3 border-t border-white/5 pt-3">
+                                                            {item.modifierGroups.map((group: any) => (
+                                                                <div key={group.id}>
+                                                                    <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-neutral-300 mb-1.5">
+                                                                        <span>{group.name}</span>
+                                                                        {group.min > 0 && (
+                                                                            <span className="text-[10px] md:text-xs text-amber-400/90 bg-amber-400/10 rounded px-1.5 py-0.5">
+                                                                                обязательно
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {group.options.map((opt: any) => (
+                                                                            <span
+                                                                                key={opt.id}
+                                                                                className="text-xs md:text-sm text-neutral-300 bg-white/5 border border-white/10 rounded-full px-3 py-1"
+                                                                            >
+                                                                                {String(opt.name).replace(/^[-–—]\s*/, '')}
+                                                                                {opt.price > 0 && (
+                                                                                    <span className="text-amber-400 ml-1">+{opt.price} ₽</span>
+                                                                                )}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Изображение (если есть) */}
@@ -309,6 +340,7 @@ function MenuContent() {
                                                             alt={item.name}
                                                             fill
                                                             unoptimized
+                                                            loading="lazy"
                                                             className="object-cover"
                                                         />
                                                     </div>

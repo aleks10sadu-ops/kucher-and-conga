@@ -31,6 +31,7 @@ const ADULTS_NO_ONSITE = 9;
 const ADULTS_BANQUET_ONLY = 12;
 const BANQUET_LEAD_DAYS = 2;
 const PREORDER_CUTOFF_HOUR_MSK = 16;
+// Минимум предзаказа НА КАЖДОГО ВЗРОСЛОГО (₽). Итоговый минимум = значение × число взрослых.
 const PREORDER_MIN: Record<HallGroup, number | null> = { conga: 4000, kucher: 3000, other: null };
 
 const PREORDER_HINT =
@@ -145,11 +146,18 @@ export function evaluateBooking(input: BookingRuleInput): BookingValidation {
       blocking.push('Наберите блюда в корзину для предзаказа.');
       canSubmit = false;
     } else {
-      const min = preorderMinimum(hallGroup);
-      if (min != null && cartFoodSum < min) {
-        blocking.push(`Минимум предзаказа для этого зала ${min} ₽. Доберите ещё ${min - cartFoodSum} ₽.`);
-        canSubmit = false;
-      } else if (min == null) {
+      const perAdult = preorderMinimum(hallGroup);
+      if (perAdult != null) {
+        // Минимум предзаказа считается на КАЖДОГО взрослого (дети не учитываются).
+        const required = perAdult * Math.max(1, adults);
+        if (cartFoodSum < required) {
+          blocking.push(
+            `Минимум предзаказа для этого зала — ${perAdult} ₽ на каждого взрослого. ` +
+            `Для ${adults} взр. это ${required} ₽. Доберите ещё ${required - cartFoodSum} ₽.`,
+          );
+          canSubmit = false;
+        }
+      } else {
         info.push(ADMIN_CONTACT_HALL);
       }
     }
