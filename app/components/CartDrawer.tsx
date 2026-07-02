@@ -3,6 +3,7 @@
 import React from 'react';
 import { ShoppingCart, X, Plus, Minus, Trash2, AlertCircle } from 'lucide-react';
 import { CartItem } from '@/types/index';
+import { visibleModifiers } from '@/lib/booking/modifiers';
 
 type BusinessLunchValidation = {
     businessLunchCount: number;
@@ -163,7 +164,16 @@ function CartItemComponent({ item, onAdd, onDecrement, onRemove }: CartItemCompo
                 <div className="flex items-start justify-between gap-2">
                     <div>
                         <div className="font-semibold">{item.name}</div>
-                        <div className="text-sm text-neutral-400">
+                        {visibleModifiers(item.modifiers).length > 0 && (
+                            <ul className="mt-1 space-y-0.5">
+                                {visibleModifiers(item.modifiers).map((m, i) => (
+                                    <li key={i} className="text-xs text-neutral-400">
+                                        {m.group}: <span className="text-neutral-200">{m.option}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <div className="text-sm text-neutral-400 mt-1">
                             {item.price.toLocaleString('ru-RU')} ₽
                         </div>
                     </div>
