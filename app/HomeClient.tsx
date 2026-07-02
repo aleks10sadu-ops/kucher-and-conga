@@ -409,11 +409,14 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
     }
 
     // Общие данные брони
+    // В режиме «Связаться с администратором» тип-зависимые данные не собираются,
+    // чтобы устаревший bookingType после переключения режима не утёк в CRM/Telegram.
+    const isSelf = bookingMode === 'self';
     const banquetPackageName = BANQUET_PACKAGES.find(p => p.id === banquetPackageId)?.name ?? null;
-    const preorderItems = bookingType === 'preorder'
+    const preorderItems = isSelf && bookingType === 'preorder'
       ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price, modifiers: c.modifiers }))
       : [];
-    const preorderSum = bookingType === 'preorder' ? cartFoodSum : 0;
+    const preorderSum = isSelf && bookingType === 'preorder' ? cartFoodSum : 0;
     const composedComment = composeReservationComment({
       adults,
       children,
@@ -421,7 +424,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       hallName: selectedHallName,
       cartItems: preorderItems,
       cartFoodSum: preorderSum,
-      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      banquetPackageName: isSelf && bookingType === 'banquet' ? banquetPackageName : null,
       comment,
     });
 
@@ -437,9 +440,9 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       children,
       bookingType,
       hallName: selectedHallName,
-      cartItems: bookingMode === 'self' ? preorderItems : [],
-      cartFoodSum: bookingMode === 'self' ? preorderSum : 0,
-      banquetPackageName: bookingMode === 'self' && bookingType === 'banquet' ? banquetPackageName : null,
+      cartItems: preorderItems,
+      cartFoodSum: preorderSum,
+      banquetPackageName: isSelf && bookingType === 'banquet' ? banquetPackageName : null,
       mode: bookingMode,
       comment,
     };
