@@ -8,10 +8,24 @@ type Props = {
   onAddToCart: (item: CartItem) => void;
 };
 
+// ponytail: дефолт ставим только для группы хлеба (имя /хлеб/i),
+// напитки гость выбирает сам.
+const BREAD_RE = /хлеб/i;
+
+function defaultChoices(set: MenuItem | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const g of set?.modifierGroups || []) {
+    if (BREAD_RE.test(g.name) && g.options[0]) out[g.id] = g.options[0].id;
+  }
+  return out;
+}
+
 export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   const [selectedSetId, setSelectedSetId] = useState<string | number | null>(sets[0]?.id ?? null);
   // выбранные опции: { [groupId]: optionId }
-  const [choices, setChoices] = useState<Record<string, string>>({});
+  const [choices, setChoices] = useState<Record<string, string>>(() =>
+    defaultChoices(sets.find((s) => String(s.id) === String(sets[0]?.id)) || null),
+  );
 
   const selectedSet = useMemo(
     () => sets.find((s) => String(s.id) === String(selectedSetId)) || null,
@@ -23,7 +37,8 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
 
   const selectSet = (id: string | number) => {
     setSelectedSetId(id);
-    setChoices({}); // сброс выбора при смене сета
+    const next = sets.find((s) => String(s.id) === String(id)) || null;
+    setChoices(defaultChoices(next)); // сброс, но с дефолтным «С хлебом»
   };
 
   const choose = (groupId: string, optionId: string) => {
