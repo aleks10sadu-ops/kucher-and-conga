@@ -177,6 +177,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
   // --- BOOKING: тип брони, валидация по правилам ---
   const [selectedHallName, setSelectedHallName] = useState<string | null>(null);
   const [banquetModalOpen, setBanquetModalOpen] = useState(false);
+  const [bookingMode, setBookingMode] = useState<'admin' | 'self'>('admin');
 
   const cartFoodSum = items.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
   const hallGroup = classifyHall(selectedHallName);
@@ -398,7 +399,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       setBookingLoading(false);
       return;
     }
-    if (bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
+    if (bookingMode === 'self' && bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
       setBookingMessage({
         type: 'error',
         text: 'Выберите банкетный пакет, совместимый с выбранным залом.',
@@ -436,9 +437,10 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       children,
       bookingType,
       hallName: selectedHallName,
-      cartItems: preorderItems,
-      cartFoodSum: preorderSum,
-      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      cartItems: bookingMode === 'self' ? preorderItems : [],
+      cartFoodSum: bookingMode === 'self' ? preorderSum : 0,
+      banquetPackageName: bookingMode === 'self' && bookingType === 'banquet' ? banquetPackageName : null,
+      mode: bookingMode,
       comment,
     };
 
@@ -458,6 +460,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       });
       setSelectedHallName(null);
       setBookingPrivacyConsent(false);
+      setBookingMode('admin');
     };
 
     const SUCCESS_TEXT = 'Заявка принята! Администратор свяжется с вами для подтверждения.';
@@ -885,6 +888,38 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                 </p>
                 <form onSubmit={submitBooking} className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+                  {/* Режим брони */}
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBookingMode('admin')}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${
+                        bookingMode === 'admin'
+                          ? 'border-amber-400 bg-amber-400/10'
+                          : 'border-white/15 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">Связаться с администратором</div>
+                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                        Оставьте контакты — администратор подберёт и подтвердит.
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookingMode('self')}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${
+                        bookingMode === 'self'
+                          ? 'border-amber-400 bg-amber-400/10'
+                          : 'border-white/15 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">Выберу сам</div>
+                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                        Заказ по факту, предзаказ или банкетное меню.
+                      </div>
+                    </button>
+                  </div>
+
                   {/* Hall Selector */}
                   <div className="md:col-span-2">
                     <HallSelector
@@ -990,7 +1025,8 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                     </div>
                   </div>
 
-                  {/* Тип брони */}
+                  {/* Тип брони — только в режиме «Выберу сам» */}
+                  {bookingMode === 'self' && (
                   <div className="md:col-span-2">
                     <BookingTypeSelector
                       validation={validation}
@@ -998,9 +1034,10 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                       onSelect={(t) => setBookingData(prev => ({ ...prev, bookingType: t }))}
                     />
                   </div>
+                  )}
 
                   {/* Предзаказ: сводка корзины */}
-                  {bookingData.bookingType === 'preorder' && (
+                  {bookingMode === 'self' && bookingData.bookingType === 'preorder' && (
                     <div className="md:col-span-2 rounded-xl border border-white/10 bg-white/5 p-4">
                       {items.length === 0 ? (
                         <p className="text-sm text-neutral-300">
@@ -1027,7 +1064,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                   )}
 
                   {/* Банкет: выбор пакета */}
-                  {bookingData.bookingType === 'banquet' && (
+                  {bookingMode === 'self' && bookingData.bookingType === 'banquet' && (
                     <div className="md:col-span-2 space-y-2">
                       <button
                         type="button"
