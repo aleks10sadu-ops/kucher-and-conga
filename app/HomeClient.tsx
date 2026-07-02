@@ -411,7 +411,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
     // Общие данные брони
     const banquetPackageName = BANQUET_PACKAGES.find(p => p.id === banquetPackageId)?.name ?? null;
     const preorderItems = bookingType === 'preorder'
-      ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price }))
+      ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price, modifiers: c.modifiers }))
       : [];
     const preorderSum = bookingType === 'preorder' ? cartFoodSum : 0;
     const composedComment = composeReservationComment({

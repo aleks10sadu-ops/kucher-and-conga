@@ -43,3 +43,32 @@ describe('formatBookingTelegram', () => {
     expect(msg).not.toContain('стол < 5');
   });
 });
+
+describe('formatBookingTelegram modifiers & mode', () => {
+  it('renders modifier sub-bullets under a preorder item', () => {
+    const msg = formatBookingTelegram({
+      firstName: 'Иван', lastName: 'Петров', phone: '+7 999 000-00-00',
+      date: '2026-07-01', time: '18:00',
+      adults: 2, children: 0, bookingType: 'preorder', hallName: 'Conga',
+      cartItems: [{ name: 'Стейк', qty: 1, price: 1500, modifiers: [
+        { group: 'Гарнир', option: 'Пюре' },
+        { group: 'Хлеб', option: 'Без хлеба' },
+      ] }],
+      cartFoodSum: 1500,
+    });
+    expect(msg).toMatch(/Стейк × 1/);
+    expect(msg).toMatch(/Гарнир: Пюре/);
+    // «Без хлеба» скрыто
+    expect(msg).not.toMatch(/Без хлеба/);
+  });
+
+  it('shows admin mode label', () => {
+    const msg = formatBookingTelegram({
+      firstName: 'Анна', lastName: 'И', phone: '+7 999 000-00-00',
+      date: '2026-07-01', time: '18:00',
+      adults: 2, children: 0, bookingType: 'onsite', hallName: 'Conga',
+      cartItems: [], cartFoodSum: 0, mode: 'admin',
+    });
+    expect(msg).toMatch(/Режим: Связаться с администратором/);
+  });
+});
