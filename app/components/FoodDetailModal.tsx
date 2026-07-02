@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { X, Plus, Minus, Star, Clock, Scale, Edit2, Save, Trash2, Check } from 'lucide-react';
+import { BLUR_DATA_URL } from '@/lib/ui/blurPlaceholder';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { uploadDishImage, isSupabaseStorageUrl } from '@/lib/supabase/storage';
 import MenuTypesAndCategoriesManager from './MenuTypesAndCategoriesManager';
@@ -54,18 +56,11 @@ export default function FoodDetailModal({
     const displayImage = rawDisplayImage && !rawDisplayImage.includes('unsplash.com') ? rawDisplayImage : null;
     const hasDisplayImage = !!displayImage;
 
-    // Состояние загрузки изображения - эти хуки были причиной ошибки, так как находились после return
-    const [modalImageLoading, setModalImageLoading] = useState(hasDisplayImage);
+    // Состояние ошибки загрузки (blur-плейсхолдер next/image показывается сам)
     const [modalImageError, setModalImageError] = useState(false);
 
     useEffect(() => {
-        if (displayImage) {
-            setModalImageLoading(true);
-            setModalImageError(false);
-        } else {
-            setModalImageLoading(false);
-            setModalImageError(false);
-        }
+        setModalImageError(false);
     }, [displayImage]);
 
     useEffect(() => {
@@ -285,16 +280,6 @@ export default function FoodDetailModal({
 
 
 
-    // Оптимизация URL изображений Supabase
-    const optimizeSupabaseImageUrl = (url: string | null, width = 600) => {
-        if (!url) return null;
-        if (url.includes('supabase.co/storage/v1/object/public/')) {
-            const separator = url.includes('?') ? '&' : '?';
-            return `${url}${separator}width=${width}&quality=80`;
-        }
-        return url;
-    };
-
     const handleAdd = (variant: MenuItemVariant | null = null) => {
         if (variant) {
             const variantId = `${item.id}_${variant.name}`;
@@ -495,13 +480,6 @@ export default function FoodDetailModal({
                                     </div>
                                 )}
 
-                                {/* Спиннер загрузки */}
-                                {hasDisplayImage && modalImageLoading && !modalImageError && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
-                                        <div className="w-12 h-12 border-3 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-                                    </div>
-                                )}
-
                                 {/* Плейсхолдер при ошибке */}
                                 {hasDisplayImage && modalImageError && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
@@ -516,18 +494,19 @@ export default function FoodDetailModal({
                                     </div>
                                 )}
 
-                                {/* Само изображение - оптимизированное */}
-                                {hasDisplayImage && (
-                                    <img
-                                        src={optimizeSupabaseImageUrl(displayImage, 600) || ''}
+                                {/* Само изображение — оптимизируется Next.js (ресайз + WebP/AVIF + edge-кэш),
+                                    с мгновенным blur-плейсхолдером пока грузится */}
+                                {hasDisplayImage && !modalImageError && (
+                                    <Image
+                                        src={displayImage}
                                         alt={displayName}
-                                        className={`w-full h-full object-cover transition-opacity duration-300 ${modalImageLoading || modalImageError ? 'opacity-0' : 'opacity-100'
-                                            }`}
-                                        onLoad={() => setModalImageLoading(false)}
-                                        onError={() => {
-                                            setModalImageLoading(false);
-                                            setModalImageError(true);
-                                        }}
+                                        fill
+                                        quality={80}
+                                        sizes="(max-width: 1024px) 90vw, 800px"
+                                        placeholder="blur"
+                                        blurDataURL={BLUR_DATA_URL}
+                                        className="object-cover"
+                                        onError={() => setModalImageError(true)}
                                     />
                                 )}
                             </div>

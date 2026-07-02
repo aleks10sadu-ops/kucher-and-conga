@@ -1,4 +1,5 @@
 import { getIikoMenu } from '@/lib/iiko';
+import { rewriteMenuImagesToMirror } from '@/lib/iiko/imageMirror';
 import { barMenuData } from '@/app/data/barMenuData';
 import { wineMenuData } from '@/app/data/wineMenuData';
 import { kidsMenuData } from '@/app/data/kidsMenuData';
@@ -13,10 +14,18 @@ export async function getFullMenu(): Promise<Record<string, { categories: MenuCa
   } catch (e) {
     console.error('getFullMenu: iiko fetch failed, serving static-only menu', e);
   }
-  return assembleFullMenu(iiko, {
+  const assembled = assembleFullMenu(iiko, {
     bar: barMenuData as any,
     wine: wineMenuData as any,
     kids: kidsMenuData as any,
     promotions: promotionsData as any,
   });
+  // Переписываем URL картинок блюд на зеркало в Supabase Storage (если уже залиты).
+  // Не бросает: при отсутствии зеркал/ключа возвращает меню без изменений.
+  try {
+    return await rewriteMenuImagesToMirror(assembled);
+  } catch (e) {
+    console.error('getFullMenu: image mirror rewrite failed, serving original URLs', e);
+    return assembled;
+  }
 }

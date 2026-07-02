@@ -6,19 +6,7 @@ import { MenuItem as MenuItemType, CartItem, MenuItemVariant } from '@/types/ind
 import { Database } from '@/types/database.types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import Image from 'next/image';
-
-
-// Иконка загрузки - пульсирующий круг с анимацией
-const LoadingSpinner = () => (
-    <div className="absolute inset-0 flex items-center justify-center bg-neutral-800/95">
-        <div className="relative">
-            {/* Внешний пульсирующий круг */}
-            <div className="absolute inset-0 w-10 h-10 border-2 border-amber-400/20 rounded-full animate-ping" />
-            {/* Вращающийся спиннер */}
-            <div className="w-10 h-10 border-3 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-        </div>
-    </div>
-);
+import { BLUR_DATA_URL } from '@/lib/ui/blurPlaceholder';
 
 // Плейсхолдер для блюд без изображения - минималистичный тёмный фон
 const ImagePlaceholder = () => (
@@ -30,18 +18,6 @@ const ImagePlaceholder = () => (
         </div>
     </div>
 );
-
-// Оптимизация URL изображений Supabase - добавляем параметры трансформации
-const optimizeSupabaseImageUrl = (url: string | null | undefined, width = 400) => {
-    if (!url) return null;
-    // Если это Supabase Storage URL, добавляем параметры трансформации
-    if (url.includes('supabase.co/storage/v1/object/public/')) {
-        // Supabase Image Transformation: ?width=400&quality=75
-        const separator = url.includes('?') ? '&' : '?';
-        return `${url}${separator}width=${width}&quality=75`;
-    }
-    return url;
-};
 
 type MenuItemProps = {
     item: MenuItemType;
@@ -85,19 +61,12 @@ export default function MenuItem({
     const imageUrl = rawImageUrl && !rawImageUrl.includes('unsplash.com') ? rawImageUrl : null;
     const hasImage = !!imageUrl;
 
-    // Состояние загрузки изображения
-    const [imageLoading, setImageLoading] = useState(hasImage);
+    // Состояние ошибки загрузки (blur-плейсхолдер next/image показывается сам)
     const [imageError, setImageError] = useState(false);
 
     // Сброс состояния при изменении изображения
     useEffect(() => {
-        if (imageUrl) {
-            setImageLoading(true);
-            setImageError(false);
-        } else {
-            setImageLoading(false);
-            setImageError(false);
-        }
+        setImageError(false);
     }, [imageUrl]);
 
     // Проверяем, что item существует и имеет необходимые свойства
@@ -273,30 +242,23 @@ export default function MenuItem({
         >
             {/* Image */}
             <div className="relative aspect-square overflow-hidden bg-neutral-800">
-                {/* Показываем плейсхолдер если нет изображения */}
-                {!hasImage && <ImagePlaceholder />}
+                {/* Плейсхолдер если нет изображения или ошибка загрузки */}
+                {(!hasImage || imageError) && <ImagePlaceholder />}
 
-                {/* Показываем спиннер пока изображение загружается */}
-                {hasImage && imageLoading && !imageError && <LoadingSpinner />}
-
-                {/* Показываем плейсхолдер при ошибке загрузки */}
-                {hasImage && imageError && <ImagePlaceholder />}
-
-                {/* Само изображение - оптимизированное для быстрой загрузки и проксирования через Next.js */}
+                {/* Само изображение — оптимизируется Next.js (ресайз + WebP/AVIF + edge-кэш),
+                    с мгновенным blur-плейсхолдером пока грузится */}
                 {hasImage && !imageError && (
                     <Image
-                        src={optimizeSupabaseImageUrl(imageUrl, 600) || ''}
+                        src={imageUrl}
                         alt={item.name}
                         fill
-                        unoptimized
-                        className={`object-cover transition-all duration-300 group-hover:scale-105 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-                        loading={priority ? "eager" : "lazy"}
-                        // @ts-ignore
-                        fetchPriority={priority ? "high" : "auto"}
-                        onLoad={() => setImageLoading(false)}
+                        quality={75}
+                        priority={priority}
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={() => {
                             console.warn(`Failed to load image for ${item.name}: ${imageUrl}`);
-                            setImageLoading(false);
                             setImageError(true);
                         }}
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

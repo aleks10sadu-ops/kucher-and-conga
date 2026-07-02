@@ -339,8 +339,9 @@ function MenuContent() {
                                                             src={item.image}
                                                             alt={item.name}
                                                             fill
-                                                            unoptimized
+                                                            quality={75}
                                                             loading="lazy"
+                                                            sizes="128px"
                                                             className="object-cover"
                                                         />
                                                     </div>
