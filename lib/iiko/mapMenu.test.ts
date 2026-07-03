@@ -167,3 +167,57 @@ describe2('mapExternalMenu — business split + modifiers', () => {
     expect2(result.main.categories[0].items[0].modifierGroups).toBeUndefined();
   });
 });
+
+import { mapExternalMenu as _mapForBread } from './mapMenu';
+
+describe('mapModifierGroups bread split', () => {
+  const rawWithBread: IikoExternalMenu = {
+    itemCategories: [
+      {
+        id: 'bl',
+        name: 'БИЗНЕС ЛАНЧ',
+        items: [
+          {
+            itemId: 'set1',
+            name: 'Сет 1',
+            itemSizes: [
+              {
+                prices: [{ organizationId: 'o', price: 500 }],
+                itemModifierGroups: [
+                  {
+                    name: 'Выбор хлеба и напитков',
+                    restrictions: { minQuantity: 1, maxQuantity: 1 },
+                    items: [
+                      { itemId: 'bread1', name: 'Хлеб б/л', prices: [{ organizationId: 'o', price: 0 }] },
+                      { itemId: 'tea', name: 'Чай', prices: [{ organizationId: 'o', price: 0 }] },
+                      { itemId: 'coffee', name: 'Кофе', prices: [{ organizationId: 'o', price: 0 }] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } as any;
+
+  it('splits bread into its own «Хлеб» group and leaves drinks separate', () => {
+    const menu = _mapForBread(rawWithBread);
+    const set = menu.business!.categories[0].items[0];
+    const groups = set.modifierGroups!;
+
+    const bread = groups.find((g) => g.name === 'Хлеб');
+    expect(bread).toBeDefined();
+    expect(bread!.min).toBe(1);
+    expect(bread!.max).toBe(1);
+    expect(bread!.options.map((o) => o.name)).toEqual(['С хлебом', 'Без хлеба']);
+    expect(bread!.options[0].id).toBe('bread1');
+    expect(bread!.options[1].id).toBe('no-bread');
+    expect(bread!.options.every((o) => o.price === 0)).toBe(true);
+
+    const drinks = groups.find((g) => g.name === 'Выбор хлеба и напитков');
+    expect(drinks).toBeDefined();
+    expect(drinks!.options.map((o) => o.name)).toEqual(['Чай', 'Кофе']);
+  });
+});

@@ -112,6 +112,14 @@ export default function FoodDetailModal({
     const modsExtraPrice = selectedModOptions.reduce((s, o) => s + (o.price || 0), 0);
     const modsLabel = selectedModOptions.map((o) => cleanOptName(o.name)).join(', ');
     const modsKey = modifierGroups.flatMap((g) => modSel[g.id] || []).join('-');
+
+    // Структурные модификаторы для корзины/Telegram: { group, option }
+    const selectedModifiers = modifierGroups.flatMap((g) =>
+        (modSel[g.id] || [])
+            .map((oid) => g.options.find((o) => o.id === oid))
+            .filter(Boolean)
+            .map((o) => ({ group: cleanOptName(g.name), option: cleanOptName((o as any).name) }))
+    );
     const requiredUnmet = modifierGroups.filter((g) => (g.min ?? 0) > 0 && (modSel[g.id]?.length ?? 0) < (g.min ?? 0));
     const modsValid = requiredUnmet.length === 0;
 
@@ -303,7 +311,6 @@ export default function FoodDetailModal({
             // Если у блюда есть модификаторы — учитываем выбор в id/названии/цене
             if (hasModifiers && !modsValid) return;
             const cartId = hasModifiers && modsKey ? `${item.id}__${modsKey}` : item.id;
-            const cartName = hasModifiers && modsLabel ? `${item.name} (${modsLabel})` : item.name;
             const cartPrice = (item.price || 0) + (hasModifiers ? modsExtraPrice : 0);
 
             const cartItem = cartItems.find(ci => ci.id === cartId);
@@ -315,12 +322,13 @@ export default function FoodDetailModal({
 
             onAddToCart({
                 id: cartId,
-                name: cartName,
+                name: item.name, // базовое имя; идентичность держит cartId с modsKey
                 price: cartPrice,
                 weight: item.weight || '',
                 description: item.description,
                 img: displayImage,
-                qty: newQuantity
+                qty: newQuantity,
+                modifiers: hasModifiers ? selectedModifiers : undefined,
             });
         }
     };

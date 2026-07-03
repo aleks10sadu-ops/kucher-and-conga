@@ -1,6 +1,7 @@
 // app/api/telegram/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { formatBookingTelegram } from '@/lib/booking/formatTelegram';
+import { visibleModifiers } from '@/lib/booking/modifiers';
 
 const TG_API = (token: string) => `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -33,6 +34,7 @@ interface OrderItem {
   name: string;
   qty: number;
   price: number;
+  modifiers?: { group: string; option: string }[];
 }
 
 interface BasePayload {
@@ -55,6 +57,7 @@ interface BookingPayload extends BasePayload {
   cartItems: OrderItem[];
   cartFoodSum: number;
   banquetPackageName?: string | null;
+  mode?: 'admin' | 'self';
 }
 
 interface DeliveryPayload extends BasePayload {
@@ -80,12 +83,13 @@ function buildMessage(payload: TelegramPayload): string {
     const {
       firstName, lastName, phone, date, time,
       adults, children, bookingType, hallName,
-      cartItems, cartFoodSum, banquetPackageName, comment,
+      cartItems, cartFoodSum, banquetPackageName, comment, mode,
     } = payload;
     return formatBookingTelegram({
       firstName, lastName, phone, date, time,
       adults, children, bookingType, hallName,
       cartItems, cartFoodSum, banquetPackageName, comment,
+      mode,
     });
   }
 
@@ -116,7 +120,13 @@ function buildMessage(payload: TelegramPayload): string {
     }
 
     const itemsBlock = allItems.length
-      ? allItems.map(i => `• ${escapeHtml(i.name)} × ${i.qty} = ${fmtCurrency(i.qty * i.price)} ₽`).join('\n')
+      ? allItems.map(i => {
+          const head = `• ${escapeHtml(i.name)} × ${i.qty} = ${fmtCurrency(i.qty * i.price)} ₽`;
+          const mods = visibleModifiers((i as OrderItem).modifiers)
+            .map(m => `\n    – ${escapeHtml(m.group)}: ${escapeHtml(m.option)}`)
+            .join('');
+          return head + mods;
+        }).join('\n')
       : '—';
 
     // Форматирование времени доставки

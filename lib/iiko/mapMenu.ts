@@ -17,25 +17,59 @@ function toNutrition(n?: IikoNutrition | null): Nutrition | null {
   return { calories: energy ?? null, proteins: proteins ?? null, fats: fats ?? null, carbs: carbs ?? null, per: 'per100g' };
 }
 
+// ponytail: хлеб детектируется по имени опции /хлеб/i.
+// Потолок: если iiko переименует «Хлеб б/л» — перестанет матчиться.
+// Апгрейд-путь: явный список id/sku хлебных опций в конфиге.
+const BREAD_RE = /хлеб/i;
+
 function mapModifierGroups(size: IikoItemSize | undefined): ModifierGroup[] {
   const groups = size?.itemModifierGroups || [];
-  return groups
-    .map((g) => {
-      const options: ModifierOption[] = (g.items || []).map((mi) => ({
-        id: mi.itemId || mi.sku || mi.name,
-        name: mi.name,
-        price: (mi.prices || []).map((p) => p.price ?? 0).find((p) => p > 0) ?? 0,
-      }));
-      const group: ModifierGroup = {
-        id: g.itemGroupId || g.sku || g.name,
-        name: g.name,
-        min: g.restrictions?.minQuantity ?? 0,
-        max: g.restrictions?.maxQuantity ?? 1,
-        options,
-      };
-      return group;
-    })
-    .filter((g) => g.options.length > 0);
+  const result: ModifierGroup[] = [];
+
+  for (const g of groups) {
+    const options: ModifierOption[] = (g.items || []).map((mi) => ({
+      id: mi.itemId || mi.sku || mi.name,
+      name: mi.name,
+      price: (mi.prices || []).map((p) => p.price ?? 0).find((p) => p > 0) ?? 0,
+    }));
+    if (options.length === 0) continue;
+
+    const breadOpt = options.find((o) => BREAD_RE.test(o.name));
+    if (breadOpt) {
+      // Отдельная категория «Хлеб»: по умолчанию с хлебом, цена 0.
+      result.push({
+        id: `bread-${g.itemGroupId || g.sku || g.name}`,
+        name: 'Хлеб',
+        min: 1,
+        max: 1,
+        options: [
+          { id: breadOpt.id, name: 'С хлебом', price: 0 },
+          { id: 'no-bread', name: 'Без хлеба', price: 0 },
+        ],
+      });
+      const rest = options.filter((o) => o.id !== breadOpt.id);
+      if (rest.length > 0) {
+        result.push({
+          id: g.itemGroupId || g.sku || g.name,
+          name: g.name,
+          min: g.restrictions?.minQuantity ?? 0,
+          max: g.restrictions?.maxQuantity ?? 1,
+          options: rest,
+        });
+      }
+      continue;
+    }
+
+    result.push({
+      id: g.itemGroupId || g.sku || g.name,
+      name: g.name,
+      min: g.restrictions?.minQuantity ?? 0,
+      max: g.restrictions?.maxQuantity ?? 1,
+      options,
+    });
+  }
+
+  return result;
 }
 
 function mapCategory(cat: { id: string; name: string; items?: IikoItem[] }): MenuCategory {

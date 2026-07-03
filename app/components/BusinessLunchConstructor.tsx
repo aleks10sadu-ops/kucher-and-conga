@@ -8,10 +8,25 @@ type Props = {
   onAddToCart: (item: CartItem) => void;
 };
 
+// Дефолт «С хлебом» ставим только для выделенной группы «Хлеб» (её создаёт mapMenu
+// с точным именем 'Хлеб'). Подстрочный матч /хлеб/i ошибочно ловил бы группу
+// «Выбор хлеба и напитков» и авто-выбирал напиток — напитки гость выбирает сам.
+const isBreadGroup = (name: string) => name.trim().toLowerCase() === 'хлеб';
+
+function defaultChoices(set: MenuItem | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const g of set?.modifierGroups || []) {
+    if (isBreadGroup(g.name) && g.options[0]) out[g.id] = g.options[0].id;
+  }
+  return out;
+}
+
 export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   const [selectedSetId, setSelectedSetId] = useState<string | number | null>(sets[0]?.id ?? null);
   // выбранные опции: { [groupId]: optionId }
-  const [choices, setChoices] = useState<Record<string, string>>({});
+  const [choices, setChoices] = useState<Record<string, string>>(() =>
+    defaultChoices(sets.find((s) => String(s.id) === String(sets[0]?.id)) || null),
+  );
 
   const selectedSet = useMemo(
     () => sets.find((s) => String(s.id) === String(selectedSetId)) || null,
@@ -19,11 +34,16 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   );
   const groups: ModifierGroup[] = selectedSet?.modifierGroups || [];
 
-  const requiredOk = groups.every((g) => g.min < 1 || choices[g.id]);
+  // Все группы бизнес-ланча обязательны: гость выбирает по одной позиции из каждой.
+  // iiko отдаёт min=0 для гарнира/супа/салата/второго/напитка, поэтому опираемся не на min,
+  // а на факт выбора в каждой группе (хлеб удовлетворён дефолтом «С хлебом»).
+  const missingGroups = groups.filter((g) => !choices[g.id]);
+  const requiredOk = missingGroups.length === 0;
 
   const selectSet = (id: string | number) => {
     setSelectedSetId(id);
-    setChoices({}); // сброс выбора при смене сета
+    const next = sets.find((s) => String(s.id) === String(id)) || null;
+    setChoices(defaultChoices(next)); // сброс, но с дефолтным «С хлебом»
   };
 
   const choose = (groupId: string, optionId: string) => {
@@ -89,7 +109,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
             <div key={g.id}>
               <div className="font-semibold mb-2">
                 {g.name}
-                {g.min >= 1 && <span className="text-amber-400"> *</span>}
+                <span className="text-amber-400"> *</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {g.options.map((o) => {
@@ -118,7 +138,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
       {selectedSet && (
         <div className="flex items-center justify-between gap-3 pt-2">
           <div className="text-sm text-neutral-400">
-            {requiredOk ? 'Готово к добавлению' : 'Выберите обязательные позиции (*)'}
+            {requiredOk ? 'Готово к добавлению' : `Выберите: ${missingGroups.map((g) => g.name).join(', ')}`}
           </div>
           <button
             type="button"

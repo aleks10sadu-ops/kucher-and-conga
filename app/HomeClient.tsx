@@ -38,6 +38,7 @@ import { useDeliveryLogic } from '../lib/hooks/useDeliveryLogic';
 import { evaluateBooking, classifyHall, banquetPackagesForHall, type BookingType } from '@/lib/booking/rules';
 import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquetPackages';
 import { composeReservationComment } from '@/lib/booking/composeReservation';
+import { visibleModifiers } from '@/lib/booking/modifiers';
 import BookingTypeSelector from './components/BookingTypeSelector';
 import BanquetMenuModal from './components/BanquetMenuModal';
 
@@ -177,6 +178,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
   // --- BOOKING: тип брони, валидация по правилам ---
   const [selectedHallName, setSelectedHallName] = useState<string | null>(null);
   const [banquetModalOpen, setBanquetModalOpen] = useState(false);
+  const [bookingMode, setBookingMode] = useState<'admin' | 'self'>('admin');
 
   const cartFoodSum = items.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
   const hallGroup = classifyHall(selectedHallName);
@@ -398,7 +400,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       setBookingLoading(false);
       return;
     }
-    if (bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
+    if (bookingMode === 'self' && bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
       setBookingMessage({
         type: 'error',
         text: 'Выберите банкетный пакет, совместимый с выбранным залом.',
@@ -408,11 +410,14 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
     }
 
     // Общие данные брони
+    // В режиме «Связаться с администратором» тип-зависимые данные не собираются,
+    // чтобы устаревший bookingType после переключения режима не утёк в CRM/Telegram.
+    const isSelf = bookingMode === 'self';
     const banquetPackageName = BANQUET_PACKAGES.find(p => p.id === banquetPackageId)?.name ?? null;
-    const preorderItems = bookingType === 'preorder'
-      ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price }))
+    const preorderItems = isSelf && bookingType === 'preorder'
+      ? items.map(c => ({ name: c.name, qty: c.qty, price: c.price, modifiers: c.modifiers }))
       : [];
-    const preorderSum = bookingType === 'preorder' ? cartFoodSum : 0;
+    const preorderSum = isSelf && bookingType === 'preorder' ? cartFoodSum : 0;
     const composedComment = composeReservationComment({
       adults,
       children,
@@ -420,7 +425,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       hallName: selectedHallName,
       cartItems: preorderItems,
       cartFoodSum: preorderSum,
-      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      banquetPackageName: isSelf && bookingType === 'banquet' ? banquetPackageName : null,
       comment,
     });
 
@@ -438,7 +443,8 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       hallName: selectedHallName,
       cartItems: preorderItems,
       cartFoodSum: preorderSum,
-      banquetPackageName: bookingType === 'banquet' ? banquetPackageName : null,
+      banquetPackageName: isSelf && bookingType === 'banquet' ? banquetPackageName : null,
+      mode: bookingMode,
       comment,
     };
 
@@ -458,6 +464,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       });
       setSelectedHallName(null);
       setBookingPrivacyConsent(false);
+      setBookingMode('admin');
     };
 
     const SUCCESS_TEXT = 'Заявка принята! Администратор свяжется с вами для подтверждения.';
@@ -885,6 +892,38 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                 </p>
                 <form onSubmit={submitBooking} className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+                  {/* Режим брони */}
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBookingMode('admin')}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${
+                        bookingMode === 'admin'
+                          ? 'border-amber-400 bg-amber-400/10'
+                          : 'border-white/15 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">Связаться с администратором</div>
+                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                        Оставьте контакты — администратор подберёт и подтвердит.
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookingMode('self')}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${
+                        bookingMode === 'self'
+                          ? 'border-amber-400 bg-amber-400/10'
+                          : 'border-white/15 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm">Выберу сам</div>
+                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                        Заказ по факту, предзаказ или банкетное меню.
+                      </div>
+                    </button>
+                  </div>
+
                   {/* Hall Selector */}
                   <div className="md:col-span-2">
                     <HallSelector
@@ -990,7 +1029,8 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                     </div>
                   </div>
 
-                  {/* Тип брони */}
+                  {/* Тип брони — только в режиме «Выберу сам» */}
+                  {bookingMode === 'self' && (
                   <div className="md:col-span-2">
                     <BookingTypeSelector
                       validation={validation}
@@ -998,9 +1038,10 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                       onSelect={(t) => setBookingData(prev => ({ ...prev, bookingType: t }))}
                     />
                   </div>
+                  )}
 
                   {/* Предзаказ: сводка корзины */}
-                  {bookingData.bookingType === 'preorder' && (
+                  {bookingMode === 'self' && bookingData.bookingType === 'preorder' && (
                     <div className="md:col-span-2 rounded-xl border border-white/10 bg-white/5 p-4">
                       {items.length === 0 ? (
                         <p className="text-sm text-neutral-300">
@@ -1027,7 +1068,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                   )}
 
                   {/* Банкет: выбор пакета */}
-                  {bookingData.bookingType === 'banquet' && (
+                  {bookingMode === 'self' && bookingData.bookingType === 'banquet' && (
                     <div className="md:col-span-2 space-y-2">
                       <button
                         type="button"
@@ -1104,7 +1145,7 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                       !bookingData.date ||
                       !bookingData.time ||
                       !isBookingTimeValid(`${bookingData.date}T${bookingData.time}:00`) ||
-                      (bookingData.bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), bookingData.banquetPackageId))
+                      (bookingMode === 'self' && bookingData.bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), bookingData.banquetPackageId))
                     }
                     className="md:col-span-2 px-6 sm:px-8 lg:px-10 py-2.5 sm:py-3 lg:py-4 text-sm sm:text-base lg:text-lg rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
@@ -1339,7 +1380,16 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-semibold">{i.name}</div>
-                        <div className="text-sm text-neutral-400">{i.price.toLocaleString('ru-RU')} ₽</div>
+                        {visibleModifiers(i.modifiers).length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {visibleModifiers(i.modifiers).map((m, idx) => (
+                              <li key={idx} className="text-xs text-neutral-400">
+                                {m.group}: <span className="text-neutral-200">{m.option}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="text-sm text-neutral-400 mt-1">{i.price.toLocaleString('ru-RU')} ₽</div>
                       </div>
                       <button onClick={() => remove(i.id)} className="p-1 rounded hover:bg-white/5" aria-label="Удалить позицию">
                         <Trash2 className="w-4 h-4 text-neutral-400" />

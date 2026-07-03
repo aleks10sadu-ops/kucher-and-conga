@@ -1,4 +1,5 @@
 import type { BookingType } from './rules';
+import { visibleModifiers } from './modifiers';
 
 export interface TelegramBookingInput {
   firstName: string;
@@ -10,10 +11,11 @@ export interface TelegramBookingInput {
   children: number;
   bookingType: BookingType;
   hallName: string | null;
-  cartItems: { name: string; qty: number; price: number }[];
+  cartItems: { name: string; qty: number; price: number; modifiers?: { group: string; option: string }[] }[];
   cartFoodSum: number;
   banquetPackageName?: string | null;
   comment?: string;
+  mode?: 'admin' | 'self';
 }
 
 const TYPE_LABEL: Record<BookingType, string> = {
@@ -36,13 +38,22 @@ export function formatBookingTelegram(i: TelegramBookingInput): string {
   lines.push(`Взрослых: ${i.adults}`);
   lines.push(`Детей: ${i.children}`);
   if (i.hallName) lines.push(`Зал: ${escapeHtml(i.hallName)}`);
-  lines.push(`Тип: ${TYPE_LABEL[i.bookingType]}`);
-  if (i.bookingType === 'preorder' && i.cartItems.length > 0) {
+  if (i.mode === 'admin') {
+    lines.push('Режим: Связаться с администратором');
+  } else {
+    lines.push(`Тип: ${TYPE_LABEL[i.bookingType]}`);
+  }
+  if (i.mode !== 'admin' && i.bookingType === 'preorder' && i.cartItems.length > 0) {
     lines.push('Предзаказ:');
-    for (const it of i.cartItems) lines.push(`  • ${escapeHtml(it.name)} × ${it.qty} — ${it.price * it.qty} ₽`);
+    for (const it of i.cartItems) {
+      lines.push(`  • ${escapeHtml(it.name)} × ${it.qty} — ${it.price * it.qty} ₽`);
+      for (const m of visibleModifiers(it.modifiers)) {
+        lines.push(`      – ${escapeHtml(m.group)}: ${escapeHtml(m.option)}`);
+      }
+    }
     lines.push(`Сумма: ${i.cartFoodSum} ₽`);
   }
-  if (i.bookingType === 'banquet' && i.banquetPackageName) {
+  if (i.mode !== 'admin' && i.bookingType === 'banquet' && i.banquetPackageName) {
     lines.push(`Банкетный пакет: ${escapeHtml(i.banquetPackageName)}`);
   }
   if (i.comment && i.comment.trim()) lines.push(`Комментарий: ${escapeHtml(i.comment.trim())}`);

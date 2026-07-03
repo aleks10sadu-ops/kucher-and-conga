@@ -13,6 +13,7 @@ export type CartItem = {
     price: number;
     img?: string;
     qty: number;
+    modifiers?: { group: string; option: string }[];
     [key: string]: any; // For flexible properties until fully strictly typed
 };
 
