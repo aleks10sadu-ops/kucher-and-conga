@@ -38,6 +38,7 @@ import { useDeliveryLogic } from '../lib/hooks/useDeliveryLogic';
 import { evaluateBooking, classifyHall, banquetPackagesForHall, type BookingType } from '@/lib/booking/rules';
 import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquetPackages';
 import { composeReservationComment } from '@/lib/booking/composeReservation';
+import { visibleModifiers } from '@/lib/booking/modifiers';
 import BookingTypeSelector from './components/BookingTypeSelector';
 import BanquetMenuModal from './components/BanquetMenuModal';
 
@@ -1379,7 +1380,16 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-semibold">{i.name}</div>
-                        <div className="text-sm text-neutral-400">{i.price.toLocaleString('ru-RU')} ₽</div>
+                        {visibleModifiers(i.modifiers).length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {visibleModifiers(i.modifiers).map((m, idx) => (
+                              <li key={idx} className="text-xs text-neutral-400">
+                                {m.group}: <span className="text-neutral-200">{m.option}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="text-sm text-neutral-400 mt-1">{i.price.toLocaleString('ru-RU')} ₽</div>
                       </div>
                       <button onClick={() => remove(i.id)} className="p-1 rounded hover:bg-white/5" aria-label="Удалить позицию">
                         <Trash2 className="w-4 h-4 text-neutral-400" />
