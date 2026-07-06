@@ -154,7 +154,7 @@ export default function BanquetMenuModal({
                                                 <p className="text-stone-500 tracking-widest text-xs md:text-sm mb-3">БАНКЕТНОЕ МЕНЮ</p>
                                                 <div className="inline-block px-6 py-2 bg-emerald-700 rounded-lg">
                                                     <span className="text-xl md:text-2xl font-bold text-white">{activeCongaMenu} ₽</span>
-                                                    <span className="text-emerald-100 ml-2 text-xs md:text-sm">/ 1460 гр./чел.</span>
+                                                    <span className="text-emerald-100 ml-2 text-xs md:text-sm">/ {activeCongaMenu === '7500' ? 1435 : 1450} гр./чел.</span>
                                                 </div>
                                             </div>
 
@@ -225,42 +225,43 @@ function CongaMenu7500() {
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
                 <div className="space-y-4">
-                    <MenuCard title="ЗАКУСКИ" weight="480 гр." color="emerald">
-                        <Item name="Мясное ассорти" desc="Говяжий язык, бастурма, куриный рулет, суджук, грудинка" w="70" />
-                        <Item name="Сырное ассорти" desc="с шоколадом, медом, орехами" w="100" />
-                        <Item name="Рыбное ассорти" desc="Масляная рыба, копчёный осётр, сёмга" w="25" />
-                        <Item name="Баклажанные рулетики" desc="с грецким орехом" w="25" />
-                        <Item name="Мини-бургер" desc="с куриной котлетой" w="80" />
-                        <Item name="Брускетта" desc="с томлёной говядиной" w="50" />
-                        <Item name="Мини-круассан" desc="с копчёной рыбой" w="50" />
+                    <MenuCard title="ЗАКУСКИ" weight="450 гр." color="emerald">
+                        <Item name="Деликатесное мясное ассорти" desc="Утиный рулет с черносливом, гусиный рулет с яблоком, свиной карбонад, грудинка домашнего копчения, пармская ветчина, хрен, горчица" w="70" />
+                        <Item name="Ассорти фермерских сыров" desc="с медом и горьким шоколадом: коровий выдержанный, козий выдержанный, с трюфелем, козий мягкий «Фрико», с грецким орехом, с пажитником" w="100" />
+                        <Item name="Рыбное ассорти" desc="Масляная рыба, копчёный осётр, сёмга слабой соли" w="25" />
+                        <Item name="Баклажанные рулетики" desc="с начинкой из грецкого ореха" w="25" />
+                        <Item name="А-ля брускетта" desc="с томлёной говядиной" w="50" />
                         <Item name="Овощной букет" w="80" />
+                        <Item name="Сельдь с картофелем" w="50" />
+                        <Item name="Паштет из куриной печени" desc="с клюквенным конфитюром" w="50" />
                     </MenuCard>
                 </div>
 
                 <div className="space-y-4">
-                    <MenuCard title="САЛАТЫ" subtitle="4 вида на выбор" weight="240 гр." color="emerald">
-                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан, чипсы" w="60" />
-                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан, чипсы" w="60" />
-                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны, перец" w="60" />
-                        <Item name="Оливье с говядиной" desc="Говядина, горошек, картофель, морковь" w="60" />
-                        <Item name="Оливье с красной рыбой" desc="Красная рыба, горошек, картофель" w="60" />
-                        <Item name="С бужениной" desc="Буженина, перец, кабачок, морковь" w="60" />
+                    <MenuCard title="САЛАТЫ" subtitle="На выбор 4 вида" weight="240 гр." color="emerald">
+                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны, сладкий перец, черри, Романо, Пармезан" w="60" />
+                        <Item name="Оливье с говядиной" desc="Говядина, горошек, картофель, морковь, яйцо, огурцы" w="60" />
+                        <Item name="Оливье с красной рыбой" desc="Красная рыба, горошек, картофель, морковь, яйцо, огурцы" w="60" />
+                        <Item name="С уткой и фруктовым чатни" desc="Утиное филе, яблочно-грушевый чатни, клюквенный соус, Пармезан, микс-салат, черри, гранатовый лук" w="60" />
                     </MenuCard>
-                    <MenuCard title="ГОРЯЧАЯ ЗАКУСКА" weight="80 гр." color="emerald">
-                        <Item name="Бразильский сырный хлеб" desc="с жульеном из красной рыбы" w="80" />
+                    <MenuCard title="ГОРЯЧИЕ ЗАКУСКИ" weight="85 гр." color="emerald">
+                        <Item name="Креветки «Панко»" desc="в пикантном соусе «Васаби»" w="35" />
+                        <Item name="Жареный Сулугуни" desc="с клюквенным соусом" w="50" />
                     </MenuCard>
                 </div>
 
                 <div className="space-y-4">
-                    <MenuCard title="МЯСНЫЕ БЛЮДА" weight="400 гр." color="emerald">
-                        <Item name="Телячьи щёчки" desc="с бататом и сливовым соусом" w="200" />
-                        <Item name="Стейк из говяжьей вырезки" desc="с картофелем и перечным соусом" w="200" />
+                    <MenuCard title="ГОРЯЧИЕ МЯСНЫЕ БЛЮДА" subtitle="порционно" weight="400 гр." color="emerald">
+                        <Item name="Телячьи щёчки" desc="с запечённым бататом и сливовым соусом" w="200" />
+                        <Item name="Стейк из говяжьей вырезки" desc="с картофелем «Черри» и перечным соусом" w="200" />
                     </MenuCard>
-                    <MenuCard title="РЫБНОЕ БЛЮДО" weight="160 гр." color="emerald">
+                    <MenuCard title="ГОРЯЧЕЕ РЫБНОЕ БЛЮДО" subtitle="порционно" weight="160 гр." color="emerald">
                         <Item name="Стейк из форели" desc="с птитимом и морковным гелем" w="160" />
                     </MenuCard>
                     <div className="p-3 bg-emerald-700 rounded-lg text-center">
-                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр.</div>
+                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр./чел.</div>
                     </div>
                 </div>
             </div>
@@ -276,49 +277,50 @@ function CongaMenu6000() {
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
                 <div className="space-y-4">
-                    <MenuCard title="ЗАКУСКИ" weight="510 гр." color="emerald">
+                    <MenuCard title="ЗАКУСКИ" weight="380 гр." color="emerald">
                         <Item name="Сельдь с картофелем" w="50" />
-                        <Item name="Ассорти сыров" desc="с медом, шоколадом" w="35" />
-                        <Item name="Мясное ассорти" desc="Гусь, утка, балык, ветчина" w="40" />
-                        <Item name="Овощной букет" w="85" />
-                        <Item name="Баклажанные рулетики" desc="с орехом и чесноком" w="25" />
-                        <Item name="Паштет из печени" desc="с клюквенным конфитюром" w="50" />
-                        <Item name="Мини-бургер" desc="с куриной котлетой" w="80" />
-                        <Item name="Брускетта" desc="с томлёной говядиной" w="50" />
-                        <Item name="Мини-круассан" desc="с копчёной рыбой" w="50" />
-                        <Item name="Рыбное ассорти" desc="Масляная, осётр, сёмга" w="45" />
+                        <Item name="Ассорти фермерских сыров" desc="с медом и горьким шоколадом: коровий выдержанный, козий выдержанный, с трюфелем, козий мягкий «Фрико», с грецким орехом, с пажитником" w="35" />
+                        <Item name="Деликатесное мясное ассорти" desc="Утиный рулет с черносливом, гусиный рулет с яблоком, свиной карбонад, грудинка домашнего копчения, пармская ветчина, хрен, горчица" w="40" />
+                        <Item name="Овощной букет" desc="Помидоры, огурцы, сладкий перец, редис, зелень" w="85" />
+                        <Item name="Баклажанные рулетики" desc="с грецким орехом и чесноком" w="25" />
+                        <Item name="Паштет из куриной печени" desc="с клюквенным конфитюром" w="50" />
+                        <Item name="А-ля брускетта" desc="с томлёной говядиной" w="50" />
+                        <Item name="Рыбное ассорти" desc="Масляная рыба, копчёный осётр, сёмга слабой соли" w="45" />
                     </MenuCard>
                 </div>
 
                 <div className="space-y-4">
-                    <MenuCard title="САЛАТЫ" subtitle="3 вида на выбор" weight="180 гр." color="emerald">
-                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан" w="60" />
-                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан" w="60" />
-                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны" w="60" />
-                        <Item name="Оливье с красной рыбой" desc="Рыба, горошек, картофель" w="60" />
-                        <Item name="С бужениной" desc="Буженина, перец, кабачок" w="60" />
+                    <MenuCard title="САЛАТЫ" subtitle="На выбор 3 вида" weight="180 гр." color="emerald">
+                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны, сладкий перец, черри, Романо, Пармезан" w="60" />
+                        <Item name="Оливье с красной рыбой" desc="Красная рыба, горошек, картофель, морковь, яйцо, огурцы" w="60" />
+                        <Item name="Оливье с говядиной" desc="Говядина, горошек, картофель, морковь, яйцо, огурцы" w="60" />
+                        <Item name="С уткой и фруктовым чатни" desc="Утиное филе, яблочно-грушевый чатни, клюквенный соус, Пармезан, микс-салат, черри, гранатовый лук" w="60" />
                     </MenuCard>
-                    <MenuCard title="ГОРЯЧАЯ ЗАКУСКА" weight="50 гр." color="emerald">
-                        <Item name="Бразильская булочка" desc="с грибным жульеном" w="50" />
+                    <MenuCard title="ГОРЯЧИЕ ЗАКУСКИ" weight="170 гр." color="emerald">
+                        <Item name="Хачапури по-имеретински" w="85" />
+                        <Item name="Креветки «Панко»" desc="в пикантном соусе «Васаби»" w="35" />
+                        <Item name="Жареный Сулугуни" desc="с клюквенным соусом" w="50" />
                     </MenuCard>
                 </div>
 
                 <div className="space-y-4">
-                    <MenuCard title="ШАШЛЫЧНЫЙ СЕТ" weight="420 гр." color="emerald">
+                    <MenuCard title="ШАШЛЫЧНЫЙ СЕТ" subtitle="с картофелем" weight="420 гр." color="emerald">
                         <Item name="Баранина" w="60" />
                         <Item name="Свиная шейка" w="60" />
                         <Item name="Куриное бедро" w="60" />
-                        <Item name="Люля-кебаб говядина" w="60" />
-                        <Item name="Люля-кебаб курица" w="60" />
+                        <Item name="Люля-кебаб из говядины" w="60" />
+                        <Item name="Люля-кебаб из курицы" w="60" />
                         <Item name="Картофельные дольки" w="100" />
                         <Item name="Шашлычный соус" w="20" />
                     </MenuCard>
-                    <MenuCard title="ОСЕТР С ОВОЩАМИ" weight="200 гр." color="emerald">
+                    <MenuCard title="ОСЕТР С ОВОЩАМИ «ЕВРОПА» НА ГРИЛЕ" weight="200 гр." color="emerald">
                         <Item name="Осетр" w="100" />
-                        <Item name="Овощи «Европа»" desc="Кабачок, перец, шампиньоны" w="100" />
+                        <Item name="Овощи «Европа»" desc="Кабачок, болгарский перец, шампиньоны" w="100" />
                     </MenuCard>
                     <div className="p-3 bg-emerald-700 rounded-lg text-center">
-                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр.</div>
+                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр./чел.</div>
                     </div>
                 </div>
             </div>
@@ -337,36 +339,34 @@ function KucherMenu() {
                 <p className="text-stone-500 tracking-widest text-xs md:text-sm mb-3">БАНКЕТНОЕ МЕНЮ</p>
                 <div className="inline-block px-6 py-2 bg-amber-600 rounded-lg">
                     <span className="text-xl md:text-2xl font-bold text-white">5000 ₽</span>
-                    <span className="text-amber-100 ml-2 text-xs md:text-sm">/ 1480 гр./чел.</span>
+                    <span className="text-amber-100 ml-2 text-xs md:text-sm">/ 1350 гр./чел.</span>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
                 <div className="space-y-4">
-                    <MenuCard title="ЗАКУСКИ" weight="500 гр." color="amber">
+                    <MenuCard title="ЗАКУСКИ" weight="370 гр." color="amber">
                         <Item name="Сельдь с картофелем" w="50" />
-                        <Item name="Ассорти фермерских сыров" desc="с медом и горьким шоколадом" w="35" />
-                        <Item name="Деликатесное мясное ассорти" desc="Гусиный рулет, утиный рулет, балык, бастурма" w="40" />
+                        <Item name="Ассорти фермерских сыров" desc="с медом и горьким шоколадом: коровий выдержанный, козий выдержанный, с трюфелем, козий мягкий «Фрико», с грецким орехом, с пажитником" w="35" />
+                        <Item name="Деликатесное мясное ассорти" desc="Утиный рулет с черносливом, гусиный рулет с яблоком, свиной карбонад, грудинка домашнего копчения, пармская ветчина, хрен, горчица" w="40" />
                         <Item name="Овощной букет" w="85" />
                         <Item name="Баклажанные рулетики" desc="с грецким орехом и чесноком" w="25" />
                         <Item name="Паштет из куриной печени" desc="с клюквенным конфитюром" w="50" />
-                        <Item name="Мини-бургер" desc="с куриной котлетой" w="80" />
                         <Item name="А-ля брускетта" desc="с томлёной говядиной" w="50" />
-                        <Item name="Мини-круассан" desc="с копчёной красной рыбой" w="50" />
                         <Item name="Лосось слабосолёный" w="35" />
                     </MenuCard>
                 </div>
 
                 <div className="space-y-4">
                     <MenuCard title="САЛАТЫ" subtitle="На выбор 3 вида" weight="180 гр." color="amber">
-                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан, чипсы" w="60" />
-                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан, чипсы" w="60" />
-                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны, перец" w="60" />
-                        <Item name="Оливье с красной рыбой" desc="Рыба, горошек, картофель, морковь" w="60" />
-                        <Item name="С бужениной" desc="Буженина, перец, кабачок, морковь" w="60" />
+                        <Item name="Цезарь с креветками" desc="Микс-салат, креветки, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Цезарь с курицей" desc="Микс-салат, курица, Пармезан, домашние чипсы, соус «Цезарь»" w="60" />
+                        <Item name="Кучер" desc="Свинина, говядина, шампиньоны, сладкий перец, черри, Романо, Пармезан" w="60" />
+                        <Item name="Оливье с красной рыбой" desc="Красная рыба, горошек, картофель, морковь, яйцо, огурцы" w="60" />
+                        <Item name="Оливье с говядиной" desc="Говядина, горошек, картофель, морковь, яйцо, огурцы" w="60" />
                     </MenuCard>
                     <MenuCard title="ГОРЯЧАЯ ЗАКУСКА" weight="80 гр." color="amber">
-                        <Item name="Хачапури по-имеретинский" w="80" />
+                        <Item name="Хачапури по-имеретински" w="80" />
                     </MenuCard>
                 </div>
 
@@ -380,12 +380,12 @@ function KucherMenu() {
                         <Item name="Картофельные дольки" w="100" />
                         <Item name="Шашлычный соус" w="20" />
                     </MenuCard>
-                    <MenuCard title="ОСЕТР С ОВОЩАМИ" weight="200 гр." color="amber">
+                    <MenuCard title="ОСЕТР С ОВОЩАМИ «ЕВРОПА» НА ГРИЛЕ" weight="200 гр." color="amber">
                         <Item name="Осетр" w="100" />
-                        <Item name="Овощи «Европа»" desc="Кабачок, перец, шампиньоны" w="100" />
+                        <Item name="Овощи «Европа»" desc="Кабачок, болгарский перец, шампиньоны" w="100" />
                     </MenuCard>
                     <div className="p-3 bg-amber-600 rounded-lg text-center">
-                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр.</div>
+                        <div className="text-white font-bold text-sm">ХЛЕБ — 100 гр./чел.</div>
                     </div>
                 </div>
             </div>
