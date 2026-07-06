@@ -22,6 +22,7 @@ import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType, CartItem, MenuCategory } from '@/types/index';
 import BanquetMenuModal from './BanquetMenuModal';
+import MenuImageGallery from './MenuImageGallery';
 
 type EnhancedMenuSectionProps = {
     onAddToCart: (item: CartItem) => void;
@@ -183,8 +184,9 @@ export default function EnhancedMenuSection({
         (ssrMenuDataByType && Object.keys(ssrMenuDataByType).length > 0)
             ? ssrMenuDataByType
             : (clientMenuData || {});
+    // banquet — модалка, bar/wine — локальные галереи страниц меню: показываем всегда, без данных iiko.
     const availableMenuTypes: MenuTypeInfo[] = MENU_TYPE_DEFS
-        .filter((d) => d.id === 'banquet' || (loadedMenuData[d.id]?.categories?.length ?? 0) > 0)
+        .filter((d) => ['banquet', 'bar', 'wine'].includes(d.id) || (loadedMenuData[d.id]?.categories?.length ?? 0) > 0)
         .map((d) => ({ id: d.id, name: d.name, isDeliveryAvailable: true }));
 
     // Функция для поиска блюд во всех типах меню
@@ -482,8 +484,8 @@ export default function EnhancedMenuSection({
                     )}
                 </div>
 
-                {/* Поиск и фильтры (скрыты для бизнес-ланча) */}
-                {selectedMenuType !== 'business' && (
+                {/* Поиск и фильтры (скрыты для бизнес-ланча и галерей бара/вина) */}
+                {!['business', 'bar', 'wine'].includes(selectedMenuType) && (
                     <div className="max-w-6xl mx-auto mb-8">
                         <div className="flex flex-col lg:flex-row gap-4">
                             {/* Поиск */}
@@ -600,7 +602,7 @@ export default function EnhancedMenuSection({
                 )}
 
                 {/* Результаты поиска */}
-                {selectedMenuType !== 'business' && searchQuery && (
+                {!['business', 'bar', 'wine'].includes(selectedMenuType) && searchQuery && (
                     <div className="text-center mb-6">
                         <p className="text-neutral-300">
                             Найдено {filteredMenu.reduce((total: number, cat: any) => total + cat.items.length, 0)} блюд
@@ -610,8 +612,18 @@ export default function EnhancedMenuSection({
                     </div>
                 )}
 
-                {/* Меню по категориям или конструктор бизнес-ланча */}
-                {selectedMenuType === 'business' ? (
+                {/* Меню по категориям, галереи бара/вина или конструктор бизнес-ланча */}
+                {selectedMenuType === 'bar' ? (
+                    <MenuImageGallery
+                        images={[1, 2, 3, 4, 5, 6, 7].map((n) => `/menu-pages/bar-${n}.webp`)}
+                        alt="Барная карта"
+                    />
+                ) : selectedMenuType === 'wine' ? (
+                    <MenuImageGallery
+                        images={[1, 2].map((n) => `/menu-pages/wine-${n}.webp`)}
+                        alt="Винная карта"
+                    />
+                ) : selectedMenuType === 'business' ? (
                     <BusinessLunchConstructor
                         sets={(loadedMenuData.business?.categories || []).flatMap((c) => c.items)}
                         onAddToCart={onAddToCart}
