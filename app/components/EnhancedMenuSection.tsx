@@ -178,8 +178,6 @@ export default function EnhancedMenuSection({
         { id: 'bar', name: 'Бар' },
         { id: 'wine', name: 'Винная карта' },
         { id: 'banquet', name: 'Банкетное меню' },
-        { id: 'kids', name: 'Детское' },
-        { id: 'promotions', name: 'Акции' },
     ];
     const loadedMenuData: Record<string, { categories: MenuCategory[] }> =
         (ssrMenuDataByType && Object.keys(ssrMenuDataByType).length > 0)

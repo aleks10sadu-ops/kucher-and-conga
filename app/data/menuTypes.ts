@@ -15,18 +15,6 @@ export const menuTypes: MenuType[] = [
         isActive: true
     },
     {
-        id: 'promotions',
-        name: 'Акции',
-        description: 'Специальные предложения и скидки',
-        isActive: false
-    },
-    {
-        id: 'kids',
-        name: 'Детское меню',
-        description: 'Блюда для детей',
-        isActive: false
-    },
-    {
         id: 'bar',
         name: 'Барное меню',
         description: 'Коктейли, напитки и закуски к ним',
