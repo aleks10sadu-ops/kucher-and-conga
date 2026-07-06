@@ -18,6 +18,8 @@ export interface CreateSiteDeliveryArgs {
   phone: string;
   customerName: string;
   comment: string;
+  /** локальное время ресторана в формате iiko: "yyyy-MM-dd HH:mm:ss.fff" */
+  completeBefore?: string | null;
   items: SiteOrderItem[];
   address: {
     full: string;
@@ -59,6 +61,7 @@ export async function createSiteDelivery(args: CreateSiteDeliveryArgs): Promise<
     // курьерская доставка ресторана: iiko возьмёт тип заказа по умолчанию этого режима
     orderServiceType: 'DeliveryByCourier',
     sourceKey: 'Сайт',
+    ...(args.completeBefore ? { completeBefore: args.completeBefore } : {}),
     phone: args.phone,
     customer: { name: args.customerName },
     comment: args.comment,

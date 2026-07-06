@@ -117,10 +117,28 @@ export async function POST(req: NextRequest) {
       ? p.coordinates
       : [null, null];
 
+    // «к 20:00» → completeBefore для iiko (время ресторана, МСК).
+    // datetime-local с сайта приходит без таймзоны — это уже московское время, берём как есть;
+    // ISO с зоной (Z/offset) конвертируем в МСК.
+    let completeBefore: string | null = null;
+    if (p.deliveryTime === 'custom' && p.deliveryTimeCustom) {
+      const naive = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?$/.exec(p.deliveryTimeCustom);
+      if (naive) {
+        completeBefore = `${naive[1]} ${naive[2]}:00.000`;
+      } else {
+        const d = new Date(p.deliveryTimeCustom);
+        if (!isNaN(d.getTime())) {
+          const msk = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+          completeBefore = msk.toISOString().slice(0, 19).replace('T', ' ') + '.000';
+        }
+      }
+    }
+
     const { orderId } = await createSiteDelivery({
       phone: normalizePhone(p.phone),
       customerName: p.name || 'Гость сайта',
       comment: buildComment(p),
+      completeBefore,
       items,
       address: { ...parseAddress(p.address), latitude: lat, longitude: lon },
     });
