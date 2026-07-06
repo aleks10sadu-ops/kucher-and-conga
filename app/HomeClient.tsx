@@ -608,7 +608,24 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
       zoneName: dForm.deliveryZone?.name,
     };
 
-    await notifyTelegram(payload);
+    // Заказ создаётся сразу в iiko (источник «Сайт»), уведомление в TG-группу
+    // пришлёт вебхук iiko. Если iiko недоступна — старое уведомление «пробить вручную»,
+    // чтобы заказ не потерялся.
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'iiko order failed');
+    } catch (err) {
+      console.error('iiko order failed, falling back to TG:', err);
+      await notifyTelegram({
+        ...payload,
+        comment: `${dForm.comment ? dForm.comment + ' | ' : ''}⚠️ Заказ НЕ создан в iiko — пробейте вручную!`,
+      });
+    }
     setDeliveryOpen(false);
     setCartOpen(false);
     setDForm({

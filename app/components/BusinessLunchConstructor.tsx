@@ -56,9 +56,11 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
       .map((g) => {
         const optId = choices[g.id];
         const opt = g.options.find((o) => o.id === optId);
-        return opt ? { group: g.name, option: opt.name } : null;
+        return opt
+          ? { group: g.name, option: opt.name, groupId: String(g.id), optionId: String(opt.id) }
+          : null;
       })
-      .filter(Boolean) as { group: string; option: string }[];
+      .filter(Boolean) as { group: string; option: string; groupId: string; optionId: string }[];
 
     const hash = Object.keys(choices).sort().map((g) => `${g}:${choices[g]}`).join('~');
     const composition = chosen.map((c) => `${c.group}: ${c.option}`).join('; ');
@@ -71,6 +73,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
       weight: 'Бизнес-ланч',
       description: composition,
       isBusinessLunch: true,
+      productId: String(selectedSet.id),
       modifiers: chosen,
     });
   };
