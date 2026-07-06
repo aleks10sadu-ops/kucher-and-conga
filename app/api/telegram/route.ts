@@ -176,12 +176,16 @@ function buildMessage(payload: TelegramPayload): string {
 export async function POST(req: NextRequest) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    if (!token || !chatId) {
+    if (!token || !process.env.TELEGRAM_CHAT_ID) {
       return NextResponse.json({ ok: false, error: 'Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID' }, { status: 500 });
     }
 
     const payload = await req.json() as TelegramPayload;
+    // Брони — в отдельную группу, чтобы доставщики не видели лишнего;
+    // доставки (fallback при недоступной iiko) — в общую группу доставок.
+    const chatId = payload.type === 'booking'
+      ? (process.env.TELEGRAM_BOOKING_CHAT_ID || process.env.TELEGRAM_CHAT_ID)
+      : process.env.TELEGRAM_CHAT_ID;
     const text = buildMessage(payload);
 
     const res = await fetch(TG_API(token), {

@@ -13,7 +13,9 @@ export type CartItem = {
     price: number;
     img?: string;
     qty: number;
-    modifiers?: { group: string; option: string }[];
+    /** iiko GUID блюда — нужен для создания заказа в iiko */
+    productId?: string;
+    modifiers?: { group: string; option: string; groupId?: string; optionId?: string }[];
     [key: string]: any; // For flexible properties until fully strictly typed
 };
 

@@ -118,7 +118,12 @@ export default function FoodDetailModal({
         (modSel[g.id] || [])
             .map((oid) => g.options.find((o) => o.id === oid))
             .filter(Boolean)
-            .map((o) => ({ group: cleanOptName(g.name), option: cleanOptName((o as any).name) }))
+            .map((o) => ({
+                group: cleanOptName(g.name),
+                option: cleanOptName((o as any).name),
+                groupId: String(g.id),
+                optionId: String((o as any).id),
+            }))
     );
     const requiredUnmet = modifierGroups.filter((g) => (g.min ?? 0) > 0 && (modSel[g.id]?.length ?? 0) < (g.min ?? 0));
     const modsValid = requiredUnmet.length === 0;
@@ -328,6 +333,7 @@ export default function FoodDetailModal({
                 description: item.description,
                 img: displayImage,
                 qty: newQuantity,
+                productId: String(item.id),
                 modifiers: hasModifiers ? selectedModifiers : undefined,
             });
         }
