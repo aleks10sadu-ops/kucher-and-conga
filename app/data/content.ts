@@ -6,12 +6,3 @@ export const gallery = [
     '/atmosphere_5.webp',
     '/atmosphere_6.webp',
 ];
-
-export const events = [
-    {
-        id: 'new-year',
-        title: 'Новогодняя ночь',
-        image: '/kongo_ng.webp',
-        link: '/events'
-    }
-];

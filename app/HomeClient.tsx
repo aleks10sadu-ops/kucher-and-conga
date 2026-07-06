@@ -29,7 +29,7 @@ import { useCart } from '../lib/hooks/useCart';
 import { deliveryZones, checkDeliveryZoneForCoords, type DeliveryZone } from './data/deliveryZones';
 import NavigationLinks from './components/NavigationLinks';
 
-import { gallery, events } from './data/content';
+import { gallery } from './data/content';
 import { isPointInPolygon } from '../lib/utils/geo';
 import { useAppSettings } from '../lib/hooks/useAppSettings';
 import { useBookingLogic } from '../lib/hooks/useBookingLogic';
@@ -41,6 +41,7 @@ import { composeReservationComment } from '@/lib/booking/composeReservation';
 import { visibleModifiers } from '@/lib/booking/modifiers';
 import BookingTypeSelector from './components/BookingTypeSelector';
 import BanquetMenuModal from './components/BanquetMenuModal';
+import NewDishesCarousel from './components/NewDishesCarousel';
 
 
 
@@ -740,26 +741,10 @@ export default function HomeClient({ ssrMenuData }: HomeClientProps) {
           <div className="relative z-20 flex items-center min-h-[calc(70vh-4rem)] sm:min-h-[calc(75vh-5rem)] md:min-h-[calc(80vh-4rem)] pt-12 sm:pt-16 md:pt-0 pb-24 sm:pb-28 md:pb-20">
             <div className="container mx-auto px-4 w-full">
               <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-stretch w-full max-w-full lg:max-w-7xl mx-auto px-2 sm:px-4 translate-y-[5%] sm:translate-y-[6%] lg:translate-y-[8%]" suppressHydrationWarning>
-                {/* Изображение мероприятия (первым на мобильных) */}
-                <a
-                  href="/events"
-                  className="w-full order-1 lg:order-2 mx-auto lg:mx-0 lg:justify-self-end block overflow-hidden rounded-xl sm:rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-300 lg:h-full"
-                  suppressHydrationWarning
-                >
-                  <Image
-                    src="/kongo_ng.webp"
-                    alt="Новогодняя ночь"
-                    width={450}
-                    height={338}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 450px"
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                    priority
-                    fetchPriority="high"
-                    quality={70}
-                    suppressHydrationWarning
-                  />
-                </a>
+                {/* Карусель новых блюд (первым на мобильных) */}
+                <div className="w-full order-1 lg:order-2 mx-auto lg:mx-0 lg:justify-self-end lg:h-full" suppressHydrationWarning>
+                  <NewDishesCarousel />
+                </div>
 
                 {/* Первый контейнер - Информация о ресторане (вторым на мобильных) */}
                 <div className="w-full rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 sm:p-6 md:p-8 lg:p-11 shadow-2xl flex flex-col justify-between lg:justify-self-start lg:self-center order-2 lg:order-1">
