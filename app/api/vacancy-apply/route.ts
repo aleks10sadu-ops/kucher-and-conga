@@ -31,17 +31,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Приём анкет временно недоступен' }, { status: 502 });
     }
 
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15000),
-        });
-        if (!res.ok) throw new Error(`Apps Script status ${res.status}`);
-        return NextResponse.json({ ok: true });
-    } catch (err) {
-        console.error('Ошибка отправки анкеты в Google Sheets:', err);
-        return NextResponse.json({ error: 'Не удалось отправить анкету, попробуйте позже' }, { status: 502 });
+    // Две попытки: сетевые таймауты к Google бывают разовыми.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                signal: AbortSignal.timeout(15000),
+            });
+            if (!res.ok) throw new Error(`Apps Script status ${res.status}`);
+            return NextResponse.json({ ok: true });
+        } catch (err) {
+            lastErr = err;
+        }
     }
+    console.error('Ошибка отправки анкеты в Google Sheets:', lastErr);
+    return NextResponse.json({ error: 'Не удалось отправить анкету, попробуйте позже' }, { status: 502 });
 }
