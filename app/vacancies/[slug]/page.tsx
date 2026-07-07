@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Briefcase } from 'lucide-react';
 import { createSupabaseBrowserClient } from '../../../lib/supabase/client';
+import VacancyApplyForm from '../../components/VacancyApplyForm';
 
 interface Post {
     id: string;
@@ -197,6 +198,11 @@ export default function VacancyPostPage() {
                     dangerouslySetInnerHTML={{ __html: post.content || '' }}
                 />
             </article>
+
+            {/* Анкета отклика */}
+            <div className="max-w-4xl mx-auto px-4 pb-8" id="apply">
+                <VacancyApplyForm vacancyTitle={post.title} />
+            </div>
 
             {/* Навигация внизу */}
             <div className="max-w-4xl mx-auto px-4 pb-12 md:pb-16">
