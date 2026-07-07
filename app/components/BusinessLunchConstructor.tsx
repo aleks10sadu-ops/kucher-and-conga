@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Image from 'next/image';
 import type { MenuItem, CartItem, ModifierGroup } from '@/types/index';
 
 type Props = {
@@ -12,6 +13,12 @@ type Props = {
 // с точным именем 'Хлеб'). Подстрочный матч /хлеб/i ошибочно ловил бы группу
 // «Выбор хлеба и напитков» и авто-выбирал напиток — напитки гость выбирает сам.
 const isBreadGroup = (name: string) => name.trim().toLowerCase() === 'хлеб';
+
+// Локальные фото сетов (скачаны из внешнего меню iiko): «Бизнес ланчи СЕТ № N» → set-N.webp
+function setImage(name: string): string | null {
+  const m = name.match(/сет\s*№?\s*([1-4])/i);
+  return m ? `/business-lunch/set-${m[1]}.webp` : null;
+}
 
 function defaultChoices(set: MenuItem | null): Record<string, string> {
   const out: Record<string, string> = {};
@@ -97,6 +104,11 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
                 active ? 'border-amber-400 bg-amber-400/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
               }`}
             >
+              {setImage(s.name) && (
+                <div className="relative w-full h-32 mb-3 rounded-xl overflow-hidden">
+                  <Image src={setImage(s.name)!} alt={s.name} fill sizes="(max-width: 640px) 100vw, 340px" className="object-cover" />
+                </div>
+              )}
               <div className="font-semibold">{s.name}</div>
               <div className="text-amber-400 font-bold mt-1">{(s.price || 0).toLocaleString('ru-RU')} ₽</div>
               {s.description && <div className="text-xs text-neutral-400 mt-1">{s.description}</div>}

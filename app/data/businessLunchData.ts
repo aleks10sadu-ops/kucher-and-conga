@@ -302,8 +302,8 @@ export const businessLunchData: BusinessLunchData = {
     delivery: {
         minimum_order: "от двух бизнес ланчей или от 1000₽",
         free_delivery: "Доставка по г. Дмитров - бесплатная",
-        whatsapp: "+7 (915)-049-28-48",
-        phone: "+7 (499) 22 99 222",
+        whatsapp: "+7 (916) 317-78-87",
+        phone: "+7 (916) 297-78-87",
         website: "Kucherandconga.ru"
     }
 };
