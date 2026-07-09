@@ -111,6 +111,10 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
         size: Math.round(18 + rnd(i * 3.17) * 14),
     }));
     const [spores, setSpores] = useState<Spore[]>(makeInitial);
+    // Споры только на десктопе: на мобильных карточки занимают всю ширину — пустого
+    // фона нет, и споры там не нужны. enabled стартует false (SSR ничего не рисует —
+    // без рассинхрона гидрации), включается на клиенте при широком экране.
+    const [enabled, setEnabled] = useState(false);
     const [ferns, setFerns] = useState<{ id: number; x: number; y: number; rot: number; scale: number }[]>([]);
     const [bursts, setBursts] = useState<{ id: number; left: number; top: number; size: number }[]>([]);
     const sporesRef = useRef(spores);
@@ -124,6 +128,13 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
     const sizeRef = useRef({ w: 1000, h: 1000 });
 
     useEffect(() => { sporesRef.current = spores; }, [spores]);
+
+    useEffect(() => {
+        const check = () => setEnabled(window.innerWidth >= 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
 
     // Пересчёт зон-исключений («забора»): карточки и картинки контента. Позиции
     // считаются относительно слоя спор; и слой, и карточки скроллятся вместе, поэтому
@@ -171,7 +182,7 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
         }
         return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', onResize); ro?.disconnect(); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [enabled]);
 
     const pop = (id: number, px: number, py: number, size: number) => {
         if (popping.current.has(id)) return;
@@ -195,7 +206,7 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
     };
 
     useEffect(() => {
-        if (reduce) return;
+        if (reduce || !enabled) return;
         const onMove = (e: PointerEvent) => {
             const el = rootRef.current; if (!el) return;
             const r = el.getBoundingClientRect();
@@ -215,12 +226,12 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
         };
         window.addEventListener('pointermove', onMove, { passive: true });
         return () => window.removeEventListener('pointermove', onMove);
-        // fern — константный проп на инстанс, читается из замыкания; размер deps постоянен.
+        // fern — константный проп на инстанс, читается из замыкания.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reduce]);
+    }, [reduce, enabled]);
 
     useEffect(() => {
-        if (reduce) return;
+        if (reduce || !enabled) return;
         let raf = 0, t0 = 0;
         const R = 155;
         const loop = (t: number) => {
@@ -269,7 +280,9 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
         };
         raf = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(raf);
-    }, [reduce]);
+    }, [reduce, enabled]);
+
+    if (!enabled) return null;
 
     return (
         <>
