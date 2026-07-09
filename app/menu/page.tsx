@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, Minus } from 'lucide-react';
 import { getMenuData } from '../actions/getMenu';
@@ -12,6 +13,29 @@ import DeliveryCheckout from './DeliveryCheckout';
 import { useCart } from '@/lib/hooks/useCart';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
+
+// Миниатюра блюда. Зеркалированные картинки (быстрый Supabase-origin) гоняем
+// через оптимизатор Next → ~10–15 КБ WebP/AVIF нужного размера, иммутабельный
+// edge-кеш, весь экран грузится разом. Ещё-не-зеркалированные iiko-URL (медленный
+// Selectel) отдаём как есть, без оптимизатора, чтобы не ловить таймаут.
+function DishThumb({ src, alt }: { src: string; alt: string }) {
+    const [broken, setBroken] = useState(false);
+    if (broken) return null;
+    const optimize = src.includes('/storage/v1/object/public/');
+    if (optimize) {
+        return (
+            <Image
+                src={src}
+                alt={alt}
+                fill
+                sizes="(max-width: 768px) 80px, 128px"
+                className="object-cover"
+                onError={() => setBroken(true)}
+            />
+        );
+    }
+    return <img src={src} alt={alt} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setBroken(true)} />;
+}
 
 function MenuContent() {
     const [menuByType, setMenuByType] = useState<Record<string, { categories: any[] }>>({});
@@ -300,9 +324,7 @@ function MenuContent() {
 
                                                     {item.image && (
                                                         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-forest-mid md:h-32 md:w-32">
-                                                            {/* Прямая отдача с Supabase CDN (WebP ~185КБ) без оптимизатора Next —
-                                                                грузится быстро и стабильно, без очереди /_next/image. */}
-                                                            <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                                            <DishThumb src={item.image} alt={item.name} />
                                                         </div>
                                                     )}
                                                 </div>
