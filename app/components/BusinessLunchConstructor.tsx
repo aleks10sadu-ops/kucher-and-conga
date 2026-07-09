@@ -86,7 +86,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   };
 
   if (!sets.length) {
-    return <div className="text-neutral-400 text-center py-8">Бизнес-ланч сейчас недоступен.</div>;
+    return <div className="text-cream/55 text-center py-8">Бизнес-ланч сейчас недоступен.</div>;
   }
 
   return (
@@ -101,7 +101,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
               type="button"
               onClick={() => selectSet(s.id)}
               className={`text-left rounded-2xl border px-4 py-3 transition ${
-                active ? 'border-amber-400 bg-amber-400/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
+                active ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.09]'
               }`}
             >
               {setImage(s.name) && (
@@ -110,8 +110,8 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
                 </div>
               )}
               <div className="font-semibold">{s.name}</div>
-              <div className="text-amber-400 font-bold mt-1">{(s.price || 0).toLocaleString('ru-RU')} ₽</div>
-              {s.description && <div className="text-xs text-neutral-400 mt-1">{s.description}</div>}
+              <div className="text-brass font-bold mt-1">{(s.price || 0).toLocaleString('ru-RU')} ₽</div>
+              {s.description && <div className="text-xs text-cream/55 mt-1">{s.description}</div>}
             </button>
           );
         })}
@@ -124,7 +124,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
             <div key={g.id}>
               <div className="font-semibold mb-2">
                 {g.name}
-                <span className="text-amber-400"> *</span>
+                <span className="text-brass"> *</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {g.options.map((o) => {
@@ -135,11 +135,11 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
                       type="button"
                       onClick={() => choose(g.id, o.id)}
                       className={`text-left rounded-xl border px-3 py-2 text-sm transition ${
-                        active ? 'border-amber-400 bg-amber-400/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
+                        active ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.09]'
                       }`}
                     >
                       {o.name}
-                      {o.price > 0 && <span className="text-neutral-400"> +{o.price} ₽</span>}
+                      {o.price > 0 && <span className="text-cream/55"> +{o.price} ₽</span>}
                     </button>
                   );
                 })}
@@ -152,14 +152,14 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
       {/* Добавить */}
       {selectedSet && (
         <div className="flex items-center justify-between gap-3 pt-2">
-          <div className="text-sm text-neutral-400">
+          <div className="text-sm text-cream/55">
             {requiredOk ? 'Готово к добавлению' : `Выберите: ${missingGroups.map((g) => g.name).join(', ')}`}
           </div>
           <button
             type="button"
             disabled={!requiredOk}
             onClick={handleAdd}
-            className="px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Добавить — {(selectedSet.price || 0).toLocaleString('ru-RU')} ₽
           </button>

@@ -515,6 +515,7 @@ export default function FoodDetailModal({
                                         src={displayImage}
                                         alt={displayName}
                                         fill
+                                        unoptimized
                                         quality={80}
                                         sizes="(max-width: 1024px) 90vw, 800px"
                                         placeholder="blur"

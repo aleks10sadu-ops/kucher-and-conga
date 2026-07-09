@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Plus, Minus } from 'lucide-react';
 import { getMenuData } from '../actions/getMenu';
 import BanquetMenuModal from '../components/BanquetMenuModal';
+import BusinessLunchConstructor from '../components/BusinessLunchConstructor';
 import FoodDetailModal from '../components/FoodDetailModal';
 import CartDrawer from '../components/CartDrawer';
 import DeliveryCheckout from './DeliveryCheckout';
@@ -170,23 +170,7 @@ function MenuContent() {
                 {/* Контент */}
                 <div className="mx-auto max-w-[1000px] px-5 pt-10 md:px-8">
                     {activeType === 'business' ? (
-                        <div className="mx-auto max-w-3xl space-y-6">
-                            {categories.flatMap((c: any) => c.items).map((set: any) => (
-                                <div key={set.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                                    <div className="flex items-baseline justify-between gap-3">
-                                        <h3 className="font-display text-xl font-bold text-cream">{set.name}</h3>
-                                        <span className="whitespace-nowrap font-semibold text-brass">{(set.price || 0).toLocaleString('ru-RU')} ₽</span>
-                                    </div>
-                                    {set.description && <p className="mt-1 text-sm text-cream/60">{set.description}</p>}
-                                    {(set.modifierGroups || []).map((g: any) => (
-                                        <div key={g.id} className="mt-3">
-                                            <div className="text-sm font-semibold text-cream/80">{g.name}</div>
-                                            <div className="text-sm text-cream/55">{g.options.map((o: any) => o.name).join(', ')}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+                        <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items)} onAddToCart={cart.add} />
                     ) : (
                         <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
                             {categories.map((category: any) => (
@@ -278,11 +262,47 @@ function MenuContent() {
                                                                 ))}
                                                             </div>
                                                         )}
+
+                                                        {/* Быстрое добавление: простые блюда — сразу в корзину;
+                                                            блюда с вариантами/модификаторами — «Выбрать» (открывает карточку). */}
+                                                        {item.price ? (
+                                                            <div className="mt-4 border-t border-white/[0.07] pt-3" onClick={(e) => e.stopPropagation()}>
+                                                                {(item.variants?.length || item.modifierGroups?.length) ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setSelectedItem(item)}
+                                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-brass/40 bg-white/[0.04] px-4 py-2 text-sm font-medium text-brass transition-colors hover:bg-white/[0.09]"
+                                                                    >
+                                                                        Выбрать и добавить
+                                                                    </button>
+                                                                ) : (() => {
+                                                                    const qty = cart.items.find((c) => c.id === item.id)?.qty || 0;
+                                                                    const setQty = (n: number) => cart.add({ id: item.id, name: item.name, price: item.price, weight: item.weight || '', img: item.image, qty: n, productId: String(item.id) });
+                                                                    return qty === 0 ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setQty(1)}
+                                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta px-4 py-2 text-sm font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark"
+                                                                        >
+                                                                            <Plus className="h-4 w-4" /> В корзину
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div className="inline-flex items-center gap-3 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1.5">
+                                                                            <button type="button" onClick={() => cart.dec(item.id)} aria-label="Меньше" className="grid h-8 w-8 place-items-center rounded-md bg-white/[0.06] text-cream transition-colors hover:bg-white/[0.12]"><Minus className="h-4 w-4" /></button>
+                                                                            <span className="min-w-[2ch] text-center font-semibold text-cream">{qty}</span>
+                                                                            <button type="button" onClick={() => setQty(qty + 1)} aria-label="Больше" className="grid h-8 w-8 place-items-center rounded-md bg-terracotta text-[#FBF3EA] transition-colors hover:bg-terracotta-dark"><Plus className="h-4 w-4" /></button>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        ) : null}
                                                     </div>
 
                                                     {item.image && (
                                                         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-forest-mid md:h-32 md:w-32">
-                                                            <Image src={item.image} alt={item.name} fill quality={75} loading="lazy" sizes="128px" className="object-cover" />
+                                                            {/* Прямая отдача с Supabase CDN (WebP ~185КБ) без оптимизатора Next —
+                                                                грузится быстро и стабильно, без очереди /_next/image. */}
+                                                            <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                                         </div>
                                                     )}
                                                 </div>

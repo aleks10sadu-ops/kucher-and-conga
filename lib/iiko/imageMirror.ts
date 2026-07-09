@@ -118,18 +118,20 @@ export function __resetMirrorSetCache(): void {
 export async function rewriteMenuImagesToMirror(
   menu: Record<string, { categories: MenuCategory[] }>,
 ): Promise<Record<string, { categories: MenuCategory[] }>> {
-  const mirrored = await getMirroredSet();
-  if (mirrored.size === 0) return menu;
-
+  // Детерминированно переписываем URL картинок iiko на зеркало в Supabase Storage.
+  // Имя объекта-зеркала выводится из URL (контент-хэш), бакет заполняется фоновым
+  // синком (revalidate/cron). Не зависит от service-role и листинга бакета —
+  // поэтому работает в проде без доп. переменных. Редкие ещё-не-зеркалированные
+  // картинки гасятся onError на клиенте (пока их не догонит синк).
   const out: Record<string, { categories: MenuCategory[] }> = {};
   for (const [key, group] of Object.entries(menu)) {
     out[key] = {
       categories: group.categories.map((cat) => ({
         ...cat,
         items: cat.items.map((it) => {
-          const name = mirrorObjectName(it.image);
-          if (name && mirrored.has(name)) {
-            return { ...it, image: mirroredPublicUrl(it.image)! };
+          if (isIikoImageUrl(it.image)) {
+            const mirror = mirroredPublicUrl(it.image);
+            if (mirror) return { ...it, image: mirror };
           }
           return it;
         }),
