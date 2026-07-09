@@ -39,7 +39,6 @@ const PREORDER_HINT =
 const ADMIN_CONTACT_PREPAY = 'Для банкета нужна предоплата 10 000 ₽ — свяжется администратор.';
 const PREORDER_PREPAY = 'Для предзаказа нужна предоплата 10 000 ₽ — свяжется администратор.';
 const ADMIN_CONTACT_HALL = 'Для этого зала свяжется администратор.';
-const CALL_ADMIN = 'Онлайн-заявка для такого числа гостей и срока недоступна — позвоните администратору.';
 
 export function classifyHall(hallName: string | null | undefined): HallGroup | null {
   if (!hallName) return null;
@@ -88,26 +87,21 @@ function banquetDateEligible(now: Date, eventDate: string): boolean {
 export function evaluateBooking(input: BookingRuleInput): BookingValidation {
   const { adults, eventDate, now, hallGroup, type, cartFoodSum } = input;
 
-  // Доступность типов
+  // Доступность ТИПА зависит только от числа гостей — онлайн-заявка доступна для
+  // любого количества, ограничивается лишь тип брони. Сроки (предзаказ до 16:00
+  // накануне, банкет заранее) — это мягкие подсказки, а не блокировки: срок
+  // подтверждает администратор. Так форма никогда не оказывается «тупиком».
   const onsiteAllowed = adults < ADULTS_NO_ONSITE;
-  const preorderAllowed = adults < ADULTS_BANQUET_ONLY && preorderTimeEligible(now, eventDate);
-  const banquetAllowed = adults >= ADULTS_BANQUET_MIN && banquetDateEligible(now, eventDate);
+  const preorderAllowed = adults < ADULTS_BANQUET_ONLY;
+  const banquetAllowed = adults >= ADULTS_BANQUET_MIN;
 
   const onsiteReason = onsiteAllowed
     ? undefined
     : adults >= ADULTS_BANQUET_ONLY
-      ? 'От 12 взрослых — только банкет'
-      : 'От 9 взрослых — только предзаказ или банкет';
-  const preorderReason = preorderAllowed
-    ? undefined
-    : adults >= ADULTS_BANQUET_ONLY
-      ? 'От 12 взрослых — только банкет'
-      : 'Предзаказ — не позже 16:00 дня до мероприятия (день-в-день нельзя)';
-  const banquetReason = banquetAllowed
-    ? undefined
-    : adults < ADULTS_BANQUET_MIN
-      ? 'Банкет — от 6 взрослых'
-      : 'Банкет — минимум за 2 дня до мероприятия';
+      ? 'От 12 гостей — только банкет'
+      : 'От 9 гостей — предзаказ или банкет';
+  const preorderReason = preorderAllowed ? undefined : 'От 12 гостей — только банкет';
+  const banquetReason = banquetAllowed ? undefined : 'Банкет — от 6 гостей';
 
   const availableTypes: TypeAvailability[] = [
     { type: 'onsite', allowed: onsiteAllowed, reason: onsiteReason },
@@ -117,12 +111,6 @@ export function evaluateBooking(input: BookingRuleInput): BookingValidation {
 
   const blocking: string[] = [];
   const info: string[] = [];
-  const anyAllowed = availableTypes.some((t) => t.allowed);
-
-  if (!anyAllowed) {
-    blocking.push(CALL_ADMIN);
-    return { availableTypes, canSubmit: false, blocking, info };
-  }
 
   if (!type) {
     return { availableTypes, canSubmit: false, blocking, info };
@@ -141,6 +129,9 @@ export function evaluateBooking(input: BookingRuleInput): BookingValidation {
   } else if (type === 'preorder') {
     info.push(PREORDER_HINT);
     info.push(PREORDER_PREPAY);
+    if (eventDate && !preorderTimeEligible(now, eventDate)) {
+      info.push('Предзаказ обычно оформляют до 16:00 накануне — администратор подтвердит срок.');
+    }
     if (!hallGroup) {
       blocking.push('Выберите зал.');
       canSubmit = false;
@@ -165,6 +156,9 @@ export function evaluateBooking(input: BookingRuleInput): BookingValidation {
     }
   } else if (type === 'banquet') {
     info.push(ADMIN_CONTACT_PREPAY);
+    if (eventDate && !banquetDateEligible(now, eventDate)) {
+      info.push('Банкет оформляется заранее — администратор согласует дату.');
+    }
     if (!hallGroup) {
       blocking.push('Выберите зал для банкета.');
       canSubmit = false;

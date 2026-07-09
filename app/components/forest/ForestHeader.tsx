@@ -23,6 +23,7 @@ export default function ForestHeader({ variant = 'solid' }: { variant?: 'solid' 
     const solid = variant === 'solid' || scrolled;
 
     return (
+        <>
         <header
             className={`${variant === 'overlay' ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-40 transition-colors duration-300 ${
                 solid
@@ -63,9 +64,11 @@ export default function ForestHeader({ variant = 'solid' }: { variant?: 'solid' 
                     <span>Разделы</span>
                 </button>
             </div>
-
-            <NavDrawer open={open} onClose={() => setOpen(false)} />
         </header>
+        {/* Дровер вне <header>: у шапки backdrop-blur создаёт содержащий блок и
+            контекст наложения — вложенный fixed-дровер попадал ПОД контент. */}
+        <NavDrawer open={open} onClose={() => setOpen(false)} />
+        </>
     );
 }
 

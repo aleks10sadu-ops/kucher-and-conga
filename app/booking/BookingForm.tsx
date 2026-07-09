@@ -47,6 +47,7 @@ export default function BookingForm() {
     const [hallId, setHallId] = useState<string | null>(null);
     const [hallName, setHallName] = useState<string | null>(null);
     const [banquetPackageId, setBanquetPackageId] = useState<string | null>(null);
+    const [banquetSalads, setBanquetSalads] = useState<string[]>([]);
     const [banquetModalOpen, setBanquetModalOpen] = useState(false);
     const cart = useCart();
 
@@ -80,7 +81,7 @@ export default function BookingForm() {
     const resetForm = () => {
         setFirstName(''); setLastName(''); setPhone(''); setDate(''); setTime('');
         setAdults(2); setChildren(0); setBookingType('onsite'); setComment(''); setConsent(false);
-        setHallId(null); setHallName(null); setBanquetPackageId(null);
+        setHallId(null); setHallName(null); setBanquetPackageId(null); setBanquetSalads([]);
     };
 
     const onSubmit = async (e: React.FormEvent) => {
@@ -120,10 +121,15 @@ export default function BookingForm() {
         setStatus('sending');
         setErrorMsg('');
 
-        const banquetPackageName =
+        const banquetBaseName =
             mode === 'self' && effectiveType === 'banquet'
                 ? BANQUET_PACKAGES.find((p) => p.id === banquetPackageId)?.name ?? null
                 : null;
+        const banquetPackageName = banquetBaseName
+            ? banquetSalads.length
+                ? `${banquetBaseName} — салаты: ${banquetSalads.join(', ')}`
+                : banquetBaseName
+            : null;
         const preorderItems =
             mode === 'self' && effectiveType === 'preorder'
                 ? cart.items.map((c) => ({ name: c.name, qty: c.qty, price: c.price }))
@@ -252,6 +258,7 @@ export default function BookingForm() {
                             setHallId(id);
                             setHallName(name ?? null);
                             setBanquetPackageId(null);
+                            setBanquetSalads([]);
                         }}
                     />
                 </div>
@@ -322,9 +329,12 @@ export default function BookingForm() {
                                 {banquetPackageId ? 'Изменить банкетный пакет' : 'Выбрать банкетный пакет'}
                             </button>
                             {banquetPackageId && (
-                                <p className="text-center text-sm text-brass">
-                                    Выбран пакет: {BANQUET_PACKAGES.find((p) => p.id === banquetPackageId)?.name}
-                                </p>
+                                <div className="text-center text-sm text-brass">
+                                    <p>Выбран пакет: {BANQUET_PACKAGES.find((p) => p.id === banquetPackageId)?.name}</p>
+                                    {banquetSalads.length > 0 && (
+                                        <p className="mt-0.5 text-xs text-cream/60">Салаты: {banquetSalads.join(', ')}</p>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
@@ -371,8 +381,9 @@ export default function BookingForm() {
                 selectable
                 hallFilter={banquetPackagesForHall(hallGroup)}
                 selectedPackageId={banquetPackageId}
-                onSelectPackage={(id) => {
+                onSelectPackage={(id, salads) => {
                     setBanquetPackageId(id);
+                    setBanquetSalads(salads);
                     setBanquetModalOpen(false);
                 }}
             />

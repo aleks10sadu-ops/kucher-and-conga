@@ -13,6 +13,7 @@ import DeliveryCheckout from './DeliveryCheckout';
 import { useCart } from '@/lib/hooks/useCart';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
+import SporeField from '../components/forest/SporeField';
 
 // Миниатюра блюда. Зеркалированные картинки (быстрый Supabase-origin) гоняем
 // через оптимизатор Next → ~10–15 КБ WebP/AVIF нужного размера, иммутабельный
@@ -128,8 +129,11 @@ function MenuContent() {
             <ForestHeader />
             <main className="min-h-screen bg-forest-ink pb-24 font-body text-cream">
                 {/* Компактный заголовок */}
-                <section className="border-b border-white/5 bg-forest-deep px-5 pb-7 pt-10 md:px-8 md:pt-14">
-                    <div className="mx-auto max-w-[1000px]">
+                <section className="relative overflow-hidden border-b border-white/5 px-5 pb-7 pt-10 md:px-8 md:pt-14">
+                    <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/85 via-forest-ink/85 to-forest-ink" />
+                    <SporeField count={10} />
+                    <div className="relative z-10 mx-auto max-w-[1000px]">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Кухня, бар, доставка</span>
                         <h1 className="mt-2 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-black leading-[1.05] text-cream">Меню</h1>
                     </div>

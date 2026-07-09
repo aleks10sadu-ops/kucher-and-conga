@@ -78,24 +78,24 @@ describe('type availability by adults', () => {
   });
 });
 
-describe('timing', () => {
-  it('preorder for tomorrow allowed before 16:00 МСК', () => {
-    // now 13:00 МСК, event tomorrow -> cutoff today 16:00 МСК -> ok
-    const v = evaluateBooking(base({ adults: 2, eventDate: '2026-06-29', type: 'preorder', hallGroup: 'conga', cartFoodSum: 5000 }));
+describe('timing is advisory, not a hard block', () => {
+  it('preorder stays available even same-day; late timing only adds an admin-confirm note', () => {
+    // day-в-день: тип доступен, форма не тупик — добавляется мягкая подсказка про срок.
+    const v = evaluateBooking(base({ adults: 2, eventDate: '2026-06-28', type: 'preorder', hallGroup: 'conga', cartFoodSum: 20000 }));
     expect(allowed(v, 'preorder')).toBe(true);
+    expect(v.canSubmit).toBe(true);
+    expect(v.info.join(' ')).toMatch(/16:00|срок/i);
   });
-  it('preorder for tomorrow blocked after 16:00 МСК', () => {
-    const lateNow = new Date('2026-06-28T14:00:00Z'); // 17:00 МСК
-    const v = evaluateBooking(base({ now: lateNow, adults: 2, eventDate: '2026-06-29', type: 'preorder' }));
-    expect(allowed(v, 'preorder')).toBe(false);
+  it('preorder for tomorrow before 16:00 has no timing note', () => {
+    const v = evaluateBooking(base({ adults: 2, eventDate: '2026-06-29', type: 'preorder', hallGroup: 'conga', cartFoodSum: 20000 }));
+    expect(v.canSubmit).toBe(true);
+    expect(v.info.join(' ')).not.toMatch(/подтвердит срок/i);
   });
-  it('preorder same-day blocked', () => {
-    const v = evaluateBooking(base({ adults: 2, eventDate: '2026-06-28', type: 'preorder' }));
-    expect(allowed(v, 'preorder')).toBe(false);
-  });
-  it('banquet needs +2 days (tomorrow blocked)', () => {
-    const v = evaluateBooking(base({ adults: 8, eventDate: '2026-06-29', type: 'banquet' }));
-    expect(allowed(v, 'banquet')).toBe(false);
+  it('banquet stays available for a too-soon date; adds an admin-confirm note', () => {
+    const v = evaluateBooking(base({ adults: 8, eventDate: '2026-06-29', type: 'banquet', hallGroup: 'kucher' }));
+    expect(allowed(v, 'banquet')).toBe(true);
+    expect(v.canSubmit).toBe(true);
+    expect(v.info.join(' ')).toMatch(/заранее|согласует/i);
   });
 });
 
@@ -144,9 +144,10 @@ describe('banquet submit + no-type-available', () => {
     expect(v.canSubmit).toBe(true);
     expect(v.info.join(' ')).toMatch(/предоплат/i);
   });
-  it('12+ adults tomorrow -> no type available, blocked with call message', () => {
-    const v = evaluateBooking(base({ adults: 14, eventDate: '2026-06-29', type: null }));
-    expect(v.canSubmit).toBe(false);
-    expect(v.blocking.join(' ')).toMatch(/позвоните администратору/i);
+  it('12+ adults tomorrow -> banquet stays available and submittable (admin confirms date)', () => {
+    const v = evaluateBooking(base({ adults: 14, eventDate: '2026-06-29', type: 'banquet', hallGroup: 'kucher' }));
+    expect(allowed(v, 'banquet')).toBe(true);
+    expect(v.canSubmit).toBe(true);
+    expect(v.info.join(' ')).toMatch(/заранее|согласует/i);
   });
 });
