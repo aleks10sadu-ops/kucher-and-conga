@@ -110,6 +110,12 @@ export default function RedesignClient() {
                 @media (prefers-reduced-motion: reduce) {
                     .rf-anim, .rf-anim * { animation: none !important; transition: none !important; }
                 }
+                .rf-btn { transition: transform .15s cubic-bezier(.22,1,.36,1), background .2s ease, border-color .2s ease; }
+                .rf-btn:active { transform: scale(.97); }
+                .rf-btn-primary:hover { background: #8F3A1B; }
+                .rf-btn-ghost:hover { background: rgba(244,247,242,0.1); border-color: rgba(244,247,242,0.55); }
+                .rf-nav a { position: relative; transition: color .2s ease; }
+                .rf-nav a:hover { color: #F8FAF6; }
                 .rf-nav { display: none; }
                 .rf-wrap { padding-left: 20px; padding-right: 20px; }
                 .rf-hero-pad { padding-left: 20px; padding-right: 20px; padding-bottom: 76px; }
@@ -136,29 +142,31 @@ export default function RedesignClient() {
                 }
             `}</style>
 
-            {/* Фикс-хедер, проявляется при скролле */}
-            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'transparent', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
+            {/* Фикс-хедер: тёмный скрим сверху для читаемости поверх видео */}
+            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'linear-gradient(180deg, rgba(11,16,12,0.72) 0%, rgba(11,16,12,0.28) 60%, transparent 100%)', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
                 <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                    <Link href={A} className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#F8FAF6' }}>Кучер <span style={{ color: C.brass }}>&</span> Conga</Link>
-                    <nav className="rf-nav" style={{ alignItems: 'center', gap: 28, fontSize: 15, color: 'rgba(244,247,242,0.82)' }}>
+                    <Link href={A} className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#F8FAF6', textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>Кучер <span style={{ color: C.brass }}>&</span> Conga</Link>
+                    <nav className="rf-nav" style={{ alignItems: 'center', gap: 28, fontSize: 15, color: 'rgba(244,247,242,0.9)', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
                         <Link href={LINKS.menu}>Меню</Link>
                         <Link href={LINKS.booking}>Бронь</Link>
                         <Link href={LINKS.events}>События</Link>
                         <Link href={LINKS.vacancies}>Команда</Link>
                     </nav>
-                    <a href="tel:+79163177887" style={{ fontSize: 14, fontWeight: 500, borderRadius: 999, padding: '8px 16px', border: '1px solid rgba(244,247,242,0.35)', color: '#F8FAF6', whiteSpace: 'nowrap' }}>+7 916 317-78-87</a>
+                    <a href="tel:+79163177887" className="rf-btn rf-btn-ghost" style={{ fontSize: 14, fontWeight: 500, borderRadius: 8, padding: '9px 16px', border: '1px solid rgba(244,247,242,0.4)', color: '#F8FAF6', whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>+7 916 317-78-87</a>
                 </div>
             </header>
 
             <div className="rf-anim">
-                {/* HERO: живой полог на видео */}
-                <section style={{ position: 'relative', overflow: 'hidden', height: 'clamp(600px, 92vh, 940px)', background: '#16211B' }}>
+                {/* HERO: живой полог на видео, на весь экран */}
+                <section style={{ position: 'relative', overflow: 'hidden', height: '100svh', minHeight: 560, background: '#16211B' }}>
                     {video && (
                         <video key={video.mp4} autoPlay loop muted playsInline poster={video.poster} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
                             <source src={video.mp4} type="video/mp4" />
                         </video>
                     )}
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(15,20,17,0.32) 0%,rgba(15,20,17,0.05) 25%,rgba(15,20,17,0.46) 64%,rgba(15,20,17,0.92) 100%)' }} />
+                    {/* Равномерное затемнение — прячет дефекты видео */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(11,16,12,0.34)' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(11,16,12,0.5) 0%,rgba(11,16,12,0.18) 32%,rgba(11,16,12,0.55) 66%,rgba(11,16,12,0.94) 100%)' }} />
 
                     <div className="rf-hero-pad" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start', gap: 20, maxWidth: 880 }}>
                         <motion.div style={{ display: 'flex', alignItems: 'center', gap: 14 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
@@ -176,8 +184,8 @@ export default function RedesignClient() {
                         </motion.p>
 
                         <motion.div className="rf-btns" style={{ display: 'flex', gap: 12, marginTop: 4 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.24, ease: EASE }}>
-                            <Link href={LINKS.booking} className="rf-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, fontWeight: 600, padding: '0 32px', background: C.terracotta, color: '#FBF3EA', boxShadow: '0 12px 34px rgba(0,0,0,0.4)' }}>Забронировать стол</Link>
-                            <Link href={LINKS.menu} className="rf-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, fontWeight: 500, padding: '0 32px', border: '1px solid rgba(248,250,246,0.6)', color: '#F8FAF6', backdropFilter: 'blur(4px)' }}>Заказать доставку</Link>
+                            <Link href={LINKS.booking} className="rf-btn rf-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 600, fontSize: 15, letterSpacing: '0.01em', padding: '0 30px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 8px 24px rgba(172,72,35,0.32)' }}>Забронировать стол</Link>
+                            <Link href={LINKS.menu} className="rf-btn rf-btn-ghost" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 500, fontSize: 15, padding: '0 30px', border: '1px solid rgba(244,247,242,0.4)', color: '#F8FAF6', background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(6px)' }}>Заказать доставку</Link>
                         </motion.div>
                     </div>
 

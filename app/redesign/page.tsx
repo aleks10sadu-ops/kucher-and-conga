@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Vollkorn, Golos_Text } from 'next/font/google';
-import RedesignClient from './HubLanding';
+import RedesignClient from './Landing';
 
 const vollkorn = Vollkorn({
     subsets: ['cyrillic', 'latin'],
