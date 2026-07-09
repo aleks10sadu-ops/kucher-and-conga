@@ -3,6 +3,7 @@
 // поэтому здесь в TG ничего не отправляем.
 import { NextResponse, NextRequest } from 'next/server';
 import { createSiteDelivery, type SiteOrderItem } from '@/lib/iiko/orders';
+import { composeAddressDetails } from '@/lib/booking/addressDetails';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -19,6 +20,12 @@ interface IncomingPayload {
   name: string;
   phone: string;
   address: string;
+  house?: string;
+  building?: string;
+  entrance?: string;
+  floor?: string;
+  apartment?: string;
+  intercom?: string;
   coordinates?: number[] | null;
   comment?: string;
   allergy?: string;
@@ -61,6 +68,8 @@ function parseAddress(full: string) {
 
 function buildComment(p: IncomingPayload): string {
   const lines: string[] = ['ЗАКАЗ С САЙТА'];
+  const details = composeAddressDetails(p);
+  if (details) lines.push(`Детали адреса: ${details}`);
   if (p.deliveryTime === 'custom' && p.deliveryTimeCustom) {
     lines.push(`Время доставки: ${p.deliveryTimeCustom}`);
   } else {
@@ -134,13 +143,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const parsed = parseAddress(p.address);
+    const details = composeAddressDetails(p);
     const { orderId } = await createSiteDelivery({
       phone: normalizePhone(p.phone),
       customerName: p.name || 'Гость сайта',
       comment: buildComment(p),
       completeBefore,
       items,
-      address: { ...parseAddress(p.address), latitude: lat, longitude: lon },
+      address: {
+        ...parsed,
+        // Явное поле «дом» с формы имеет приоритет над разбором строки адреса.
+        house: (p.house && p.house.trim()) || parsed.house,
+        building: p.building?.trim() || null,
+        entrance: p.entrance?.trim() || null,
+        floor: p.floor?.trim() || null,
+        flat: p.apartment?.trim() || null,
+        doorphone: p.intercom?.trim() || null,
+        // deliveryPoint.comment покажет курьеру полный адрес с деталями.
+        full: details ? `${p.address}, ${details}` : p.address,
+        latitude: lat,
+        longitude: lon,
+      },
     });
 
     return NextResponse.json({ ok: true, orderId });

@@ -2,34 +2,16 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingCart } from 'lucide-react';
 import { getMenuData } from '../actions/getMenu';
 import BanquetMenuModal from '../components/BanquetMenuModal';
-
-// Type definitions based on data files
-interface MenuItemVariant {
-    name: string;
-    price: number;
-    weight: string;
-}
-
-interface MenuItem {
-    id: string;
-    name: string;
-    description: string;
-    price?: number;
-    weight?: string; // Some items have weight as string
-    variants?: MenuItemVariant[];
-    image?: string;
-}
-
-interface MenuCategory {
-    id: string;
-    name: string;
-    items: MenuItem[];
-}
-
+import FoodDetailModal from '../components/FoodDetailModal';
+import CartDrawer from '../components/CartDrawer';
+import DeliveryCheckout from './DeliveryCheckout';
+import { useCart } from '@/lib/hooks/useCart';
+import ForestHeader from '../components/forest/ForestHeader';
+import ForestFooter from '../components/forest/ForestFooter';
 
 function MenuContent() {
     const [menuByType, setMenuByType] = useState<Record<string, { categories: any[] }>>({});
@@ -38,6 +20,14 @@ function MenuContent() {
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Заказ: корзина + модалка блюда + оформление доставки
+    const cart = useCart();
+    const [selectedItem, setSelectedItem] = useState<any>(null);
+    const [cartOpen, setCartOpen] = useState(false);
+    const [deliveryOpen, setDeliveryOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
 
     useEffect(() => {
         let active = true;
@@ -72,316 +62,292 @@ function MenuContent() {
         setActiveType(id);
         const cats = menuByType[id]?.categories || [];
         setActiveCategory(cats[0]?.id || '');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const scrollToCategory = (categoryId: string) => {
         setActiveCategory(categoryId);
         const element = document.getElementById(categoryId);
         if (element) {
-            const offset = 100; // Компенсация фиксированного заголовка
+            const offset = 172;
             const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-            window.scrollTo({
-                top: elementPosition - offset,
-                behavior: 'smooth'
-            });
+            window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
         }
         setIsMenuOpen(false);
     };
 
     if (loading && categories.length === 0) {
         return (
-            <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-white text-xl">
-                Загрузка меню…
-            </div>
+            <>
+                <ForestHeader />
+                <main className="flex min-h-screen items-center justify-center bg-forest-ink text-cream/70">Загрузка меню…</main>
+            </>
         );
     }
 
+    const pill = (active: boolean) =>
+        `rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            active ? 'bg-terracotta text-[#FBF3EA]' : 'border border-white/12 bg-white/[0.04] text-cream/75 hover:bg-white/[0.09]'
+        }`;
+
     return (
-        <div className="bg-neutral-950 min-h-screen text-white pb-20">
-            {/* Фиксированная шапка с навигацией по типам меню */}
-            <div className="fixed top-0 left-0 right-0 z-40 bg-neutral-950/80 backdrop-blur-md border-b border-white/10 pt-20">
-                <div className="container mx-auto px-4">
-                    {/* Таб-бар типов меню */}
-                    {availableTypes.length > 1 && (
-                        <div className="flex flex-wrap justify-center gap-2 mb-3">
-                            {availableTypes.map((t) => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => selectType(t.id)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                                        activeType === t.id && t.id !== 'banquet'
-                                            ? 'bg-amber-400 text-black'
-                                            : 'bg-white/5 text-neutral-300 hover:bg-white/10 border border-white/10'
-                                    }`}
-                                >
-                                    {t.name}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {/* Навигация по категориям (десктоп) */}
-                    {activeType !== 'business' && (
-                    <div className="hidden md:flex justify-center space-x-6 pb-4 overflow-x-auto scrollbar-none">
-                        {categories.map((category: any) => (
-                            <button
-                                key={category.id}
-                                onClick={() => scrollToCategory(category.id)}
-                                className={`text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === category.id
-                                    ? 'text-amber-400 border-b-2 border-amber-400'
-                                    : 'text-neutral-400 hover:text-white'
-                                    }`}
-                            >
-                                {category.name}
-                            </button>
-                        ))}
+        <>
+            <ForestHeader />
+            <main className="min-h-screen bg-forest-ink pb-24 font-body text-cream">
+                {/* Компактный заголовок */}
+                <section className="border-b border-white/5 bg-forest-deep px-5 pb-7 pt-10 md:px-8 md:pt-14">
+                    <div className="mx-auto max-w-[1000px]">
+                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Кухня, бар, доставка</span>
+                        <h1 className="mt-2 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-black leading-[1.05] text-cream">Меню</h1>
                     </div>
-                    )}
+                </section>
 
-                    {/* Навигация по категориям (мобильная) */}
-                    {activeType !== 'business' && (
-                    <div className="md:hidden pb-4 relative">
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="w-full flex items-center justify-between px-4 py-2 bg-white/5 rounded-lg text-sm text-neutral-300 pointer-events-auto"
-                        >
-                            <span className="truncate">
-                                {categories.find((c: any) => c.id === activeCategory)?.name || 'Выберите категорию'}
-                            </span>
-                            <span className={`transform transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}>
-                                ▼
-                            </span>
-                        </button>
+                {/* Липкая навигация: типы меню + категории */}
+                <div className="sticky top-16 z-30 border-b border-white/10 bg-forest-ink/90 backdrop-blur-md">
+                    <div className="mx-auto max-w-[1000px] px-5 py-3 md:px-8">
+                        {availableTypes.length > 1 && (
+                            <div className="mb-2 flex flex-wrap gap-2">
+                                {availableTypes.map((t) => (
+                                    <button key={t.id} onClick={() => selectType(t.id)} className={pill(activeType === t.id && t.id !== 'banquet')}>
+                                        {t.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
-                        <AnimatePresence>
-                            {isMenuOpen && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className="absolute top-full left-0 right-0 mt-2 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden py-2 max-h-[60vh] overflow-y-auto z-50 pointer-events-auto"
-                                >
+                        {activeType !== 'business' && categories.length > 0 && (
+                            <>
+                                <div className="hidden gap-5 overflow-x-auto pb-1 md:flex">
                                     {categories.map((category: any) => (
                                         <button
                                             key={category.id}
                                             onClick={() => scrollToCategory(category.id)}
-                                            className={`w-full text-left px-4 py-3 text-sm transition-colors ${activeCategory === category.id
-                                                ? 'bg-amber-400/10 text-amber-400'
-                                                : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                                                }`}
+                                            className={`whitespace-nowrap border-b-2 pb-1 text-sm font-medium transition-colors ${
+                                                activeCategory === category.id ? 'border-brass text-brass' : 'border-transparent text-cream/55 hover:text-cream'
+                                            }`}
                                         >
                                             {category.name}
                                         </button>
                                     ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Основной контент */}
-            <div className="container mx-auto px-4 pt-48 md:pt-48">
-                {activeType === 'business' ? (
-                    <div className="max-w-3xl mx-auto space-y-8">
-                        {categories.flatMap((c: any) => c.items).map((set: any) => (
-                            <div key={set.id} className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <h3 className="text-xl font-bold">{set.name}</h3>
-                                    <span className="text-amber-400 font-bold whitespace-nowrap">{(set.price || 0).toLocaleString('ru-RU')} ₽</span>
                                 </div>
-                                {set.description && <p className="text-neutral-400 text-sm mt-1">{set.description}</p>}
-                                {(set.modifierGroups || []).map((g: any) => (
-                                    <div key={g.id} className="mt-3">
-                                        <div className="text-sm font-semibold text-neutral-300">{g.name}</div>
-                                        <div className="text-sm text-neutral-400">{g.options.map((o: any) => o.name).join(', ')}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
+
+                                <div className="relative md:hidden">
+                                    <button
+                                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                        className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-cream/80"
+                                    >
+                                        <span className="truncate">{categories.find((c: any) => c.id === activeCategory)?.name || 'Выберите категорию'}</span>
+                                        <span className={`transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}>▼</span>
+                                    </button>
+                                    <AnimatePresence>
+                                        {isMenuOpen && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[60vh] overflow-y-auto rounded-xl border border-white/10 bg-forest py-2 shadow-2xl"
+                                            >
+                                                {categories.map((category: any) => (
+                                                    <button
+                                                        key={category.id}
+                                                        onClick={() => scrollToCategory(category.id)}
+                                                        className={`block w-full px-4 py-3 text-left text-sm transition-colors ${
+                                                            activeCategory === category.id ? 'bg-brass/10 text-brass' : 'text-cream/60 hover:bg-white/5 hover:text-cream'
+                                                        }`}
+                                                    >
+                                                        {category.name}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </>
+                        )}
                     </div>
-                ) : (
-                    <div className="max-w-4xl mx-auto space-y-16 md:space-y-24">
-                        {categories.map((category: any) => (
-                            <div
-                                key={category.id}
-                                id={category.id}
-                                className="scroll-mt-48 pointer-events-auto"
-                            >
-                                <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-amber-400 border-b border-white/10 pb-4">
-                                    {category.name}
-                                </h2>
+                </div>
 
-                                <div className="grid gap-6 md:gap-8">
-                                    {category.items.map((item: any) => (
-                                        <div
-                                            key={item.id}
-                                            className="group bg-white/5 rounded-2xl p-4 md:p-6 hover:bg-white/10 transition-colors border border-white/5 hover:border-amber-400/20"
-                                        >
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-baseline justify-between gap-4 mb-2">
-                                                        <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-amber-400 transition-colors">
-                                                            {item.name}
-                                                        </h3>
-                                                        {item.price && (
-                                                            <span className="text-lg md:text-xl font-bold text-amber-400 whitespace-nowrap">
-                                                                {item.price} ₽
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {item.description && (
-                                                        <p className="text-sm md:text-base text-neutral-400 mb-2 leading-relaxed">
-                                                            {item.description}
-                                                        </p>
-                                                    )}
-
-                                                    {/* Характеристики для вина */}
-                                                    {(item.type || item.grape || item.strength) && (
-                                                        <div className="flex flex-wrap gap-2 mb-2 text-xs text-neutral-500">
-                                                            {item.type && (
-                                                                <span className="bg-white/5 px-2 py-1 rounded">
-                                                                    {item.type}
-                                                                </span>
-                                                            )}
-                                                            {item.grape && (
-                                                                <span className="bg-white/5 px-2 py-1 rounded">
-                                                                    🍇 {item.grape}
-                                                                </span>
-                                                            )}
-                                                            {item.strength && (
-                                                                <span className="bg-white/5 px-2 py-1 rounded">
-                                                                    💪 {item.strength}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex items-center gap-4 text-xs md:text-sm text-neutral-500">
-                                                        {item.weight && (
-                                                            <span>⚖️ {typeof item.weight === 'number' ? `${item.weight} г` : item.weight}</span>
-                                                        )}
-                                                        {item.volume && item.volume_unit && (
-                                                            <span>🥛 {item.volume} {item.volume_unit}</span>
-                                                        )}
-                                                    </div>
-
-                                                    {item.nutrition && (
-                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs md:text-sm text-neutral-500 mt-1">
-                                                            {item.nutrition.calories != null && (
-                                                                <span>{Math.round(item.nutrition.calories)} ккал</span>
-                                                            )}
-                                                            {item.nutrition.proteins != null && <span>Б {item.nutrition.proteins}</span>}
-                                                            {item.nutrition.fats != null && <span>Ж {item.nutrition.fats}</span>}
-                                                            {item.nutrition.carbs != null && <span>У {item.nutrition.carbs}</span>}
-                                                            <span className="opacity-60">/ 100 г</span>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Варианты блюд/напитков */}
-                                                    {item.variants && item.variants.length > 0 && (
-                                                        <div className="mt-4 space-y-2 border-t border-white/5 pt-3">
-                                                            {item.variants.map((variant: any, idx: number) => (
-                                                                <div key={idx} className="flex justify-between items-center text-sm">
-                                                                    <span className="text-neutral-300">{variant.name}</span>
-                                                                    <div className="flex items-center gap-3">
-                                                                        {variant.weight && (
-                                                                            <span className="text-neutral-500 text-xs">
-                                                                                {variant.weight}
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="font-semibold text-amber-400">
-                                                                            {variant.price} ₽
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Модификаторы из iiko (гарнир/мясо на выбор и т.п.) */}
-                                                    {item.modifierGroups && item.modifierGroups.length > 0 && (
-                                                        <div className="mt-4 space-y-3 border-t border-white/5 pt-3">
-                                                            {item.modifierGroups.map((group: any) => (
-                                                                <div key={group.id}>
-                                                                    <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-neutral-300 mb-1.5">
-                                                                        <span>{group.name}</span>
-                                                                        {group.min > 0 && (
-                                                                            <span className="text-[10px] md:text-xs text-amber-400/90 bg-amber-400/10 rounded px-1.5 py-0.5">
-                                                                                обязательно
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-2">
-                                                                        {group.options.map((opt: any) => (
-                                                                            <span
-                                                                                key={opt.id}
-                                                                                className="text-xs md:text-sm text-neutral-300 bg-white/5 border border-white/10 rounded-full px-3 py-1"
-                                                                            >
-                                                                                {String(opt.name).replace(/^[-–—]\s*/, '')}
-                                                                                {opt.price > 0 && (
-                                                                                    <span className="text-amber-400 ml-1">+{opt.price} ₽</span>
-                                                                                )}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Изображение (если есть) */}
-                                                {item.image && (
-                                                    <div className="relative w-20 h-20 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900">
-                                                        <Image
-                                                            src={item.image}
-                                                            alt={item.name}
-                                                            fill
-                                                            quality={75}
-                                                            loading="lazy"
-                                                            sizes="128px"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
+                {/* Контент */}
+                <div className="mx-auto max-w-[1000px] px-5 pt-10 md:px-8">
+                    {activeType === 'business' ? (
+                        <div className="mx-auto max-w-3xl space-y-6">
+                            {categories.flatMap((c: any) => c.items).map((set: any) => (
+                                <div key={set.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <h3 className="font-display text-xl font-bold text-cream">{set.name}</h3>
+                                        <span className="whitespace-nowrap font-semibold text-brass">{(set.price || 0).toLocaleString('ru-RU')} ₽</span>
+                                    </div>
+                                    {set.description && <p className="mt-1 text-sm text-cream/60">{set.description}</p>}
+                                    {(set.modifierGroups || []).map((g: any) => (
+                                        <div key={g.id} className="mt-3">
+                                            <div className="text-sm font-semibold text-cream/80">{g.name}</div>
+                                            <div className="text-sm text-cream/55">{g.options.map((o: any) => o.name).join(', ')}</div>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
+                            {categories.map((category: any) => (
+                                <section key={category.id} id={category.id} className="scroll-mt-[172px]">
+                                    <h2 className="mb-7 border-b border-white/10 pb-3 font-display text-2xl font-bold text-cream md:text-3xl">
+                                        {category.name}
+                                    </h2>
+                                    <div className="grid gap-4 md:gap-5">
+                                        {category.items.map((item: any) => (
+                                            <div
+                                                key={item.id}
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => setSelectedItem(item)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') setSelectedItem(item); }}
+                                                className="group cursor-pointer rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-brass/25 hover:bg-white/[0.06] md:p-6"
+                                            >
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="mb-2 flex items-baseline justify-between gap-4">
+                                                            <h3 className="font-display text-lg font-bold text-cream transition-colors group-hover:text-brass md:text-xl">
+                                                                {item.name}
+                                                            </h3>
+                                                            {item.price && (
+                                                                <span className="whitespace-nowrap text-lg font-bold text-brass md:text-xl">{item.price} ₽</span>
+                                                            )}
+                                                        </div>
 
-            {/* Кнопка "Наверх" */}
-            <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="fixed bottom-8 right-8 w-12 h-12 bg-amber-400 text-black rounded-full shadow-lg flex items-center justify-center font-bold hover:bg-amber-300 transition-transform hover:scale-110 z-40"
-            >
-                ↑
-            </button>
+                                                        {item.description && (
+                                                            <p className="mb-2 text-sm leading-relaxed text-cream/60 md:text-[15px]">{item.description}</p>
+                                                        )}
 
-            {/* Футер с возвратом */}
-            <div className="fixed bottom-0 left-0 right-0 bg-neutral-950/90 backdrop-blur border-t border-white/10 p-4 z-40 md:hidden">
-                <Link
-                    href="/"
-                    className="flex items-center justify-center w-full py-3 bg-white/10 rounded-xl text-white font-medium hover:bg-white/20 transition-colors"
+                                                        {(item.type || item.grape || item.strength) && (
+                                                            <div className="mb-2 flex flex-wrap gap-2 text-xs text-cream/70">
+                                                                {item.type && <span className="rounded bg-white/[0.06] px-2 py-1">{item.type}</span>}
+                                                                {item.grape && <span className="rounded bg-white/[0.06] px-2 py-1">{item.grape}</span>}
+                                                                {item.strength && <span className="rounded bg-white/[0.06] px-2 py-1">{item.strength}</span>}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex items-center gap-4 text-xs text-cream/45 md:text-sm">
+                                                            {item.weight && <span>{typeof item.weight === 'number' ? `${item.weight} г` : item.weight}</span>}
+                                                            {item.volume && item.volume_unit && <span>{item.volume} {item.volume_unit}</span>}
+                                                        </div>
+
+                                                        {item.nutrition && (
+                                                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-cream/45 md:text-sm">
+                                                                {item.nutrition.calories != null && <span>{Math.round(item.nutrition.calories)} ккал</span>}
+                                                                {item.nutrition.proteins != null && <span>Б {item.nutrition.proteins}</span>}
+                                                                {item.nutrition.fats != null && <span>Ж {item.nutrition.fats}</span>}
+                                                                {item.nutrition.carbs != null && <span>У {item.nutrition.carbs}</span>}
+                                                                <span className="opacity-60">/ 100 г</span>
+                                                            </div>
+                                                        )}
+
+                                                        {item.variants && item.variants.length > 0 && (
+                                                            <div className="mt-4 space-y-2 border-t border-white/[0.07] pt-3">
+                                                                {item.variants.map((variant: any, idx: number) => (
+                                                                    <div key={idx} className="flex items-center justify-between text-sm">
+                                                                        <span className="text-cream/75">{variant.name}</span>
+                                                                        <div className="flex items-center gap-3">
+                                                                            {variant.weight && <span className="text-xs text-cream/45">{variant.weight}</span>}
+                                                                            <span className="font-semibold text-brass">{variant.price} ₽</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {item.modifierGroups && item.modifierGroups.length > 0 && (
+                                                            <div className="mt-4 space-y-3 border-t border-white/[0.07] pt-3">
+                                                                {item.modifierGroups.map((group: any) => (
+                                                                    <div key={group.id}>
+                                                                        <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-cream/80 md:text-sm">
+                                                                            <span>{group.name}</span>
+                                                                            {group.min > 0 && (
+                                                                                <span className="rounded bg-brass/12 px-1.5 py-0.5 text-[10px] text-brass md:text-xs">обязательно</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {group.options.map((opt: any) => (
+                                                                                <span key={opt.id} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-cream/75 md:text-sm">
+                                                                                    {String(opt.name).replace(/^[-–—]\s*/, '')}
+                                                                                    {opt.price > 0 && <span className="ml-1 text-brass">+{opt.price} ₽</span>}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {item.image && (
+                                                        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-forest-mid md:h-32 md:w-32">
+                                                            <Image src={item.image} alt={item.name} fill quality={75} loading="lazy" sizes="128px" className="object-cover" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    aria-label="Наверх"
+                    className="fixed bottom-8 right-8 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-terracotta font-bold text-[#FBF3EA] shadow-lg transition-transform hover:scale-110 hover:bg-terracotta-dark"
                 >
-                    ← На главную
-                </Link>
-            </div>
+                    ↑
+                </button>
 
-            <BanquetMenuModal isOpen={isBanquetOpen} onClose={() => setIsBanquetOpen(false)} />
-        </div>
+                {/* Корзина — плавающая кнопка */}
+                {cart.count > 0 && (
+                    <button
+                        onClick={() => setCartOpen(true)}
+                        className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] shadow-xl shadow-black/40 transition-colors hover:bg-terracotta-dark"
+                    >
+                        <ShoppingCart className="h-5 w-5" />
+                        Корзина · {cart.count} · {cart.total.toLocaleString('ru-RU')} ₽
+                    </button>
+                )}
+
+                <FoodDetailModal
+                    item={selectedItem}
+                    isOpen={!!selectedItem}
+                    onClose={() => setSelectedItem(null)}
+                    onAddToCart={cart.add}
+                    cartItems={cart.items}
+                />
+                <CartDrawer
+                    isOpen={cartOpen}
+                    onClose={() => setCartOpen(false)}
+                    items={cart.items}
+                    onAdd={cart.add}
+                    onDecrement={cart.dec}
+                    onRemove={cart.remove}
+                    count={cart.count}
+                    total={cart.total}
+                    onDeliveryClick={() => { setCartOpen(false); setDeliveryOpen(true); }}
+                    businessLunchValidation={{ businessLunchCount: 0, isValid: true }}
+                    isMounted={mounted}
+                />
+                {deliveryOpen && (
+                    <DeliveryCheckout items={cart.items} subtotal={cart.total} onClose={() => setDeliveryOpen(false)} onSuccess={() => cart.clear()} />
+                )}
+
+                <BanquetMenuModal isOpen={isBanquetOpen} onClose={() => setIsBanquetOpen(false)} />
+            </main>
+            <ForestFooter />
+        </>
     );
 }
 
 export default function MenuPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-neutral-950 flex items-center justify-center text-white">Загрузка меню...</div>}>
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-forest-ink text-cream/70">Загрузка меню…</div>}>
             <MenuContent />
         </Suspense>
     );

@@ -4,7 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
+import { loadContentPosts } from '@/lib/content/loadContentPosts';
 import ContentManager from '../components/ContentManager';
+import ForestHeader from '../components/forest/ForestHeader';
+import ForestFooter from '../components/forest/ForestFooter';
+import { SITE } from '../components/forest/site';
 
 interface Post {
     id: string;
@@ -19,7 +23,6 @@ interface Post {
     is_published: boolean;
 }
 
-// Вспомогательная функция для проверки валидности URL для Next.js Image
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url || typeof url !== 'string') return false;
     const trimmedUrl = url.trim();
@@ -44,7 +47,6 @@ export default function VacanciesPage() {
         loadPosts();
         checkAdmin();
 
-        // Realtime синхронизация
         const supabase = createSupabaseBrowserClient() as any;
         if (!supabase) return;
 
@@ -52,15 +54,8 @@ export default function VacanciesPage() {
             .channel('content-posts-changes')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'content_posts',
-                    filter: `category=eq.vacancies`,
-                },
-                () => {
-                    loadPosts();
-                }
+                { event: '*', schema: 'public', table: 'content_posts', filter: `category=eq.vacancies` },
+                () => loadPosts()
             )
             .subscribe();
 
@@ -82,11 +77,7 @@ export default function VacanciesPage() {
                 setAdminLoading(false);
                 return;
             }
-            const { data: adminRecord } = await supabase
-                .from('admins')
-                .select('role')
-                .eq('id', user.id)
-                .maybeSingle();
+            const { data: adminRecord } = await supabase.from('admins').select('role').eq('id', user.id).maybeSingle();
             setIsAdmin(!!adminRecord);
         } catch {
             setIsAdmin(false);
@@ -98,28 +89,11 @@ export default function VacanciesPage() {
     const loadPosts = async () => {
         setLoading(true);
         try {
-            const supabase = createSupabaseBrowserClient() as any;
-            if (!supabase) {
-                setLoading(false);
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('content_posts')
-                .select('*')
-                .eq('category', 'vacancies')
-                .eq('is_published', true)
-                .order('published_at', { ascending: false })
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error loading posts:', error);
-                setPosts([]);
-            } else {
-                setPosts(data || []);
-            }
+            const { data, error } = await loadContentPosts('vacancies');
+            if (error) console.warn('Вакансии: не удалось загрузить (сеть):', error?.message || error?.code || 'unknown');
+            setPosts(data);
         } catch (err) {
-            console.error('Error:', err);
+            console.warn('Вакансии: ошибка загрузки:', err);
             setPosts([]);
         } finally {
             setLoading(false);
@@ -127,106 +101,108 @@ export default function VacanciesPage() {
     };
 
     return (
-        <div className="bg-neutral-950 text-white min-h-screen">
-            <div className="container mx-auto px-4 py-20">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <Link href="/" className="inline-block text-amber-400 hover:text-amber-300 transition-colors">
-                            ← Вернуться на главную
-                        </Link>
-                        {!adminLoading && isAdmin && (
-                            <button
-                                onClick={() => setShowContentManager(true)}
-                                className="px-4 py-2 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
-                            >
-                                Управление вакансиями
-                            </button>
-                        )}
+        <>
+            <ForestHeader />
+            <main className="min-h-screen bg-forest-ink font-body text-cream">
+                {/* Герой */}
+                <section className="relative overflow-hidden">
+                    <img src="/atmosphere_2.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/82 via-forest-ink/85 to-forest-ink" />
+                    <div className="relative mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
+                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Команда · {SITE.city}</span>
+                        <h1 className="mt-2 max-w-[18ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04] text-cream">
+                            Работа в «Кучер&nbsp;&&nbsp;Conga»
+                        </h1>
+                        <p className="mt-4 max-w-[56ch] text-[clamp(15px,2vw,19px)] leading-relaxed text-cream/85">
+                            Мы ищем людей, которым нравится, когда гостю хорошо. Кухня, зал, бар, доставка — расскажите, что
+                            вам ближе, прямо в отклике.
+                        </p>
                     </div>
+                </section>
 
-                    <h1 className="text-4xl md:text-5xl font-bold mb-12">Вакансии</h1>
+                {/* Список */}
+                <section className="relative border-t border-white/5 bg-forest-deep py-14 md:py-20">
+                    <div className="mx-auto max-w-[1280px] px-5 md:px-8">
+                        {!adminLoading && isAdmin && (
+                            <div className="mb-8 flex justify-end">
+                                <button
+                                    onClick={() => setShowContentManager(true)}
+                                    className="rounded-lg border border-brass/40 bg-white/[0.04] px-4 py-2 text-sm font-medium text-brass transition-colors hover:bg-white/[0.08]"
+                                >
+                                    Управление вакансиями
+                                </button>
+                            </div>
+                        )}
 
-                    {loading ? (
-                        <div className="text-center py-12 text-neutral-400">Загрузка...</div>
-                    ) : posts.length === 0 ? (
-                        <div className="text-center py-12 text-neutral-400">
-                            <p>Информация о вакансиях будет добавлена позже</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                            {posts.map((post, index) => {
-                                const isLarge = index % 6 === 0;
-                                const isWide = index % 6 === 3;
-
-                                return (
-                                    <Link
-                                        key={post.id}
-                                        href={`/vacancies/${post.slug}`}
-                                        className={`group relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-amber-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-400/10 flex flex-col ${isLarge ? 'md:col-span-2 md:row-span-2' : ''
-                                            } ${isWide ? 'md:col-span-2' : ''}`}
-                                    >
-                                        {post.image_url && isValidImageUrl(post.image_url) ? (
-                                            <div className={`relative w-full ${isLarge ? 'h-64 md:h-80' : 'h-48 md:h-56'} overflow-hidden flex-shrink-0 bg-neutral-900`}>
-                                                {post.image_url.includes('supabase.co') ? (
-                                                    <img
-                                                        src={post.image_url}
-                                                        alt={post.title}
-                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                    />
-                                                ) : (
-                                                    <Image
-                                                        src={post.image_url}
-                                                        alt={post.title}
-                                                        fill
-                                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                                    />
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
-                                            </div>
-                                        ) : (
-                                            <div className={`relative w-full ${isLarge ? 'h-48 md:h-64' : 'h-40 md:h-48'} overflow-hidden flex-shrink-0 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center`}>
-                                                <div className="text-center">
-                                                    <div className="text-4xl mb-2">💼</div>
-                                                    <p className="text-xs text-neutral-500">Нет изображения</p>
+                        {loading ? (
+                            <div className="py-16 text-center text-cream/50">Загрузка…</div>
+                        ) : posts.length === 0 ? (
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
+                                <p className="text-cream/70">Сейчас открытых вакансий нет.</p>
+                                <p className="mt-2 text-sm text-cream/50">
+                                    Но если чувствуете, что вам к нам — напишите на{' '}
+                                    <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">
+                                        {SITE.phones[0].label}
+                                    </a>
+                                    .
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid auto-rows-[1fr] grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                                {posts.map((post, index) => {
+                                    const feature = index % 5 === 0;
+                                    return (
+                                        <Link
+                                            key={post.id}
+                                            href={`/vacancies/${post.slug}`}
+                                            className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-brass/40 hover:bg-white/[0.07] hover:shadow-2xl hover:shadow-black/40 ${
+                                                feature ? 'sm:col-span-2 lg:row-span-2' : ''
+                                            }`}
+                                        >
+                                            {post.image_url && isValidImageUrl(post.image_url) ? (
+                                                <div className={`relative w-full flex-shrink-0 overflow-hidden bg-forest-mid ${feature ? 'h-56 md:h-72' : 'h-44 md:h-52'}`}>
+                                                    {post.image_url.includes('supabase.co') ? (
+                                                        <img src={post.image_url} alt={post.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                                    ) : (
+                                                        <Image src={post.image_url} alt={post.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                                                    )}
+                                                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-ink/40 to-transparent" />
                                                 </div>
-                                            </div>
-                                        )}
-
-                                        <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0">
-                                            <h2 className={`font-bold mb-2 md:mb-3 line-clamp-2 group-hover:text-amber-400 transition-colors ${isLarge ? 'text-xl md:text-2xl lg:text-3xl' : 'text-lg md:text-xl lg:text-2xl'
-                                                }`}>
-                                                {post.title}
-                                            </h2>
-
-                                            {post.excerpt && (
-                                                <p className={`text-neutral-300 mb-3 md:mb-4 flex-1 ${isLarge ? 'text-sm md:text-base line-clamp-4' : 'text-xs md:text-sm line-clamp-3'
-                                                    }`}>
-                                                    {post.excerpt}
-                                                </p>
+                                            ) : (
+                                                <div className={`relative flex w-full flex-shrink-0 items-end overflow-hidden bg-gradient-to-br from-forest-mid to-forest-deep ${feature ? 'h-40 md:h-52' : 'h-28 md:h-32'}`}>
+                                                    <span className="p-5 font-display text-[15px] uppercase tracking-[0.16em] text-brass/70">Вакансия</span>
+                                                </div>
                                             )}
 
-                                            <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 border-t border-white/10">
-                                                {post.published_at && (
-                                                    <p className="text-xs md:text-sm text-neutral-400">
-                                                        {new Date(post.published_at).toLocaleDateString('ru-RU', {
-                                                            year: 'numeric',
-                                                            month: 'short',
-                                                            day: 'numeric'
-                                                        })}
+                                            <div className="flex min-h-0 flex-1 flex-col p-5 md:p-6">
+                                                <h2 className={`mb-2 font-display font-bold leading-snug text-cream transition-colors group-hover:text-brass ${feature ? 'text-2xl md:text-[28px]' : 'text-xl'}`}>
+                                                    {post.title}
+                                                </h2>
+                                                {post.excerpt && (
+                                                    <p className={`flex-1 leading-relaxed text-cream/72 ${feature ? 'text-[15px] line-clamp-4' : 'text-sm line-clamp-3'}`}>
+                                                        {post.excerpt}
                                                     </p>
                                                 )}
-                                                <span className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg md:text-xl">
-                                                    →
-                                                </span>
+                                                <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+                                                    <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-terracotta">
+                                                        Откликнуться <span className="transition-transform group-hover:translate-x-1" aria-hidden>→</span>
+                                                    </span>
+                                                    {post.published_at && (
+                                                        <span className="text-xs text-cream/45">
+                                                            {new Date(post.published_at).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </main>
+            <ForestFooter />
 
             {showContentManager && (
                 <ContentManager
@@ -238,6 +214,6 @@ export default function VacanciesPage() {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }

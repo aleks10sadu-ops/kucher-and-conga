@@ -1,22 +1,42 @@
-import HomeClient from './HomeClient';
-import { getFullMenu } from '@/lib/menu/getFullMenu';
+import type { Metadata } from 'next';
+import ForestScene from './redesign/ForestBloom';
+import { SITE } from './components/forest/site';
 
-// ISR: страница (включая URL картинок блюд) пересобирается не чаще раза в 5 минут.
-// Совпадает с in-memory TTL меню iiko (lib/iiko/menu.ts).
-export const revalidate = 300;
+export const metadata: Metadata = {
+    title: 'Кучер & Conga — ресторан в Дмитрове. Здесь лес растёт с потолка',
+    description:
+        'Авторская кухня, шашлычные сеты и банкеты в Дмитрове. Зал Conga с подвешенным лесом и лампами-грибами, веранда у леса, доставка по городу.',
+    alternates: { canonical: '/' },
+    openGraph: {
+        title: 'Кучер & Conga — ресторан в Дмитрове',
+        description: 'Авторская кухня, зал Conga с подвешенным лесом, веранда, банкеты и доставка по Дмитрову.',
+        url: '/',
+        type: 'website',
+        images: ['/hero-image.webp'],
+    },
+};
 
-export default async function Page() {
-  // SSR-меню: URL изображений попадают в исходный HTML, поэтому Next отдаёт srcset,
-  // а первые карточки (priority) начинают грузиться сразу, без клиентского водопада.
-  // Если iiko недоступен — отдаём undefined, и клиент сам подтянет меню (fallback).
-  let ssrMenuData: Record<string, { categories: any[] }> | undefined;
-  try {
-    const data = await getFullMenu();
-    ssrMenuData = data && Object.keys(data).length > 0 ? data : undefined;
-  } catch (e) {
-    console.error('Home page getFullMenu failed, falling back to client fetch', e);
-    ssrMenuData = undefined;
-  }
-
-  return <HomeClient ssrMenuData={ssrMenuData} />;
+export default function Page() {
+    return (
+        <>
+            <ForestScene />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'Restaurant',
+                        name: SITE.name,
+                        description: 'Авторская кухня, зал Conga с подвешенным лесом, банкеты и доставка в Дмитрове.',
+                        servesCuisine: ['Авторская', 'Европейская', 'Русская', 'Мангал'],
+                        address: { '@type': 'PostalAddress', streetAddress: 'Промышленная улица, 20Б', addressLocality: 'Дмитров', addressCountry: 'RU' },
+                        telephone: SITE.phones[0].label,
+                        acceptsReservations: 'True',
+                        url: 'https://kucher-conga.ru/',
+                        priceRange: '₽₽',
+                    }),
+                }}
+            />
+        </>
+    );
 }

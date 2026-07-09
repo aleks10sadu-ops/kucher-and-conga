@@ -18,6 +18,7 @@ export interface Post {
     created_at?: string;
     updated_at?: string;
     published_at?: string | null;
+    event_date?: string | null; // только для событий (category='events')
     created_by?: string;
 }
 
@@ -142,6 +143,9 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                 isSupabaseUrl: post.image_url ? isSupabaseStorageUrl(post.image_url) : false
             });
 
+            // event_date добавляем только для событий, чтобы не трогать другие категории.
+            const eventDatePatch = category === 'events' ? { event_date: post.event_date || null } : {};
+
             if (post.id) {
                 // Обновление
                 const { error } = await supabase
@@ -154,6 +158,7 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                         image_url: post.image_url || null,
                         is_published: post.is_published,
                         updated_at: new Date().toISOString(),
+                        ...eventDatePatch,
                     })
                     .eq('id', post.id);
 
@@ -175,6 +180,7 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                         is_published: post.is_published,
                         published_at: post.is_published ? new Date().toISOString() : null,
                         created_by: user.id,
+                        ...eventDatePatch,
                     })
                     .select()
                     .single();
@@ -431,6 +437,18 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                                             placeholder="Краткое описание (необязательно)"
                                             className="w-full bg-black/40 border border-white/20 rounded px-3 py-2 text-sm outline-none focus:border-amber-400"
                                         />
+                                        {category === 'events' && (
+                                            <div>
+                                                <label className="block text-sm text-neutral-300 mb-1">Дата и время события</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={currentPost.event_date ? String(currentPost.event_date).slice(0, 16) : ''}
+                                                    onChange={(e) => handleFieldChange('event_date', e.target.value || null)}
+                                                    className="w-full bg-black/40 border border-white/20 rounded px-3 py-2 text-sm outline-none focus:border-amber-400 [color-scheme:dark]"
+                                                />
+                                                <p className="mt-1 text-xs text-neutral-500">Используется в афише и в микроразметке Schema.org (Event.startDate).</p>
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <label className="block text-sm text-neutral-300">Изображение</label>
 

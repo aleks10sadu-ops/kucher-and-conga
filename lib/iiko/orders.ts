@@ -26,6 +26,11 @@ export interface CreateSiteDeliveryArgs {
     city: string | null;
     street: string | null;
     house: string | null;
+    building?: string | null;
+    entrance?: string | null;
+    floor?: string | null;
+    flat?: string | null;
+    doorphone?: string | null;
     latitude: number | null;
     longitude: number | null;
   };
@@ -85,6 +90,11 @@ export async function createSiteDelivery(args: CreateSiteDeliveryArgs): Promise<
           city: args.address.city || 'Дмитров',
         },
         house: args.address.house || '-',
+        ...(args.address.building ? { building: args.address.building } : {}),
+        ...(args.address.entrance ? { entrance: args.address.entrance } : {}),
+        ...(args.address.floor ? { floor: args.address.floor } : {}),
+        ...(args.address.flat ? { flat: args.address.flat } : {}),
+        ...(args.address.doorphone ? { doorphone: args.address.doorphone } : {}),
       },
       comment: args.address.full,
     },

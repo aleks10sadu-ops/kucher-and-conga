@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
@@ -32,7 +32,45 @@ const LINKS = {
 const EASE = [0.22, 1, 0.36, 1] as const;
 const glass: React.CSSProperties = { backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', background: 'rgba(255,255,255,0.10)' };
 
-const GALLERY = [1, 2, 3, 4, 5, 6].map((n) => `/atmosphere_${n}.webp`);
+// 8 фото на ПК (симметричная сетка 4×2), 6 на телефоне (последние два скрыты).
+const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `/atmosphere_${n}.webp`);
+
+// Счётчик лопнутых спор — общий на все инстансы AtmosphereFX, сбрасывается при
+// перезагрузке (модуль пересоздаётся). Простой pub/sub без внешних зависимостей.
+let _popCount = 0;
+const _popSubs = new Set<() => void>();
+function bumpPop() { _popCount += 1; _popSubs.forEach((f) => f()); }
+function usePopCount() {
+    const [, force] = useReducer((x: number) => x + 1, 0);
+    useEffect(() => { _popSubs.add(force); return () => { _popSubs.delete(force); }; }, []);
+    return _popCount;
+}
+// Плавающие споры-одуванчики под пологом. Детерминированный псевдо-рандом на
+// Math.sin даёт одинаковую стартовую раскладку на сервере и клиенте — без
+// hydration mismatch. Респаун после «лопания» уже клиентский (там Math.random ок).
+type Spore = { id: number; top: string; left: string; size: number; dur: number; delay: number };
+const rnd = (seed: number) => { const x = Math.sin(seed) * 10000; return x - Math.floor(x); };
+const INITIAL_SPORES: Spore[] = Array.from({ length: 22 }, (_, i) => ({
+    id: i,
+    top: (5 + rnd(i * 12.9898) * 86).toFixed(2) + '%',
+    left: (3 + rnd(i * 78.233) * 92).toFixed(2) + '%',
+    size: Math.round(18 + rnd(i * 3.17) * 16),
+    dur: Math.round(13 + rnd(i * 9.7) * 11),
+    delay: +(rnd(i * 4.3) * 8).toFixed(2),
+}));
+// Нити «зонтика» споры — предрасчёт, чтобы не пересчитывать на каждый рендер.
+const FILAMENTS = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * Math.PI * 2;
+    return { x: +(12 + Math.cos(a) * 10).toFixed(2), y: +(12 + Math.sin(a) * 10).toFixed(2) };
+});
+// Перья папоротника вдоль стебля (снизу вверх): пара листочков на каждом узле,
+// короче к верхушке. Используется в курсорном следе.
+const FERN = Array.from({ length: 9 }, (_, i) => {
+    const p = i / 9;                       // 0 у основания … 1 у верхушки
+    const y = +(42 - p * 38).toFixed(2);   // высота узла на стебле
+    const len = +(11 * (1 - p * 0.72)).toFixed(2);
+    return { y, len };
+});
 const YANDEX_REVIEWS = 'https://yandex.ru/maps-reviews-widget/10214255530?comments';
 const YANDEX_MAP = 'https://yandex.ru/map-widget/v1/?um=constructor%3A1c90c41847ab12bb686f7ffc03fcb5b1930c854da9e094965c7ac7ad24f8e4b7&source=constructor';
 const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
@@ -119,6 +157,7 @@ export default function RedesignClient() {
                 @keyframes rfFlicker { 0%{opacity:.7} 42%{opacity:.86} 55%{opacity:.74} 100%{opacity:.9} }
                 @keyframes rfTwinkle { from{opacity:.2} to{opacity:.9} }
                 @keyframes rfSweep { from{transform:translateX(-240%) skewX(-14deg)} to{transform:translateX(340%) skewX(-14deg)} }
+                @keyframes rfFloat { 0%{transform:translate(0,0) rotate(0deg);opacity:.72} 50%{transform:translate(10px,-26px) rotate(9deg);opacity:1} 100%{transform:translate(0,0) rotate(0deg);opacity:.72} }
                 .rf-bb .rf-photo { transition: transform .7s cubic-bezier(.22,1,.36,1); will-change: transform; }
                 .rf-bb .rf-arrow { transition: transform .35s cubic-bezier(.22,1,.36,1); }
                 .rf-bb .rf-sweep { opacity: 0; }
@@ -152,8 +191,16 @@ export default function RedesignClient() {
                 .rf-bentopad { padding-top: 28px; padding-bottom: 28px; }
                 .rf-foot { grid-template-columns: 1fr; }
                 .rf-find { grid-template-columns: 1fr; }
+                .rf-rf2 { grid-template-columns: 1fr; }
+                .rf-gallery { grid-template-columns: repeat(2, 1fr); }
+                .rf-g-desk { display: none; }
+                .rf-only-desk { display: none; }
                 @media (min-width: 768px) {
                     .rf-find { grid-template-columns: 1.5fr 1fr; }
+                    .rf-rf2 { grid-template-columns: 1.05fr 0.95fr; }
+                    .rf-gallery { grid-template-columns: repeat(4, 1fr); }
+                    .rf-g-desk { display: block; }
+                    .rf-only-desk { display: block; }
                     .rf-nav { display: flex; }
                     .rf-wrap { padding-left: 32px; padding-right: 32px; }
                     .rf-hero-pad { padding-left: 100px; padding-right: 100px; padding-bottom: 118px; }
@@ -171,7 +218,9 @@ export default function RedesignClient() {
             {/* Фикс-хедер: тёмный скрим сверху для читаемости поверх видео */}
             <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'linear-gradient(180deg, rgba(11,16,12,0.72) 0%, rgba(11,16,12,0.28) 60%, transparent 100%)', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
                 <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                    <Link href={A} className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#FFFFFF', textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>Кучер <span style={{ color: C.brass }}>&</span> Conga</Link>
+                    <Link href={A} aria-label="Кучер и Conga — на главную" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <img src={`${A}/kongo_logo_main.svg`} alt="Кучер и Conga" style={{ height: 26, width: 'auto', display: 'block', filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }} />
+                    </Link>
                     <nav className="rf-nav" style={{ alignItems: 'center', gap: 6, fontSize: 15, color: '#FFFFFF', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
                         <Link href={LINKS.menu}>Меню</Link>
                         <Link href={LINKS.booking}>Бронь</Link>
@@ -187,6 +236,9 @@ export default function RedesignClient() {
 
             {/* Выдвижное меню разделов справа */}
             <NavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
+
+            {/* Счётчик лопнутых спор (только ПК): едет справа от бенто до заголовка «Атмосфера» */}
+            <PopCounter />
 
             <div className="rf-anim">
                 {/* HERO: живой полог на видео, на весь экран */}
@@ -230,11 +282,14 @@ export default function RedesignClient() {
                 </section>
 
                 {/* БЕНТО над фото зала — на весь экран */}
-                <section style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center' }}>
+                <section id="bento" style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                     <img src="/hero-image.webp" alt="Зал с подвешенным лесом" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(12,19,14,0.72) 0%,rgba(12,19,14,0.58) 45%,rgba(12,19,14,0.85) 100%)' }} />
 
-                    <div className="rf-wrap rf-bentopad" style={{ position: 'relative', maxWidth: 1280, margin: '0 auto', width: '100%' }}>
+                    {/* Споры + курсорный след-папоротник и в разделе бенто */}
+                    <AtmosphereFX />
+
+                    <div className="rf-wrap rf-bentopad" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', width: '100%' }}>
                         {/* Desktop grid */}
                         <div className="rf-desk" style={{ gridTemplateColumns: '50% 27% 23%', gridTemplateRows: '346px 282px' }}>
                             {/* A. Меню и доставка */}
@@ -331,7 +386,7 @@ export default function RedesignClient() {
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.14),rgba(14,22,17,0.55))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>Акции</h3>
-                                        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: 'rgba(244,247,242,0.85)' }}>Сезонные предложения.</p>
+                                        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: 'rgba(244,247,242,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Сезонные предложения</p>
                                     </div>
                                     <Arrow r={14} t={12} size={15} />
                                 </Link>
@@ -340,7 +395,7 @@ export default function RedesignClient() {
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.24),rgba(14,22,17,0.6))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>События</h3>
-                                        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: 'rgba(244,247,242,0.85)' }}>Концерты и праздники.</p>
+                                        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: 'rgba(244,247,242,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Концерты и вечера</p>
                                     </div>
                                     <Arrow r={14} t={12} size={15} />
                                 </Link>
@@ -359,65 +414,78 @@ export default function RedesignClient() {
                     </div>
                 </section>
 
-                {/* АТМОСФЕРА — галерея */}
-                <section id="atmosphere" style={{ background: '#182620', padding: '72px 0' }}>
-                    <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
-                        <SectionHead kicker="Зал Conga" title="Атмосфера" />
-                        <div className="rf-gallery" style={{ marginTop: 36, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
-                            {GALLERY.map((src, i) => (
-                                <button key={src} type="button" onClick={() => setLightbox(i)} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', aspectRatio: '4 / 3', padding: 0, background: 'none' }}>
-                                    <img className="rf-photo" src={src} alt={`Атмосфера ресторана, фото ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
-                                    <Sweep w="55%" />
-                                </button>
-                            ))}
-                        </div>
+                {/* Нижний блок: реальное фото зала под тёмным слоем + атмосферные эффекты */}
+                <div style={{ position: 'relative', overflow: 'hidden' }}>
+                    {/* Фон — интерьер зала, затемнён, чтобы текст читался, а споры светились */}
+                    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                        <img src="/hero-image.webp" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(10,16,12,0.86) 0%,rgba(10,16,12,0.9) 50%,rgba(10,16,12,0.94) 100%)' }} />
                     </div>
-                </section>
 
-                {/* ОТЗЫВЫ — виджет Яндекс.Карт */}
-                <section id="reviews" style={{ background: '#22352A', padding: '72px 0' }}>
-                    <div className="rf-wrap" style={{ maxWidth: 900, margin: '0 auto' }}>
-                        <SectionHead kicker="Нам доверяют" title="Отзывы гостей" />
-                        <div style={{ marginTop: 36, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', ...glass }}>
-                            <iframe
-                                src={YANDEX_REVIEWS}
-                                title="Отзывы о ресторане на Яндекс.Картах"
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                style={{ width: '100%', height: 620, border: 0, display: 'block', background: '#fff' }}
-                            />
-                        </div>
-                        <div style={{ marginTop: 16, textAlign: 'center' }}>
-                            <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" style={{ color: C.brass, fontSize: 14 }}>Читать все отзывы на Яндекс.Картах →</a>
-                        </div>
-                    </div>
-                </section>
+                    {/* Споры (за контентом, только в пустых местах) + курсорный след-папоротник (поверх) */}
+                    <AtmosphereFX />
 
-                {/* КАК НАС НАЙТИ — карта */}
-                <section id="find" style={{ background: '#182620', padding: '72px 0' }}>
-                    <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
-                        <SectionHead kicker="Дмитров" title="Как нас найти" />
-                        <div className="rf-find" style={{ marginTop: 36, display: 'grid', gap: 20, alignItems: 'stretch' }}>
-                            <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                <iframe
-                                    src={YANDEX_MAP}
-                                    title="Ресторан Кучер и Конга на карте Дмитрова"
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                    style={{ width: '100%', height: 420, border: 0, display: 'block' }}
-                                />
+                    {/* АТМОСФЕРА — галерея */}
+                    <section id="atmosphere" style={{ position: 'relative', zIndex: 2, paddingTop: 72, paddingBottom: 34 }}>
+                        <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
+                            <SectionHead kicker="Зал Conga" title="Атмосфера" />
+                            <div className="rf-gallery" style={{ marginTop: 36, display: 'grid', gap: 12 }}>
+                                {GALLERY.map((src, i) => (
+                                    <button key={src} type="button" onClick={() => setLightbox(i)} className={`rf-bb${i >= 6 ? ' rf-g-desk' : ''}`} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', aspectRatio: '4 / 3', padding: 0, background: 'none' }}>
+                                        <img className="rf-photo" src={src} alt={`Атмосфера ресторана, фото ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                                        <Sweep w="55%" />
+                                    </button>
+                                ))}
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
-                                <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Адрес</div><div style={{ fontSize: 18, color: '#EDF2EA' }}>Дмитров, Промышленная улица, 20Б</div></div>
-                                <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Телефоны</div>
-                                    <a href="tel:+79163177887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 317-78-87</a>
-                                    <a href="tel:+79162977887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 297-78-87</a>
+                        </div>
+                    </section>
+
+                    {/* ОТЗЫВЫ + КАК НАС НАЙТИ — на одном уровне: отзывы слева, карта справа */}
+                    <section id="reviews" style={{ position: 'relative', zIndex: 2, paddingTop: 10, paddingBottom: 76 }}>
+                        <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
+                            <div className="rf-rf2" style={{ display: 'grid', gap: 28, alignItems: 'start' }}>
+                                {/* Отзывы */}
+                                <div>
+                                    <SectionHead kicker="Нам доверяют" title="Отзывы гостей" />
+                                    <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', ...glass }}>
+                                        <iframe
+                                            src={YANDEX_REVIEWS}
+                                            title="Отзывы о ресторане на Яндекс.Картах"
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            style={{ width: '100%', height: 560, border: 0, display: 'block', background: '#fff' }}
+                                        />
+                                    </div>
+                                    <div style={{ marginTop: 14 }}>
+                                        <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" style={{ color: C.brass, fontSize: 14 }}>Читать все отзывы на Яндекс.Картах →</a>
+                                    </div>
                                 </div>
-                                <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" className="rf-btn rf-btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', borderRadius: 8, fontWeight: 600, padding: '13px 26px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)' }}>Открыть в Яндекс.Картах</a>
+
+                                {/* Как нас найти */}
+                                <div id="find">
+                                    <SectionHead kicker="Дмитров" title="Как нас найти" />
+                                    <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                        <iframe
+                                            src={YANDEX_MAP}
+                                            title="Ресторан Кучер и Конга на карте Дмитрова"
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            style={{ width: '100%', height: 360, border: 0, display: 'block' }}
+                                        />
+                                    </div>
+                                    <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                                        <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Адрес</div><div style={{ fontSize: 18, color: '#EDF2EA' }}>Дмитров, Промышленная улица, 20Б</div></div>
+                                        <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Телефоны</div>
+                                            <a href="tel:+79163177887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 317-78-87</a>
+                                            <a href="tel:+79162977887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 297-78-87</a>
+                                        </div>
+                                        <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" className="rf-btn rf-btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', borderRadius: 8, fontWeight: 600, padding: '13px 26px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)' }}>Открыть в Яндекс.Картах</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                </div>
 
                 {/* Футер */}
                 <footer style={{ background: '#1B140E', borderTop: '3px solid #7A2E26' }}>
@@ -448,6 +516,247 @@ export default function RedesignClient() {
             {/* Лайтбокс галереи */}
             <Lightbox index={lightbox} onClose={() => setLightbox(null)} onNav={(d) => setLightbox((i) => i === null ? null : (i + d + GALLERY.length) % GALLERY.length)} />
         </main>
+    );
+}
+
+// Споры-одуванчики: светящееся семя с нитями-зонтиком. Наведи курсор — лопается,
+// разлетается частицами, и на её месте где-то ещё появляется новая.
+function SporeGlyph() {
+    return (
+        <svg viewBox="0 0 24 24" width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
+            <g stroke="rgba(246,249,243,0.72)" strokeWidth={1} strokeLinecap="round">
+                {FILAMENTS.map((f, i) => (
+                    <g key={i}>
+                        <line x1={12} y1={12} x2={f.x} y2={f.y} />
+                        <circle cx={f.x} cy={f.y} r={0.9} fill="rgba(246,249,243,0.85)" stroke="none" />
+                    </g>
+                ))}
+            </g>
+            <circle cx={12} cy={12} r={2.4} fill="#F6F9F3" />
+        </svg>
+    );
+}
+
+// Разлёт частиц при сдувании споры (координаты в px внутри слоя эффектов).
+function Burst({ left, top, size }: { left: number; top: number; size: number }) {
+    const n = 8;
+    return (
+        <div style={{ position: 'absolute', left, top, width: 0, height: 0, pointerEvents: 'none' }}>
+            {Array.from({ length: n }, (_, i) => {
+                const a = (i / n) * Math.PI * 2;
+                const d = size * 1.4 + (i % 3) * 8;
+                const px = Math.max(3, Math.round(size * 0.22));
+                return (
+                    <motion.span key={i}
+                        initial={{ opacity: 0.95, x: 0, y: 0, scale: 1 }}
+                        animate={{ opacity: 0, x: Math.cos(a) * d, y: Math.sin(a) * d, scale: 0.2 }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                        style={{ position: 'absolute', left: -px / 2, top: -px / 2, width: px, height: px, borderRadius: '50%', background: 'radial-gradient(closest-side,#F6F9F3,rgba(194,148,85,0.5),transparent)' }}
+                    />
+                );
+            })}
+        </div>
+    );
+}
+
+// Побег папоротника в курсорном следе.
+function FernGlyph() {
+    return (
+        <svg viewBox="0 0 30 46" width="30" height="46" style={{ display: 'block', overflow: 'visible' }}>
+            <g stroke="rgba(246,249,243,0.85)" strokeWidth={1.4} strokeLinecap="round" fill="none">
+                <path d="M15 46 C 15 34, 13 20, 15 4" />
+                {FERN.map((n, i) => (
+                    <g key={i} strokeWidth={1.1}>
+                        <path d={`M15 ${n.y} C ${15 - n.len * 0.5} ${n.y - 1}, ${15 - n.len} ${n.y - n.len * 0.5}, ${15 - n.len} ${n.y - n.len}`} />
+                        <path d={`M15 ${n.y} C ${15 + n.len * 0.5} ${n.y - 1}, ${15 + n.len} ${n.y - n.len * 0.5}, ${15 + n.len} ${n.y - n.len}`} />
+                    </g>
+                ))}
+            </g>
+        </svg>
+    );
+}
+
+// Прорастает снизу вверх от точки курсора, держится миг и сжимается-исчезает.
+function Fern({ x, y, rot, scale }: { x: number; y: number; rot: number; scale: number }) {
+    return (
+        <motion.span
+            initial={{ opacity: 0, scale: 0.15 }}
+            animate={{ opacity: [0, 1, 1, 0], scale: [0.15, scale, scale, scale * 0.55] }}
+            transition={{ duration: 1, ease: 'easeOut', times: [0, 0.32, 0.66, 1] }}
+            style={{ position: 'absolute', left: x, top: y, width: 30, height: 46, marginLeft: -15, marginTop: -46, transformOrigin: '50% 100%', rotate: rot, filter: 'drop-shadow(0 0 6px rgba(244,247,242,0.5)) drop-shadow(0 0 2px rgba(122,190,122,0.55))' }}
+        >
+            <FernGlyph />
+        </motion.span>
+    );
+}
+
+// Атмосфера нижнего блока: споры за контентом (только в пустых местах) реагируют
+// на ветер курсора и сдуваются при резком рывке; поверх — прорастающий след-папоротник.
+function AtmosphereFX() {
+    const reduce = useReducedMotion();
+    const rootRef = useRef<HTMLDivElement>(null);
+    const [spores, setSpores] = useState<Spore[]>(INITIAL_SPORES);
+    const [ferns, setFerns] = useState<{ id: number; x: number; y: number; rot: number; scale: number }[]>([]);
+    const [bursts, setBursts] = useState<{ id: number; left: number; top: number; size: number }[]>([]);
+    const sporesRef = useRef(spores);
+    const spanRefs = useRef(new Map<number, HTMLElement>());
+    const runtime = useRef(new Map<number, { x: number; y: number; vx: number; vy: number; ph: number }>());
+    const popping = useRef(new Set<number>());
+    const mouse = useRef({ x: -9999, y: -9999, in: false, spd: 0 });
+    const lastFern = useRef({ x: 0, y: 0, t: 0 });
+    const idRef = useRef(10000);
+
+    useEffect(() => { sporesRef.current = spores; }, [spores]);
+
+    const pop = (id: number, px: number, py: number, size: number) => {
+        if (popping.current.has(id)) return;
+        popping.current.add(id);
+        const bid = idRef.current++;
+        setBursts((b) => [...b, { id: bid, left: px, top: py, size }]);
+        setTimeout(() => { setBursts((b) => b.filter((z) => z.id !== bid)); popping.current.delete(id); }, 700);
+        bumpPop();
+        runtime.current.delete(id);
+        spanRefs.current.delete(id);
+        const repl: Spore = {
+            id: idRef.current++,
+            top: (5 + Math.random() * 86).toFixed(2) + '%',
+            left: (3 + Math.random() * 92).toFixed(2) + '%',
+            size: Math.round(18 + Math.random() * 14),
+            dur: 0, delay: 0,
+        };
+        setSpores((prev) => prev.filter((z) => z.id !== id).concat(repl));
+    };
+
+    const spawnFern = (x: number, y: number) => {
+        const id = idRef.current++;
+        const rot = Math.random() * 44 - 22;
+        const scale = 0.72 + Math.random() * 0.6;
+        setFerns((f) => (f.length > 20 ? f.slice(1) : f).concat({ id, x, y, rot, scale }));
+        setTimeout(() => setFerns((f) => f.filter((z) => z.id !== id)), 1050);
+    };
+
+    // Курсор: координаты внутри слоя, скорость, посев папоротника вдоль пути.
+    useEffect(() => {
+        if (reduce) return;
+        const onMove = (e: PointerEvent) => {
+            const el = rootRef.current; if (!el) return;
+            const r = el.getBoundingClientRect();
+            const x = e.clientX - r.left, y = e.clientY - r.top;
+            const m = mouse.current;
+            const inb = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
+            m.spd = Math.min(70, Math.hypot(x - m.x, y - m.y));
+            m.x = x; m.y = y; m.in = inb;
+            if (inb) {
+                const lf = lastFern.current;
+                const now = performance.now();
+                if (Math.hypot(x - lf.x, y - lf.y) > 44 && now - lf.t > 55) {
+                    lf.x = x; lf.y = y; lf.t = now;
+                    spawnFern(x, y);
+                }
+            }
+        };
+        window.addEventListener('pointermove', onMove, { passive: true });
+        return () => window.removeEventListener('pointermove', onMove);
+    }, [reduce]);
+
+    // Физика спор: амбиентный дрейф + ветер от курсора + сдувание при резком рывке.
+    useEffect(() => {
+        if (reduce) return;
+        let raf = 0, t0 = 0;
+        const R = 155;
+        const loop = (t: number) => {
+            if (!t0) t0 = t;
+            const time = (t - t0) / 1000;
+            const el = rootRef.current;
+            const w = el ? el.clientWidth : 1000, h = el ? el.clientHeight : 1000;
+            const m = mouse.current;
+            for (const s of sporesRef.current) {
+                const bx = (parseFloat(s.left) / 100) * w;
+                const by = (parseFloat(s.top) / 100) * h;
+                let rt = runtime.current.get(s.id);
+                if (!rt) { rt = { x: bx, y: by, vx: 0, vy: 0, ph: (s.id % 12) * 0.7 }; runtime.current.set(s.id, rt); }
+                const ax = bx + Math.sin(time * 0.5 + rt.ph) * 9;
+                const ay = by + Math.cos(time * 0.42 + rt.ph * 1.3) * 11;
+                if (m.in) {
+                    const dx = rt.x - m.x, dy = rt.y - m.y;
+                    const dist = Math.hypot(dx, dy) || 1;
+                    if (dist < R) {
+                        const f = 1 - dist / R;
+                        // Мягче, чем раньше: медленное приближение можно «догнать» и лопнуть,
+                        // резкий рывок сдувает спору прочь.
+                        const push = f * (0.32 + m.spd * 0.045);
+                        rt.vx += (dx / dist) * push;
+                        rt.vy += (dy / dist) * push;
+                        // Лопается при аккуратном подведении (не на резком махе).
+                        if (dist < 26 && m.spd < 30) pop(s.id, rt.x, rt.y, s.size);
+                    }
+                }
+                rt.vx += (ax - rt.x) * 0.02;
+                rt.vy += (ay - rt.y) * 0.02;
+                rt.vx *= 0.87; rt.vy *= 0.87;
+                rt.x += rt.vx; rt.y += rt.vy;
+                const node = spanRefs.current.get(s.id);
+                if (node) node.style.transform = `translate(${(rt.x - bx).toFixed(2)}px,${(rt.y - by).toFixed(2)}px)`;
+            }
+            m.spd *= 0.9;
+            raf = requestAnimationFrame(loop);
+        };
+        raf = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(raf);
+    }, [reduce]);
+
+    return (
+        <>
+            {/* Споры — за контентом (zIndex 1): видны только в пустых местах фона */}
+            <div ref={rootRef} aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 1 }}>
+                {spores.map((s) => (
+                    <span key={s.id}
+                        ref={(n) => { if (n) spanRefs.current.set(s.id, n); else spanRefs.current.delete(s.id); }}
+                        style={{ position: 'absolute', top: s.top, left: s.left, width: s.size, height: s.size, willChange: 'transform', opacity: reduce ? 0.68 : 0.92, filter: 'drop-shadow(0 0 8px rgba(244,247,242,0.5)) drop-shadow(0 0 3px rgba(194,148,85,0.55))' }}
+                    >
+                        <SporeGlyph />
+                    </span>
+                ))}
+            </div>
+            {/* Курсорный след-папоротник + разлёт спор — поверх контента (zIndex 3) */}
+            <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3 }}>
+                {ferns.map((f) => <Fern key={f.id} x={f.x} y={f.y} rot={f.rot} scale={f.scale} />)}
+                {bursts.map((b) => <Burst key={b.id} left={b.left} top={b.top} size={b.size} />)}
+            </div>
+        </>
+    );
+}
+
+// Счётчик лопнутых спор (ПК). Появляется на бенто справа сверху и съезжает вниз
+// по мере скролла, паркуясь на уровне заголовка «Атмосфера»; дальше исчезает.
+function PopCounter() {
+    const count = usePopCount();
+    const [pos, setPos] = useState({ top: 96, visible: false });
+    useEffect(() => {
+        const update = () => {
+            const bento = document.getElementById('bento');
+            const atm = document.getElementById('atmosphere');
+            if (!bento || !atm) { setPos((p) => (p.visible ? { ...p, visible: false } : p)); return; }
+            const vh = window.innerHeight;
+            const bRect = bento.getBoundingClientRect();
+            const aRect = atm.getBoundingClientRect();
+            const p = Math.max(0, Math.min(1, -bRect.top / Math.max(1, bRect.height)));
+            const top = 96 + p * 204;                       // плавно съезжает 96 → 300
+            const visible = bRect.top < vh * 0.5 && aRect.bottom > 120;
+            setPos({ top, visible });
+        };
+        update();
+        window.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
+    }, []);
+    return (
+        <div className="rf-only-desk" aria-hidden style={{ position: 'fixed', right: 24, top: pos.top, zIndex: 45, pointerEvents: 'none', opacity: pos.visible ? 1 : 0, transform: pos.visible ? 'translateX(0)' : 'translateX(16px)', transition: 'opacity .45s ease, transform .45s ease, top .12s linear' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '13px 18px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 10px 30px rgba(0,0,0,0.35)', ...glass }}>
+                <span style={{ fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.brass, whiteSpace: 'nowrap' }}>Спор лопнуто</span>
+                <motion.span key={count} className="rf-serif" initial={{ scale: 1.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 15 }} style={{ fontSize: 30, fontWeight: 900, color: '#F6F9F3', lineHeight: 1 }}>{count}</motion.span>
+            </div>
+        </div>
     );
 }
 

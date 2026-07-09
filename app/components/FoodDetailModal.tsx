@@ -390,7 +390,7 @@ export default function FoodDetailModal({
                 onClick={onClose}
             />
 
-            <div className="relative w-full max-w-4xl max-h-[90vh] bg-neutral-950 rounded-2xl border border-white/10 overflow-hidden">
+            <div className="relative w-full max-w-4xl max-h-[90vh] bg-forest text-cream font-body rounded-2xl border border-white/10 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <div className="flex items-center gap-3 flex-1">
@@ -399,7 +399,7 @@ export default function FoodDetailModal({
                                 type="text"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                className="flex-1 bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-2xl font-bold outline-none focus:border-amber-400"
+                                className="flex-1 bg-forest-ink/60 border border-white/20 rounded-lg px-3 py-2 text-2xl font-bold outline-none focus:border-brass/60"
                                 placeholder="Название блюда"
                             />
                         ) : (
@@ -408,14 +408,14 @@ export default function FoodDetailModal({
                         {isAdmin && !isEditing && item.id !== 'new' && (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="p-2 rounded-full hover:bg-white/10 transition text-amber-400"
+                                className="p-2 rounded-full hover:bg-white/10 transition text-brass"
                                 aria-label="Редактировать"
                             >
                                 <Edit2 className="w-5 h-5" />
                             </button>
                         )}
                         {isAdmin && item.id === 'new' && (
-                            <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded">Новое блюдо</span>
+                            <span className="text-xs text-brass bg-brass/10 px-2 py-1 rounded">Новое блюдо</span>
                         )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export default function FoodDetailModal({
                                 <button
                                     onClick={handleSave}
                                     disabled={saving || !editName.trim()}
-                                    className="p-2 rounded-full bg-amber-400 text-black hover:bg-amber-300 transition disabled:opacity-50"
+                                    className="p-2 rounded-full bg-terracotta text-[#FBF3EA] hover:bg-terracotta-dark transition disabled:opacity-50"
                                     aria-label="Сохранить"
                                 >
                                     <Save className="w-5 h-5" />
@@ -479,31 +479,31 @@ export default function FoodDetailModal({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
                         {/* Image */}
                         <div className="space-y-4">
-                            <div className="aspect-square rounded-xl overflow-hidden bg-neutral-800 relative">
+                            <div className="aspect-square rounded-xl overflow-hidden bg-forest-mid relative">
                                 {/* Плейсхолдер если нет изображения */}
                                 {!hasDisplayImage && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-forest-mid to-forest-deep">
                                         <div className="text-center p-8">
-                                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-700 flex items-center justify-center">
-                                                <svg className="w-10 h-10 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-forest-mid flex items-center justify-center">
+                                                <svg className="w-10 h-10 text-cream/45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                             </div>
-                                            <span className="text-sm text-neutral-500">Изображение отсутствует</span>
+                                            <span className="text-sm text-cream/45">Изображение отсутствует</span>
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Плейсхолдер при ошибке */}
                                 {hasDisplayImage && modalImageError && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-forest-mid to-forest-deep">
                                         <div className="text-center p-8">
-                                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-neutral-700 flex items-center justify-center">
-                                                <svg className="w-10 h-10 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-forest-mid flex items-center justify-center">
+                                                <svg className="w-10 h-10 text-cream/45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                 </svg>
                                             </div>
-                                            <span className="text-sm text-neutral-500">Ошибка загрузки</span>
+                                            <span className="text-sm text-cream/45">Ошибка загрузки</span>
                                         </div>
                                     </div>
                                 )}
@@ -526,7 +526,7 @@ export default function FoodDetailModal({
                             </div>
                             {isEditing && (
                                 <div className="space-y-2">
-                                    <label className="block text-sm text-neutral-300">Изображение блюда</label>
+                                    <label className="block text-sm text-cream/75">Изображение блюда</label>
 
                                     {/* Загрузка файла */}
                                     <div className="space-y-2">
@@ -571,7 +571,7 @@ export default function FoodDetailModal({
                                                 disabled={uploadingImage}
                                             />
                                             <div className="flex items-center gap-2">
-                                                <div className="flex-1 px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-sm text-neutral-300 hover:bg-black/60 transition text-center pointer-events-none">
+                                                <div className="flex-1 px-3 py-2 bg-forest-ink/60 border border-white/20 rounded-lg text-sm text-cream/75 hover:bg-black/60 transition text-center pointer-events-none">
                                                     {uploadingImage ? 'Загрузка...' : '📤 Загрузить изображение'}
                                                 </div>
                                             </div>
@@ -589,16 +589,16 @@ export default function FoodDetailModal({
                                         )}
 
                                         {/* Или ввести URL вручную */}
-                                        <div className="text-xs text-neutral-400 text-center">или</div>
+                                        <div className="text-xs text-cream/55 text-center">или</div>
                                         <input
                                             type="text"
                                             value={editImageUrl}
                                             onChange={(e) => setEditImageUrl(e.target.value)}
                                             placeholder="Введите URL изображения (https://... или /local-image.webp)"
-                                            className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 outline-none focus:border-amber-400 text-sm"
+                                            className="w-full bg-forest-ink/60 border border-white/20 rounded-lg px-3 py-2 outline-none focus:border-brass/60 text-sm"
                                         />
                                         {editImageUrl && (
-                                            <div className="text-xs text-neutral-500">
+                                            <div className="text-xs text-cream/45">
                                                 {isSupabaseStorageUrl(editImageUrl) ? '✓ Изображение в Supabase Storage' : 'Внешний URL'}
                                             </div>
                                         )}
@@ -617,12 +617,12 @@ export default function FoodDetailModal({
                                                 step="0.01"
                                                 value={editPrice}
                                                 onChange={(e) => setEditPrice(Number(e.target.value || 0))}
-                                                className="w-32 bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-2xl font-bold text-amber-400 outline-none focus:border-amber-400"
+                                                className="w-32 bg-forest-ink/60 border border-white/20 rounded-lg px-3 py-2 text-2xl font-bold text-brass outline-none focus:border-brass/60"
                                             />
-                                            <span className="text-2xl font-bold text-amber-400">₽</span>
+                                            <span className="text-2xl font-bold text-brass">₽</span>
                                         </div>
                                     ) : (
-                                        <div className="text-2xl font-bold text-amber-400">
+                                        <div className="text-2xl font-bold text-brass">
                                             {displayPrice.toLocaleString('ru-RU')} ₽
                                         </div>
                                     )}
@@ -632,11 +632,11 @@ export default function FoodDetailModal({
                                             value={editWeight}
                                             onChange={(e) => setEditWeight(e.target.value)}
                                             placeholder="Вес"
-                                            className="w-24 bg-black/40 border border-white/20 rounded-lg px-2 py-1 text-neutral-400 outline-none focus:border-amber-400 text-sm"
+                                            className="w-24 bg-forest-ink/60 border border-white/20 rounded-lg px-2 py-1 text-cream/55 outline-none focus:border-brass/60 text-sm"
                                         />
                                     ) : (
                                         displayWeight && (
-                                            <div className="flex items-center gap-1 text-neutral-400">
+                                            <div className="flex items-center gap-1 text-cream/55">
                                                 <Scale className="w-4 h-4" />
                                                 <span>{displayWeight}</span>
                                             </div>
@@ -644,7 +644,7 @@ export default function FoodDetailModal({
                                     )}
                                 </div>
                                 {!isEditing && (
-                                    <div className="flex items-center gap-1 text-amber-400">
+                                    <div className="flex items-center gap-1 text-brass">
                                         <Star className="w-4 h-4 fill-current" />
                                         <span className="text-sm font-medium">Рекомендуем</span>
                                     </div>
@@ -662,11 +662,11 @@ export default function FoodDetailModal({
                                         value={editDescription}
                                         onChange={(e) => setEditDescription(e.target.value)}
                                         rows={4}
-                                        className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-neutral-300 leading-relaxed outline-none focus:border-amber-400 resize-none"
+                                        className="w-full bg-forest-ink/60 border border-white/20 rounded-lg px-3 py-2 text-cream/75 leading-relaxed outline-none focus:border-brass/60 resize-none"
                                         placeholder="Описание блюда"
                                     />
                                 ) : (
-                                    <p className="text-neutral-300 leading-relaxed">
+                                    <p className="text-cream/75 leading-relaxed">
                                         {displayDescription}
                                     </p>
                                 )}
@@ -685,13 +685,13 @@ export default function FoodDetailModal({
                                 return (
                                     <div>
                                         <h3 className="text-lg font-semibold mb-3">
-                                            Пищевая ценность <span className="text-sm font-normal text-neutral-500">на 100 г</span>
+                                            Пищевая ценность <span className="text-sm font-normal text-cream/45">на 100 г</span>
                                         </h3>
                                         <div className="grid grid-cols-4 gap-2">
                                             {cells.map((c) => (
                                                 <div key={c.label} className="bg-white/5 rounded-lg p-3 text-center">
-                                                    <div className="text-base lg:text-lg font-bold text-amber-400">{c.value}</div>
-                                                    <div className="text-[11px] lg:text-xs text-neutral-400 mt-0.5">{c.label}</div>
+                                                    <div className="text-base lg:text-lg font-bold text-brass">{c.value}</div>
+                                                    <div className="text-[11px] lg:text-xs text-cream/55 mt-0.5">{c.label}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -711,11 +711,11 @@ export default function FoodDetailModal({
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <h3 className="text-base font-semibold">{cleanOptName(g.name)}</h3>
                                                     {required ? (
-                                                        <span className="text-[11px] text-amber-400 bg-amber-400/10 rounded px-2 py-0.5">обязательно</span>
+                                                        <span className="text-[11px] text-brass bg-brass/10 rounded px-2 py-0.5">обязательно</span>
                                                     ) : (
-                                                        <span className="text-[11px] text-neutral-500">не обязательно</span>
+                                                        <span className="text-[11px] text-cream/45">не обязательно</span>
                                                     )}
-                                                    {!single && <span className="text-[11px] text-neutral-500">можно до {g.max}</span>}
+                                                    {!single && <span className="text-[11px] text-cream/45">можно до {g.max}</span>}
                                                 </div>
                                                 <div className="space-y-2">
                                                     {g.options.map((opt) => {
@@ -725,16 +725,16 @@ export default function FoodDetailModal({
                                                                 key={opt.id}
                                                                 type="button"
                                                                 onClick={() => toggleMod(g, opt.id)}
-                                                                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ${checked ? 'border-amber-400 bg-amber-400/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                                                                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ${checked ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
                                                             >
                                                                 <span className="flex items-center gap-3">
-                                                                    <span className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${single ? 'rounded-full' : 'rounded'} border ${checked ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/30'}`}>
+                                                                    <span className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${single ? 'rounded-full' : 'rounded'} border ${checked ? 'border-brass bg-terracotta text-[#FBF3EA]' : 'border-white/30'}`}>
                                                                         {checked && <Check className="w-3.5 h-3.5" />}
                                                                     </span>
                                                                     <span className="text-sm text-white">{cleanOptName(opt.name)}</span>
                                                                 </span>
                                                                 {opt.price > 0 && (
-                                                                    <span className="text-amber-400 text-sm font-medium whitespace-nowrap">+{opt.price} ₽</span>
+                                                                    <span className="text-brass text-sm font-medium whitespace-nowrap">+{opt.price} ₽</span>
                                                                 )}
                                                             </button>
                                                         );
@@ -750,14 +750,14 @@ export default function FoodDetailModal({
                             {hasModifiers && !isEditing && item.id !== 'new' && (
                                 <div className="pt-4 border-t border-white/10">
                                     {!modsValid && (
-                                        <p className="text-amber-300 text-sm mb-3">
+                                        <p className="text-brass text-sm mb-3">
                                             Выберите: {requiredUnmet.map((g) => cleanOptName(g.name)).join(', ')}
                                         </p>
                                     )}
                                     <button
                                         onClick={() => handleAdd()}
                                         disabled={!modsValid}
-                                        className="w-full px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="w-full px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
                                         <Plus className="w-5 h-5" />
                                         Добавить в корзину — {((item.price || 0) + modsExtraPrice).toLocaleString('ru-RU')} ₽
@@ -772,7 +772,7 @@ export default function FoodDetailModal({
                                     <select
                                         value={editCategoryId}
                                         onChange={(e) => setEditCategoryId(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-neutral-300 outline-none focus:border-amber-400"
+                                        className="w-full bg-forest-ink/60 border border-white/20 rounded-lg px-3 py-2 text-cream/75 outline-none focus:border-brass/60"
                                     >
                                         <option value="">Без категории</option>
                                         {categories.map((c) => (
@@ -796,16 +796,16 @@ export default function FoodDetailModal({
                                                 <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                                                     <div className="flex-1">
                                                         <div className="font-medium text-white">{variant.name}</div>
-                                                        <div className="text-sm text-neutral-400">{variant.weight || item.weight}</div>
+                                                        <div className="text-sm text-cream/55">{variant.weight || item.weight}</div>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <span className="text-amber-400 font-semibold">
+                                                        <span className="text-brass font-semibold">
                                                             {variant.price ? variant.price.toLocaleString('ru-RU') : '0'} ₽
                                                         </span>
                                                         {variantQuantity === 0 ? (
                                                             <button
                                                                 onClick={() => handleAdd(variant)}
-                                                                className="px-4 py-2 text-sm rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
+                                                                className="px-4 py-2 text-sm rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark transition"
                                                             >
                                                                 Добавить
                                                             </button>
@@ -822,7 +822,7 @@ export default function FoodDetailModal({
                                                                 <button
                                                                     onClick={() => handleAdd(variant)}
                                                                     disabled={variantQuantity >= 99}
-                                                                    className="p-2 rounded-full bg-amber-400 text-black hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    className="p-2 rounded-full bg-terracotta text-[#FBF3EA] hover:bg-terracotta-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                                     aria-label="Добавить"
                                                                 >
                                                                     <Plus className="w-4 h-4" />
@@ -845,7 +845,7 @@ export default function FoodDetailModal({
                                         {quantity === 0 ? (
                                             <button
                                                 onClick={() => handleAdd()}
-                                                className="px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
+                                                className="px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark transition"
                                             >
                                                 Добавить
                                             </button>
@@ -862,7 +862,7 @@ export default function FoodDetailModal({
                                                 <button
                                                     onClick={() => handleAdd()}
                                                     disabled={quantity >= 99}
-                                                    className="p-3 rounded-full bg-amber-400 text-black hover:bg-amber-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="p-3 rounded-full bg-terracotta text-[#FBF3EA] hover:bg-terracotta-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                     aria-label="Добавить"
                                                 >
                                                     <Plus className="w-5 h-5" />
@@ -876,11 +876,11 @@ export default function FoodDetailModal({
                             {/* Additional Info */}
                             {!isEditing && (
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
-                                    <div className="flex items-center gap-2 text-sm text-neutral-400">
+                                    <div className="flex items-center gap-2 text-sm text-cream/55">
                                         <Clock className="w-4 h-4" />
                                         <span>Время приготовления: 15-25 мин</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-neutral-400">
+                                    <div className="flex items-center gap-2 text-sm text-cream/55">
                                         <Star className="w-4 h-4" />
                                         <span>Популярное блюдо</span>
                                     </div>

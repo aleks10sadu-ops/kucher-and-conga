@@ -1,11 +1,33 @@
 import './globals.css';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
+import { Vollkorn, Golos_Text } from 'next/font/google';
 import React from 'react';
+import { SITE_URL } from './components/forest/site';
+
+// Шрифты дизайн-системы «Перевёрнутый лес» — грузятся один раз в корне и доступны
+// всем страницам как CSS-переменные (--font-display / --font-body).
+const vollkorn = Vollkorn({
+    subsets: ['cyrillic', 'latin'],
+    weight: ['600', '700', '900'],
+    style: ['normal', 'italic'],
+    variable: '--font-display',
+    display: 'swap',
+});
+const golos = Golos_Text({
+    subsets: ['cyrillic', 'latin'],
+    weight: ['400', '500', '600', '700'],
+    variable: '--font-body',
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
-    title: 'Кучер и Конга',
-    description: 'Изысканная кухня: традиции, утончённый вкус и безупречная атмосфера.',
+    metadataBase: new URL(SITE_URL),
+    title: {
+        default: 'Кучер & Conga — ресторан в Дмитрове',
+        template: '%s',
+    },
+    description: 'Авторская кухня, зал Conga с подвешенным лесом, банкеты и доставка в Дмитрове.',
     icons: {
         icon: '/icon.svg',
     },
@@ -17,7 +39,7 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
     return (
-        <html lang="ru">
+        <html lang="ru" className={`${vollkorn.variable} ${golos.variable}`}>
             <head>
                 {/* Preconnect для Supabase (основной источник изображений) */}
                 <link rel="preconnect" href="https://mmyfglktqvojwpycreko.supabase.co" crossOrigin="anonymous" />

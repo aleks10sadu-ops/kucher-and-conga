@@ -4,7 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
+import { loadContentPosts } from '@/lib/content/loadContentPosts';
 import ContentManager from '../components/ContentManager';
+import ForestHeader from '../components/forest/ForestHeader';
+import ForestFooter from '../components/forest/ForestFooter';
+import { SITE } from '../components/forest/site';
 
 interface Post {
     id: string;
@@ -17,19 +21,15 @@ interface Post {
     created_at: string;
     category: string;
     is_published: boolean;
+    event_date?: string | null;
 }
 
-// Вспомогательная функция для проверки валидности URL для Next.js Image
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url || typeof url !== 'string') return false;
-    // Должен быть абсолютный URL (http:// или https://) или относительный путь, начинающийся с /
     const trimmedUrl = url.trim();
     if (trimmedUrl.length === 0) return false;
-    // Проверяем, что это валидный URL
     try {
-        // Для относительных путей просто проверяем формат
         if (trimmedUrl.startsWith('/')) return true;
-        // Для абсолютных URL проверяем через URL конструктор
         new URL(trimmedUrl);
         return trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://');
     } catch {
@@ -48,7 +48,6 @@ export default function EventsPage() {
         loadPosts();
         checkAdmin();
 
-        // Realtime синхронизация
         const supabase = createSupabaseBrowserClient() as any;
         if (!supabase) return;
 
@@ -56,15 +55,8 @@ export default function EventsPage() {
             .channel('content-posts-changes')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'content_posts',
-                    filter: `category=eq.events`,
-                },
-                () => {
-                    loadPosts();
-                }
+                { event: '*', schema: 'public', table: 'content_posts', filter: `category=eq.events` },
+                () => loadPosts()
             )
             .subscribe();
 
@@ -86,11 +78,7 @@ export default function EventsPage() {
                 setAdminLoading(false);
                 return;
             }
-            const { data: adminRecord } = await supabase
-                .from('admins')
-                .select('role')
-                .eq('id', user.id)
-                .maybeSingle();
+            const { data: adminRecord } = await supabase.from('admins').select('role').eq('id', user.id).maybeSingle();
             setIsAdmin(!!adminRecord);
         } catch {
             setIsAdmin(false);
@@ -102,38 +90,11 @@ export default function EventsPage() {
     const loadPosts = async () => {
         setLoading(true);
         try {
-            const supabase = createSupabaseBrowserClient() as any;
-            if (!supabase) {
-                setLoading(false);
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('content_posts')
-                .select('*')
-                .eq('category', 'events')
-                .eq('is_published', true)
-                .order('published_at', { ascending: false })
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error loading posts:', error);
-                setPosts([]);
-            } else {
-                const postsData = (data as Post[]) || [];
-                console.log('Загружено событий:', postsData.length);
-                postsData.forEach(post => {
-                    console.log(`Событие "${post.title}":`, {
-                        id: post.id,
-                        image_url: post.image_url,
-                        hasImage: !!post.image_url,
-                        isValidUrl: post.image_url ? isValidImageUrl(post.image_url) : false
-                    });
-                });
-                setPosts(postsData);
-            }
+            const { data, error } = await loadContentPosts('events');
+            if (error) console.warn('События: не удалось загрузить (сеть):', error?.message || error?.code || 'unknown');
+            setPosts(data as Post[]);
         } catch (err) {
-            console.error('Error:', err);
+            console.warn('События: ошибка загрузки:', err);
             setPosts([]);
         } finally {
             setLoading(false);
@@ -141,216 +102,115 @@ export default function EventsPage() {
     };
 
     return (
-        <div className="bg-neutral-950 text-white min-h-screen">
-            <div className="container mx-auto px-4 py-20">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <Link href="/" className="inline-block text-amber-400 hover:text-amber-300 transition-colors">
-                            ← Вернуться на главную
-                        </Link>
-                        {!adminLoading && isAdmin && (
-                            <button
-                                onClick={() => setShowContentManager(true)}
-                                className="px-4 py-2 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition"
-                            >
-                                Управление событиями
-                            </button>
-                        )}
+        <>
+            <ForestHeader />
+            <main className="min-h-screen bg-forest-ink font-body text-cream">
+                {/* Герой */}
+                <section className="relative overflow-hidden">
+                    <img src="/atmosphere_3.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/82 via-forest-ink/85 to-forest-ink" />
+                    <div className="relative mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
+                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Зал Conga · {SITE.city}</span>
+                        <h1 className="mt-2 max-w-[16ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04] text-cream">
+                            События и вечера
+                        </h1>
+                        <p className="mt-4 max-w-[56ch] text-[clamp(15px,2vw,19px)] leading-relaxed text-cream/85">
+                            Концерты, тематические ужины и праздники под подвешенным лесом и лампами-грибами. Загляните, что у
+                            нас будет в ближайшее время.
+                        </p>
                     </div>
+                </section>
 
-                    <h1 className="text-4xl md:text-5xl font-bold mb-12">События</h1>
+                {/* Список */}
+                <section className="relative border-t border-white/5 bg-forest-deep py-14 md:py-20">
+                    <div className="mx-auto max-w-[1280px] px-5 md:px-8">
+                        {!adminLoading && isAdmin && (
+                            <div className="mb-8 flex justify-end">
+                                <button
+                                    onClick={() => setShowContentManager(true)}
+                                    className="rounded-lg border border-brass/40 bg-white/[0.04] px-4 py-2 text-sm font-medium text-brass transition-colors hover:bg-white/[0.08]"
+                                >
+                                    Управление событиями
+                                </button>
+                            </div>
+                        )}
 
-                    {loading ? (
-                        <div className="text-center py-12 text-neutral-400">Загрузка...</div>
-                    ) : posts.length === 0 ? (
-                        <div className="text-center py-12 text-neutral-400">
-                            <p>События будут добавлены позже</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                            {posts.map((post, index) => {
-                                // Bento Style: чередуем размеры карточек для визуального интереса
-                                const isLarge = index % 6 === 0; // Каждая 6-я карточка большая
-                                const isWide = index % 6 === 3; // Каждая 3-я карточка широкая
-
-                                return (
-                                    <Link
-                                        key={post.id}
-                                        href={`/events/${post.slug}`}
-                                        className={`group relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-amber-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-400/10 flex flex-col ${isLarge ? 'md:col-span-2 md:row-span-2' : ''
-                                            } ${isWide ? 'md:col-span-2' : ''}`}
-                                    >
-                                        {/* Изображение - всегда сверху */}
-                                        {post.image_url && isValidImageUrl(post.image_url) ? (
-                                            <div className={`relative w-full ${isLarge ? 'h-64 md:h-80' : 'h-48 md:h-56'} overflow-hidden flex-shrink-0 bg-neutral-900`}>
-                                                {post.image_url.includes('supabase.co') ? (
-                                                    // Для Supabase используем обычный img для лучшей совместимости
-                                                    <img
-                                                        src={post.image_url}
-                                                        alt={post.title}
-                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                        loading="lazy"
-                                                        crossOrigin="anonymous"
-                                                        onLoad={() => {
-                                                            console.log('✅ Изображение загружено успешно:', post.image_url);
-                                                        }}
-                                                        onError={async (e) => {
-                                                            console.error('❌ Ошибка загрузки изображения:', post.image_url);
-
-                                                            // Проверяем доступность файла
-                                                            try {
-                                                                const response = await fetch(post.image_url!, {
-                                                                    method: 'HEAD',
-                                                                    mode: 'no-cors' // Пробуем без CORS для диагностики
-                                                                }).catch(() => {
-                                                                    // Если no-cors не работает, пробуем обычный запрос
-                                                                    return fetch(post.image_url!, { method: 'HEAD' });
-                                                                });
-
-                                                                console.log('Проверка доступности файла:', {
-                                                                    url: post.image_url,
-                                                                    status: response?.status,
-                                                                    statusText: response?.statusText,
-                                                                    ok: response?.ok,
-                                                                    type: response?.type
-                                                                });
-
-                                                                // Пробуем проверить через Supabase API
-                                                                if (post.image_url!.includes('supabase.co')) {
-                                                                    const supabase = createSupabaseBrowserClient() as any;
-                                                                    if (supabase) {
-                                                                        const urlParts = post.image_url!.split('/');
-                                                                        const bucketIndex = urlParts.indexOf('public');
-                                                                        if (bucketIndex !== -1) {
-                                                                            const bucketName = urlParts[bucketIndex + 1];
-                                                                            const filePath = urlParts.slice(bucketIndex + 2).join('/');
-
-                                                                            console.log('Проверка через Supabase API:', { bucketName, filePath });
-
-                                                                            // Пробуем получить список файлов в папке
-                                                                            const folderPath = filePath.split('/').slice(0, -1).join('/');
-                                                                            const fileName = filePath.split('/').pop();
-
-                                                                            const { data: files, error: listError } = await supabase.storage
-                                                                                .from(bucketName)
-                                                                                .list(folderPath, {
-                                                                                    limit: 100
-                                                                                });
-
-                                                                            if (listError) {
-                                                                                console.error('Ошибка при проверке файлов:', listError);
-                                                                            } else {
-                                                                                console.log('Файлы в папке:', files);
-                                                                                const fileExists = files?.some((f: any) => f.name === fileName);
-                                                                                console.log(`Файл "${fileName}" ${fileExists ? 'найден' : 'НЕ найден'} в папке "${folderPath}"`);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                if (response?.status === 404) {
-                                                                    console.error('❌ Файл не найден по указанному пути (404)');
-                                                                    console.error('Возможные причины:');
-                                                                    console.error('1. Файл был удален');
-                                                                    console.error('2. Файл не был перемещен из temp после создания записи');
-                                                                    console.error('3. Неправильный путь в URL');
-                                                                } else if (response?.status === 403) {
-                                                                    console.error('❌ Доступ запрещен (403)');
-                                                                    console.error('Проверьте:');
-                                                                    console.error('1. Bucket настроен как Public bucket');
-                                                                    console.error('2. RLS политики настроены для чтения');
-                                                                } else if (response?.status === 400) {
-                                                                    console.error('❌ Bad Request (400)');
-                                                                    console.error('Возможные причины:');
-                                                                    console.error('1. Неправильный формат URL');
-                                                                    console.error('2. Файл поврежден или имеет неправильный формат');
-                                                                    console.error('3. Проблемы с кодировкой пути');
-                                                                }
-                                                            } catch (fetchError) {
-                                                                console.error('Ошибка при проверке файла:', fetchError);
-                                                            }
-
-                                                            // Показываем плейсхолдер при ошибке
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.style.display = 'none';
-                                                            const container = target.parentElement;
-                                                            if (container && !container.querySelector('.error-placeholder')) {
-                                                                const placeholder = document.createElement('div');
-                                                                placeholder.className = 'error-placeholder w-full h-full flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5';
-                                                                placeholder.innerHTML = `
-                                  <div class="text-center">
-                                    <div class="text-4xl mb-2">📅</div>
-                                    <p class="text-xs text-neutral-500">Ошибка загрузки</p>
-                                    <p class="text-xs text-neutral-600 mt-1">Проверьте консоль</p>
-                                  </div>
-                                `;
-                                                                container.appendChild(placeholder);
-                                                            }
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    // Для других источников используем Next.js Image
-                                                    <Image
-                                                        src={post.image_url}
-                                                        alt={post.title}
-                                                        fill
-                                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                                        onError={(e) => {
-                                                            console.error('Ошибка загрузки изображения:', post.image_url);
-                                                        }}
-                                                    />
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
-                                            </div>
-                                        ) : (
-                                            // Плейсхолдер если нет изображения
-                                            <div className={`relative w-full ${isLarge ? 'h-48 md:h-64' : 'h-40 md:h-48'} overflow-hidden flex-shrink-0 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center`}>
-                                                <div className="text-center">
-                                                    <div className="text-4xl mb-2">📅</div>
-                                                    <p className="text-xs text-neutral-500">Нет изображения</p>
+                        {loading ? (
+                            <div className="py-16 text-center text-cream/50">Загрузка…</div>
+                        ) : posts.length === 0 ? (
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
+                                <p className="text-cream/70">Пока ближайших событий нет.</p>
+                                <p className="mt-2 text-sm text-cream/50">
+                                    Забронируйте стол — и мы расскажем, что готовим.{' '}
+                                    <Link href="/booking" className="text-brass hover:underline">Забронировать →</Link>
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid auto-rows-[1fr] grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                                {posts.map((post, index) => {
+                                    const feature = index % 5 === 0;
+                                    return (
+                                        <Link
+                                            key={post.id}
+                                            href={`/events/${post.slug}`}
+                                            className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition-all duration-300 hover:-translate-y-1 hover:border-brass/40 hover:bg-white/[0.07] hover:shadow-2xl hover:shadow-black/40 ${
+                                                feature ? 'sm:col-span-2 lg:row-span-2' : ''
+                                            }`}
+                                        >
+                                            {post.image_url && isValidImageUrl(post.image_url) ? (
+                                                <div className={`relative w-full flex-shrink-0 overflow-hidden bg-forest-mid ${feature ? 'h-56 md:h-72' : 'h-44 md:h-52'}`}>
+                                                    {post.image_url.includes('supabase.co') ? (
+                                                        <img
+                                                            src={post.image_url}
+                                                            alt={post.title}
+                                                            loading="lazy"
+                                                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                            onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
+                                                        />
+                                                    ) : (
+                                                        <Image src={post.image_url} alt={post.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                                                    )}
+                                                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-ink/45 to-transparent" />
                                                 </div>
-                                            </div>
-                                        )}
-
-                                        {/* Контент - название, описание, дата */}
-                                        <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0">
-                                            {/* Название */}
-                                            <h2 className={`font-bold mb-2 md:mb-3 line-clamp-2 group-hover:text-amber-400 transition-colors ${isLarge ? 'text-xl md:text-2xl lg:text-3xl' : 'text-lg md:text-xl lg:text-2xl'
-                                                }`}>
-                                                {post.title}
-                                            </h2>
-
-                                            {/* Описание */}
-                                            {post.excerpt && (
-                                                <p className={`text-neutral-300 mb-3 md:mb-4 flex-1 ${isLarge ? 'text-sm md:text-base line-clamp-4' : 'text-xs md:text-sm line-clamp-3'
-                                                    }`}>
-                                                    {post.excerpt}
-                                                </p>
+                                            ) : (
+                                                <div className={`relative flex w-full flex-shrink-0 items-end overflow-hidden bg-gradient-to-br from-forest-mid to-forest-deep ${feature ? 'h-40 md:h-52' : 'h-28 md:h-32'}`}>
+                                                    <span className="p-5 font-display text-[15px] uppercase tracking-[0.16em] text-brass/70">Событие</span>
+                                                </div>
                                             )}
 
-                                            {/* Дата и стрелка - всегда внизу */}
-                                            <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 border-t border-white/10">
-                                                {post.published_at && (
-                                                    <p className="text-xs md:text-sm text-neutral-400">
-                                                        {new Date(post.published_at).toLocaleDateString('ru-RU', {
-                                                            year: 'numeric',
-                                                            month: 'short',
-                                                            day: 'numeric'
-                                                        })}
+                                            <div className="flex min-h-0 flex-1 flex-col p-5 md:p-6">
+                                                <h2 className={`mb-2 font-display font-bold leading-snug text-cream transition-colors group-hover:text-brass ${feature ? 'text-2xl md:text-[28px]' : 'text-xl'}`}>
+                                                    {post.title}
+                                                </h2>
+                                                {post.excerpt && (
+                                                    <p className={`flex-1 leading-relaxed text-cream/72 ${feature ? 'text-[15px] line-clamp-4' : 'text-sm line-clamp-3'}`}>
+                                                        {post.excerpt}
                                                     </p>
                                                 )}
-                                                <span className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity text-lg md:text-xl">
-                                                    →
-                                                </span>
+                                                <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+                                                    <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-terracotta">
+                                                        Подробнее <span className="transition-transform group-hover:translate-x-1" aria-hidden>→</span>
+                                                    </span>
+                                                    {post.event_date ? (
+                                                        <span className="text-xs font-medium text-brass">
+                                                            {new Date(post.event_date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    ) : post.published_at ? (
+                                                        <span className="text-xs text-cream/45">
+                                                            {new Date(post.published_at).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </main>
+            <ForestFooter />
 
             {showContentManager && (
                 <ContentManager
@@ -362,6 +222,6 @@ export default function EventsPage() {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }

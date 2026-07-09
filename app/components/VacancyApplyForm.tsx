@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 type Props = { vacancyTitle: string };
 
-const inputCls = 'w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg outline-none text-white placeholder-neutral-500 focus:border-amber-400/50 transition';
+const inputCls = 'w-full rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
 
 // Анкета отклика на вакансию. Пишется в Google Таблицу через /api/vacancy-apply.
 export default function VacancyApplyForm({ vacancyTitle }: Props) {
@@ -35,18 +35,18 @@ export default function VacancyApplyForm({ vacancyTitle }: Props) {
 
     if (status === 'ok') {
         return (
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-8 text-center">
-                <div className="text-3xl mb-3">✅</div>
-                <h3 className="text-xl font-bold mb-2">Анкета отправлена!</h3>
-                <p className="text-neutral-300">Мы свяжемся с вами в ближайшее время.</p>
+            <div className="rounded-2xl border border-brass/30 bg-brass/10 p-8 text-center text-cream">
+                <div className="mb-3 text-3xl">✅</div>
+                <h3 className="mb-2 font-display text-xl font-bold">Анкета отправлена!</h3>
+                <p className="text-cream/75">Мы свяжемся с вами в ближайшее время.</p>
             </div>
         );
     }
 
     return (
-        <form onSubmit={onSubmit} className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8 space-y-4">
-            <h3 className="text-2xl font-bold">Откликнуться на вакансию</h3>
-            <p className="text-neutral-400 text-sm">Заполните анкету — мы рассмотрим её и свяжемся с вами.</p>
+        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-cream md:p-8">
+            <h3 className="font-display text-2xl font-bold">Откликнуться на вакансию</h3>
+            <p className="text-sm text-cream/55">Заполните анкету — мы рассмотрим её и свяжемся с вами.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input name="fio" required maxLength={200} placeholder="ФИО *" className={inputCls} />
@@ -67,12 +67,12 @@ export default function VacancyApplyForm({ vacancyTitle }: Props) {
             <textarea name="experience" maxLength={1000} rows={3} placeholder="Опыт работы: где и сколько работали" className={inputCls} />
             <textarea name="comment" maxLength={1000} rows={3} placeholder="Расскажите о себе" className={inputCls} />
 
-            {status === 'error' && <p className="text-red-400 text-sm">{errorMsg}</p>}
+            {status === 'error' && <p className="text-sm text-red-400">{errorMsg}</p>}
 
             <button
                 type="submit"
                 disabled={status === 'sending'}
-                className="w-full md:w-auto px-8 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 transition disabled:opacity-50"
+                className="w-full rounded-lg bg-terracotta px-8 py-3 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50 md:w-auto"
             >
                 {status === 'sending' ? 'Отправляем…' : 'Отправить анкету'}
             </button>

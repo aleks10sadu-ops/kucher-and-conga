@@ -118,36 +118,21 @@ const nextConfig = {
           }]),
         ],
       },
-      // Кеширование для статических ресурсов
-      {
-        source: '/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff|woff2|ttf|eot)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      // Кеширование для статических чанков Next.js (с хешем в имени)
-      {
-        source: '/_next/static/chunks/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      // Кеширование для статических файлов Next.js (CSS, JS с хешем)
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // Иммутабельный кеш статики — ТОЛЬКО в проде (там имена содержат контент-хеш).
+      // В dev это ломало обновление чанков и CSS: браузер держал старую версию под
+      // стабильным URL, из-за чего правки не подхватывались без переименования файлов.
+      ...(process.env.NODE_ENV === 'production'
+        ? [
+            {
+              source: '/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff|woff2|ttf|eot)',
+              headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+            {
+              source: '/_next/static/:path*',
+              headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+            },
+          ]
+        : []),
     ];
   },
   // Настройка для современных браузеров (ES6+)

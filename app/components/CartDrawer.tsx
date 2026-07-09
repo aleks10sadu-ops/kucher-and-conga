@@ -57,7 +57,7 @@ export default function CartDrawer({
                 aria-label="Корзина"
                 aria-hidden={isMounted ? (isOpen ? "false" : "true") : "true"}
                 role="dialog"
-                className={`fixed right-0 top-0 z-50 h-full w-full sm:w-[420px] bg-neutral-950 border-l border-white/10 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'
+                className={`fixed right-0 top-0 z-50 h-full w-full sm:w-[420px] bg-forest text-cream font-body border-l border-white/10 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'
                     }`}
                 suppressHydrationWarning
             >
@@ -66,7 +66,7 @@ export default function CartDrawer({
                     <div className="flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5" />
                         <span className="font-semibold">Корзина</span>
-                        {count > 0 && <span className="text-sm text-neutral-400">({count})</span>}
+                        {count > 0 && <span className="text-sm text-cream/55">({count})</span>}
                     </div>
                     <button
                         onClick={onClose}
@@ -80,7 +80,7 @@ export default function CartDrawer({
                 {/* Items */}
                 <div className="h-[calc(100%-230px)] overflow-auto p-4 space-y-4">
                     {items.length === 0 ? (
-                        <div className="text-neutral-400">
+                        <div className="text-cream/55">
                             Ваша корзина пуста. Добавьте блюда из меню.
                         </div>
                     ) : (
@@ -97,24 +97,24 @@ export default function CartDrawer({
                 </div>
 
                 {/* Footer */}
-                <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4 space-y-3 bg-neutral-950">
+                <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4 space-y-3 bg-forest">
                     <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">Итого</span>
+                        <span className="text-cream/55">Итого</span>
                         <span className="text-xl font-bold">{total.toLocaleString('ru-RU')} ₽</span>
                     </div>
 
                     {/* Предупреждение о бизнес-ланчах */}
                     {businessLunchValidation.businessLunchCount > 0 && !businessLunchValidation.isValid && (
-                        <div className="p-3 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-start gap-2">
-                            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 bg-brass/10 border border-brass/25 rounded-lg flex items-start gap-2">
+                            <AlertCircle className="w-5 h-5 text-brass flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
-                                <p className="text-amber-300 text-sm font-semibold mb-1">
+                                <p className="text-brass text-sm font-semibold mb-1">
                                     Условия заказа бизнес-ланчей
                                 </p>
-                                <p className="text-amber-200/80 text-xs">
+                                <p className="text-cream/70 text-xs">
                                     {businessLunchValidation.message}
                                 </p>
-                                <p className="text-amber-200/60 text-xs mt-1">
+                                <p className="text-cream/55 text-xs mt-1">
                                     Бизнес-ланчей в заказе: {businessLunchValidation.businessLunchCount} |
                                     Сумма: {total.toLocaleString('ru-RU')} ₽
                                 </p>
@@ -126,12 +126,12 @@ export default function CartDrawer({
                         <button
                             disabled={!canOrder}
                             onClick={onDeliveryClick}
-                            className="w-full px-6 py-3 rounded-full bg-amber-400 text-black font-semibold hover:bg-amber-300 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+                            className="w-full px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
                         >
                             Доставка
                         </button>
                     </div>
-                    <p className="text-[12px] text-neutral-400">
+                    <p className="text-[12px] text-cream/55">
                         Оплата на месте/при получении. Администратор свяжется для подтверждения.
                     </p>
                 </div>
@@ -167,13 +167,13 @@ function CartItemComponent({ item, onAdd, onDecrement, onRemove }: CartItemCompo
                         {visibleModifiers(item.modifiers).length > 0 && (
                             <ul className="mt-1 space-y-0.5">
                                 {visibleModifiers(item.modifiers).map((m, i) => (
-                                    <li key={i} className="text-xs text-neutral-400">
-                                        {m.group}: <span className="text-neutral-200">{m.option}</span>
+                                    <li key={i} className="text-xs text-cream/55">
+                                        {m.group}: <span className="text-cream/80">{m.option}</span>
                                     </li>
                                 ))}
                             </ul>
                         )}
-                        <div className="text-sm text-neutral-400 mt-1">
+                        <div className="text-sm text-cream/55 mt-1">
                             {item.price.toLocaleString('ru-RU')} ₽
                         </div>
                     </div>
@@ -182,14 +182,14 @@ function CartItemComponent({ item, onAdd, onDecrement, onRemove }: CartItemCompo
                         className="p-1 rounded hover:bg-white/5"
                         aria-label="Удалить позицию"
                     >
-                        <Trash2 className="w-4 h-4 text-neutral-400" />
+                        <Trash2 className="w-4 h-4 text-cream/55" />
                     </button>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => onDecrement(item.id)}
-                            className="p-2 rounded-full border border-white/20 hover:border-amber-400/50 hover:scale-110 active:scale-95 transition-all duration-200"
+                            className="p-2 rounded-full border border-white/20 hover:border-brass/50 hover:scale-110 active:scale-95 transition-all duration-200"
                             aria-label="Убавить"
                         >
                             <Minus className="w-4 h-4" />
@@ -205,7 +205,7 @@ function CartItemComponent({ item, onAdd, onDecrement, onRemove }: CartItemCompo
                                     onAdd({ ...item, qty: newQty });
                                 }
                             }}
-                            className="w-12 text-center bg-black/40 border border-white/10 rounded-lg px-2 py-1 outline-none focus:border-amber-400 text-sm"
+                            className="w-12 text-center bg-forest-ink/60 border border-white/10 rounded-lg px-2 py-1 outline-none focus:border-brass/60 text-sm"
                         />
                         <button
                             onClick={() => {
@@ -214,7 +214,7 @@ function CartItemComponent({ item, onAdd, onDecrement, onRemove }: CartItemCompo
                                 }
                             }}
                             disabled={item.qty >= 99}
-                            className="p-2 rounded-full bg-amber-400 text-black hover:bg-amber-300 hover:scale-110 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 rounded-full bg-terracotta text-[#FBF3EA] hover:bg-terracotta-dark hover:scale-110 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label="Добавить"
                         >
                             <Plus className="w-4 h-4" />
