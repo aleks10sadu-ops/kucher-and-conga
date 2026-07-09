@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
 // Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
@@ -30,6 +31,23 @@ const LINKS = {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const glass: React.CSSProperties = { backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', background: 'rgba(255,255,255,0.10)' };
+
+const GALLERY = [1, 2, 3, 4, 5, 6].map((n) => `/atmosphere_${n}.webp`);
+const YANDEX_REVIEWS = 'https://yandex.ru/maps-reviews-widget/10214255530?comments';
+const YANDEX_MAP = 'https://yandex.ru/map-widget/v1/?um=constructor%3A1c90c41847ab12bb686f7ffc03fcb5b1930c854da9e094965c7ac7ad24f8e4b7&source=constructor';
+const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
+
+// Полная навигация для выдвижного меню.
+const NAV = [
+    { href: LINKS.menu, label: 'Меню и доставка' },
+    { href: LINKS.booking, label: 'Забронировать стол' },
+    { href: LINKS.promotions, label: 'Акции' },
+    { href: LINKS.events, label: 'События' },
+    { href: LINKS.vacancies, label: 'Вакансии' },
+    { href: '#atmosphere', label: 'Атмосфера' },
+    { href: '#reviews', label: 'Отзывы гостей' },
+    { href: '#find', label: 'Как нас найти' },
+];
 
 function useHeroVideo() {
     const [src, setSrc] = useState<{ mp4: string; poster: string } | null>(null);
@@ -83,6 +101,8 @@ const bandBase: React.CSSProperties = { position: 'absolute', left: 0, right: 0,
 export default function RedesignClient() {
     const video = useHeroVideo();
     const [scrolled, setScrolled] = useState(false);
+    const [navOpen, setNavOpen] = useState(false);
+    const [lightbox, setLightbox] = useState<number | null>(null);
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 40);
         window.addEventListener('scroll', onScroll, { passive: true });
@@ -110,31 +130,37 @@ export default function RedesignClient() {
                 @media (prefers-reduced-motion: reduce) {
                     .rf-anim, .rf-anim * { animation: none !important; transition: none !important; }
                 }
-                .rf-btn { transition: transform .15s cubic-bezier(.22,1,.36,1), background .2s ease, border-color .2s ease; }
+                .rf-btn { transition: transform .15s cubic-bezier(.22,1,.36,1), background .2s ease, border-color .2s ease; cursor: pointer; }
                 .rf-btn:active { transform: scale(.97); }
                 .rf-btn-primary:hover { background: #8F3A1B; }
-                .rf-btn-ghost:hover { background: rgba(244,247,242,0.1); border-color: rgba(244,247,242,0.55); }
-                .rf-nav a { position: relative; transition: color .2s ease; }
-                .rf-nav a:hover { color: #F8FAF6; }
+                .rf-btn-ghost:hover { background: rgba(244,247,242,0.14); border-color: rgba(244,247,242,0.6); }
+                .rf-nav a { padding: 8px 14px; border-radius: 8px; color: #FFFFFF; transition: background .2s ease; }
+                .rf-nav a:hover { background: rgba(255,255,255,0.14); }
+                .rf-menu-btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; padding: 9px 14px; border: 1px solid rgba(244,247,242,0.4); color: #FFFFFF; background: rgba(255,255,255,0.04); transition: background .2s ease, border-color .2s ease; }
+                .rf-menu-btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(244,247,242,0.6); }
+                a.rf-drawer-link { display: block; padding: 14px 4px; font-size: 18px; color: #EDF2EA; border-bottom: 1px solid rgba(244,247,242,0.1); transition: color .2s ease, transform .2s ease; }
+                a.rf-drawer-link:hover { color: #FFFFFF; transform: translateX(8px); }
                 .rf-nav { display: none; }
                 .rf-wrap { padding-left: 20px; padding-right: 20px; }
                 .rf-hero-pad { padding-left: 20px; padding-right: 20px; padding-bottom: 76px; }
                 .rf-h1 { font-size: clamp(2.6rem, 8vw, 3rem); }
                 .rf-lede { font-size: 15px; }
                 .rf-btns { flex-direction: column; width: 100%; }
-                .rf-btn { height: 52px; }
+                .rf-hero-btn { height: 56px; width: 100%; }
                 .rf-desk { display: none; }
                 .rf-mob { display: grid; }
                 .rf-bentopad { padding-top: 28px; padding-bottom: 28px; }
                 .rf-foot { grid-template-columns: 1fr; }
+                .rf-find { grid-template-columns: 1fr; }
                 @media (min-width: 768px) {
+                    .rf-find { grid-template-columns: 1.5fr 1fr; }
                     .rf-nav { display: flex; }
                     .rf-wrap { padding-left: 32px; padding-right: 32px; }
                     .rf-hero-pad { padding-left: 100px; padding-right: 100px; padding-bottom: 118px; }
                     .rf-h1 { font-size: clamp(3.4rem, 6vw, 5.1rem); }
                     .rf-lede { font-size: 19px; }
                     .rf-btns { flex-direction: row; width: auto; }
-                    .rf-btn { height: auto; padding-top: 17px; padding-bottom: 17px; }
+                    .rf-hero-btn { height: 60px; width: auto; min-width: 250px; }
                     .rf-desk { display: grid; }
                     .rf-mob { display: none; }
                     .rf-bentopad { padding-top: 84px; padding-bottom: 84px; }
@@ -145,16 +171,22 @@ export default function RedesignClient() {
             {/* Фикс-хедер: тёмный скрим сверху для читаемости поверх видео */}
             <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'linear-gradient(180deg, rgba(11,16,12,0.72) 0%, rgba(11,16,12,0.28) 60%, transparent 100%)', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
                 <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                    <Link href={A} className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#F8FAF6', textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>Кучер <span style={{ color: C.brass }}>&</span> Conga</Link>
-                    <nav className="rf-nav" style={{ alignItems: 'center', gap: 28, fontSize: 15, color: 'rgba(244,247,242,0.9)', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
+                    <Link href={A} className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#FFFFFF', textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}>Кучер <span style={{ color: C.brass }}>&</span> Conga</Link>
+                    <nav className="rf-nav" style={{ alignItems: 'center', gap: 6, fontSize: 15, color: '#FFFFFF', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
                         <Link href={LINKS.menu}>Меню</Link>
                         <Link href={LINKS.booking}>Бронь</Link>
                         <Link href={LINKS.events}>События</Link>
                         <Link href={LINKS.vacancies}>Команда</Link>
                     </nav>
-                    <a href="tel:+79163177887" className="rf-btn rf-btn-ghost" style={{ fontSize: 14, fontWeight: 500, borderRadius: 8, padding: '9px 16px', border: '1px solid rgba(244,247,242,0.4)', color: '#F8FAF6', whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>+7 916 317-78-87</a>
+                    <button type="button" onClick={() => setNavOpen(true)} className="rf-menu-btn" aria-label="Открыть меню разделов" style={{ fontSize: 14, fontWeight: 500, textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
+                        <Menu style={{ width: 18, height: 18 }} aria-hidden />
+                        <span>Разделы</span>
+                    </button>
                 </div>
             </header>
+
+            {/* Выдвижное меню разделов справа */}
+            <NavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
 
             <div className="rf-anim">
                 {/* HERO: живой полог на видео, на весь экран */}
@@ -184,8 +216,8 @@ export default function RedesignClient() {
                         </motion.p>
 
                         <motion.div className="rf-btns" style={{ display: 'flex', gap: 12, marginTop: 4 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.24, ease: EASE }}>
-                            <Link href={LINKS.booking} className="rf-btn rf-btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 600, fontSize: 15, letterSpacing: '0.01em', padding: '0 30px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 8px 24px rgba(172,72,35,0.32)' }}>Забронировать стол</Link>
-                            <Link href={LINKS.menu} className="rf-btn rf-btn-ghost" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 500, fontSize: 15, padding: '0 30px', border: '1px solid rgba(244,247,242,0.4)', color: '#F8FAF6', background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(6px)' }}>Заказать доставку</Link>
+                            <Link href={LINKS.booking} className="rf-btn rf-btn-primary rf-hero-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 600, fontSize: 16, letterSpacing: '0.01em', padding: '0 36px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 8px 24px rgba(172,72,35,0.32)' }}>Забронировать стол</Link>
+                            <Link href={LINKS.menu} className="rf-btn rf-btn-ghost rf-hero-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 500, fontSize: 16, padding: '0 36px', border: '1px solid rgba(244,247,242,0.45)', color: '#FFFFFF', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(6px)' }}>Заказать доставку</Link>
                         </motion.div>
                     </div>
 
@@ -197,12 +229,12 @@ export default function RedesignClient() {
                     </div>
                 </section>
 
-                {/* БЕНТО над фото зала */}
-                <section style={{ position: 'relative' }}>
+                {/* БЕНТО над фото зала — на весь экран */}
+                <section style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center' }}>
                     <img src="/hero-image.webp" alt="Зал с подвешенным лесом" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(12,19,14,0.66) 0%,rgba(12,19,14,0.55) 45%,rgba(12,19,14,0.82) 100%)' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(12,19,14,0.72) 0%,rgba(12,19,14,0.58) 45%,rgba(12,19,14,0.85) 100%)' }} />
 
-                    <div className="rf-wrap rf-bentopad" style={{ position: 'relative', maxWidth: 1280, margin: '0 auto' }}>
+                    <div className="rf-wrap rf-bentopad" style={{ position: 'relative', maxWidth: 1280, margin: '0 auto', width: '100%' }}>
                         {/* Desktop grid */}
                         <div className="rf-desk" style={{ gridTemplateColumns: '50% 27% 23%', gridTemplateRows: '346px 282px' }}>
                             {/* A. Меню и доставка */}
@@ -327,6 +359,66 @@ export default function RedesignClient() {
                     </div>
                 </section>
 
+                {/* АТМОСФЕРА — галерея */}
+                <section id="atmosphere" style={{ background: '#182620', padding: '72px 0' }}>
+                    <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
+                        <SectionHead kicker="Зал Conga" title="Атмосфера" />
+                        <div className="rf-gallery" style={{ marginTop: 36, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                            {GALLERY.map((src, i) => (
+                                <button key={src} type="button" onClick={() => setLightbox(i)} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', aspectRatio: '4 / 3', padding: 0, background: 'none' }}>
+                                    <img className="rf-photo" src={src} alt={`Атмосфера ресторана, фото ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                                    <Sweep w="55%" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ОТЗЫВЫ — виджет Яндекс.Карт */}
+                <section id="reviews" style={{ background: '#22352A', padding: '72px 0' }}>
+                    <div className="rf-wrap" style={{ maxWidth: 900, margin: '0 auto' }}>
+                        <SectionHead kicker="Нам доверяют" title="Отзывы гостей" />
+                        <div style={{ marginTop: 36, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', ...glass }}>
+                            <iframe
+                                src={YANDEX_REVIEWS}
+                                title="Отзывы о ресторане на Яндекс.Картах"
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                style={{ width: '100%', height: 620, border: 0, display: 'block', background: '#fff' }}
+                            />
+                        </div>
+                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                            <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" style={{ color: C.brass, fontSize: 14 }}>Читать все отзывы на Яндекс.Картах →</a>
+                        </div>
+                    </div>
+                </section>
+
+                {/* КАК НАС НАЙТИ — карта */}
+                <section id="find" style={{ background: '#182620', padding: '72px 0' }}>
+                    <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
+                        <SectionHead kicker="Дмитров" title="Как нас найти" />
+                        <div className="rf-find" style={{ marginTop: 36, display: 'grid', gap: 20, alignItems: 'stretch' }}>
+                            <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                <iframe
+                                    src={YANDEX_MAP}
+                                    title="Ресторан Кучер и Конга на карте Дмитрова"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    style={{ width: '100%', height: 420, border: 0, display: 'block' }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
+                                <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Адрес</div><div style={{ fontSize: 18, color: '#EDF2EA' }}>Дмитров, Промышленная улица, 20Б</div></div>
+                                <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Телефоны</div>
+                                    <a href="tel:+79163177887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 317-78-87</a>
+                                    <a href="tel:+79162977887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 297-78-87</a>
+                                </div>
+                                <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" className="rf-btn rf-btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', borderRadius: 8, fontWeight: 600, padding: '13px 26px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)' }}>Открыть в Яндекс.Картах</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Футер */}
                 <footer style={{ background: '#1B140E', borderTop: '3px solid #7A2E26' }}>
                     <div className="rf-wrap rf-foot" style={{ maxWidth: 1280, margin: '0 auto', paddingTop: 40, paddingBottom: 8, display: 'grid', gap: 28 }}>
@@ -336,17 +428,117 @@ export default function RedesignClient() {
                             <a href="tel:+79163177887" style={{ fontSize: 16, color: '#EFE9E0' }}>+7 (916) 317-78-87</a>
                         </Col>
                         <Col label="Часы работы">
-                            <span style={{ fontSize: 16, color: '#EFE9E0' }}>пн–вс, 12:00 — 00:00</span>
-                            <span style={{ fontSize: 13, color: 'rgba(239,233,224,0.55)' }}>брони до 22:00 · доставка с 14:00 до 22:00</span>
+                            <span style={{ fontSize: 15, color: '#EFE9E0' }}>Пн–Чт&nbsp;&nbsp;12:00 — 23:00 <span style={{ color: 'rgba(239,233,224,0.5)' }}>(вход до 22:00)</span></span>
+                            <span style={{ fontSize: 15, color: '#EFE9E0' }}>Пт, Сб&nbsp;&nbsp;12:00 — 01:00 <span style={{ color: 'rgba(239,233,224,0.5)' }}>(вход до 23:00)</span></span>
+                            <span style={{ fontSize: 15, color: '#EFE9E0' }}>Вс&nbsp;&nbsp;13:00 — 23:00 <span style={{ color: 'rgba(239,233,224,0.5)' }}>(вход до 22:00)</span></span>
+                            <span style={{ fontSize: 13, color: C.brass, marginTop: 4 }}>Брони и доставка — с 12:00 до 22:00</span>
                         </Col>
                     </div>
-                    <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', paddingBottom: 32, marginTop: 24, paddingTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(239,233,224,0.12)' }}>
-                        <span className="rf-serif" style={{ fontWeight: 700, fontSize: 15, color: '#EFE9E0' }}>Кучер &amp; Conga</span>
-                        <span style={{ fontSize: 12.5, color: 'rgba(239,233,224,0.45)' }}>© 2026 Ресторан «Кучер и Конга»</span>
+                    <div className="rf-wrap rf-foot-bottom" style={{ maxWidth: 1280, margin: '0 auto', paddingBottom: 32, marginTop: 24, paddingTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, borderTop: '1px solid rgba(239,233,224,0.12)' }}>
+                        <span style={{ fontSize: 12.5, color: 'rgba(239,233,224,0.5)' }}>© 2026 Ресторан «Кучер и Конга»</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', fontSize: 13 }}>
+                            <a href="/privacy" style={{ color: 'rgba(239,233,224,0.72)' }}>Политика конфиденциальности</a>
+                            <a href="/rules" style={{ color: 'rgba(239,233,224,0.72)' }}>Правила пользования</a>
+                            <a href="https://t.me/Kvazar27" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(239,233,224,0.72)' }}>Сайт разработан — @Kvazar27</a>
+                        </div>
                     </div>
                 </footer>
             </div>
+
+            {/* Лайтбокс галереи */}
+            <Lightbox index={lightbox} onClose={() => setLightbox(null)} onNav={(d) => setLightbox((i) => i === null ? null : (i + d + GALLERY.length) % GALLERY.length)} />
         </main>
+    );
+}
+
+function SectionHead({ kicker, title }: { kicker: string; title: string }) {
+    const reduce = useReducedMotion();
+    return (
+        <motion.div
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.5, ease: EASE }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
+            <span style={{ fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.brass }}>{kicker}</span>
+            <h2 className="rf-serif" style={{ margin: 0, fontWeight: 900, fontSize: 'clamp(2rem, 4vw, 3.2rem)', color: '#F8FAF6', lineHeight: 1.05 }}>{title}</h2>
+        </motion.div>
+    );
+}
+
+function NavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+    useEffect(() => {
+        if (open) {
+            const prev = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = prev; };
+        }
+    }, [open]);
+    return (
+        <AnimatePresence>
+            {open && (
+                <>
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+                        onClick={onClose}
+                        style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(9,13,10,0.6)', backdropFilter: 'blur(2px)' }}
+                    />
+                    <motion.aside
+                        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                        style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 61, width: 'min(88vw, 380px)', background: '#182620', borderLeft: '1px solid rgba(255,255,255,0.12)', padding: '24px 24px 32px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                            <span className="rf-serif" style={{ fontWeight: 900, fontSize: 20, color: '#FFFFFF' }}>Разделы</span>
+                            <button type="button" onClick={onClose} aria-label="Закрыть меню" className="rf-menu-btn" style={{ padding: 9 }}><X style={{ width: 18, height: 18 }} aria-hidden /></button>
+                        </div>
+                        <nav style={{ display: 'flex', flexDirection: 'column' }}>
+                            {NAV.map((item) => item.href.startsWith('#') ? (
+                                <a key={item.href} href={item.href} onClick={onClose} className="rf-drawer-link">{item.label}</a>
+                            ) : (
+                                <Link key={item.href} href={item.href} onClick={onClose} className="rf-drawer-link">{item.label}</Link>
+                            ))}
+                        </nav>
+                        <div style={{ marginTop: 'auto', paddingTop: 24, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <a href="tel:+79163177887" style={{ fontSize: 16, color: '#EDF2EA' }}>+7 (916) 317-78-87</a>
+                            <a href="tel:+79162977887" style={{ fontSize: 16, color: '#EDF2EA' }}>+7 (916) 297-78-87</a>
+                        </div>
+                    </motion.aside>
+                </>
+            )}
+        </AnimatePresence>
+    );
+}
+
+function Lightbox({ index, onClose, onNav }: { index: number | null; onClose: () => void; onNav: (d: number) => void }) {
+    useEffect(() => {
+        if (index === null) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowLeft') onNav(-1);
+            if (e.key === 'ArrowRight') onNav(1);
+        };
+        window.addEventListener('keydown', onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+    }, [index, onClose, onNav]);
+    return (
+        <AnimatePresence>
+            {index !== null && (
+                <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+                    onClick={onClose}
+                    style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(6,10,7,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+                >
+                    <button type="button" onClick={onClose} aria-label="Закрыть" style={{ position: 'fixed', top: 20, right: 20, padding: 10, borderRadius: 999, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer' }}><X style={{ width: 24, height: 24 }} /></button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); onNav(-1); }} aria-label="Предыдущее" style={{ position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 32, padding: '8px 16px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', cursor: 'pointer' }}>‹</button>
+                    <img src={GALLERY[index]} alt={`Атмосфера ресторана, фото ${index + 1}`} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 12 }} />
+                    <button type="button" onClick={(e) => { e.stopPropagation(); onNav(1); }} aria-label="Следующее" style={{ position: 'fixed', right: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 32, padding: '8px 16px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', cursor: 'pointer' }}>›</button>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
 
