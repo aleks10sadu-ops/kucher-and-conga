@@ -32,7 +32,7 @@ export default function Page() {
                         address: { '@type': 'PostalAddress', streetAddress: 'Промышленная улица, 20Б', addressLocality: 'Дмитров', addressCountry: 'RU' },
                         telephone: SITE.phones[0].label,
                         acceptsReservations: 'True',
-                        url: 'https://kucher-conga.ru/',
+                        url: 'https://kucherandconga.ru/',
                         priceRange: '₽₽',
                     }),
                 }}

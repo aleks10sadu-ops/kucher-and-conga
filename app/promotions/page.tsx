@@ -113,7 +113,7 @@ export default function PromotionsPage() {
                         name: 'Акции и особые вечера — Кучер & Conga',
                         description:
                             'Постоянные предложения ресторана «Кучер & Conga» в Дмитрове: бизнес-ланч, банкетные сеты, бесплатная доставка.',
-                        url: 'https://kucher-conga.ru/promotions',
+                        url: 'https://kucherandconga.ru/promotions',
                         isPartOf: { '@type': 'Restaurant', name: SITE.name, address: SITE.address },
                     }),
                 }}

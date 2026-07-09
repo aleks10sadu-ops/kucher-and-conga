@@ -42,7 +42,7 @@ export const NAV_TOP = [
 
 // Базовый адрес сайта для SEO (sitemap/robots/canonical/Schema).
 // Задайте NEXT_PUBLIC_SITE_URL в Vercel, если боевой домен другой.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://kucher-conga.ru').replace(/\/$/, '');
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://kucherandconga.ru').replace(/\/$/, '');
 
 // Реквизиты оператора для юридических страниц (152-ФЗ).
 // ВАЖНО: заполните значения с пометкой «⟨…⟩» реальными данными юрлица/ИП.

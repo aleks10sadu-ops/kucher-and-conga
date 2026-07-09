@@ -85,7 +85,7 @@ export default function BookingPage() {
                         address: { '@type': 'PostalAddress', streetAddress: 'Промышленная улица, 20Б', addressLocality: 'Дмитров', addressCountry: 'RU' },
                         telephone: SITE.phones[0].label,
                         acceptsReservations: 'True',
-                        url: 'https://kucher-conga.ru/booking',
+                        url: 'https://kucherandconga.ru/booking',
                     }),
                 }}
             />
