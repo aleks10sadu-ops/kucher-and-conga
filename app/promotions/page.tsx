@@ -52,7 +52,7 @@ export default function PromotionsPage() {
                 {/* Герой с фото зала под тёмным слоем */}
                 <section className="relative overflow-hidden">
                     <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/88 via-forest-ink/90 to-forest-ink" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/92 via-forest-ink/93 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">{SITE.city}</span>
                         <h1 className="mt-2 max-w-[16ch] font-display text-[clamp(2.4rem,6vw,4.2rem)] font-black leading-[1.04] text-cream">

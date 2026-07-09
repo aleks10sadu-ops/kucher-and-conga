@@ -1,14 +1,16 @@
 'use client';
 
-// Лёгкое поле спор для внутренних страниц: споры дрейфуют в пустых местах фона,
-// реагируют на ветер курсора (резкий рывок сдувает, аккуратное подведение — лопает
-// с разлётом и респавном), курсор оставляет прорастающий след-папоротник.
-// Самодостаточно (без счётчика лендинга): кладётся абсолютным слоем в relative-контейнер.
+// Поле спор для секций страниц. Споры дрейфуют ТОЛЬКО в пустых местах фона:
+// у карточек/картинок есть «забор» — зоны-исключения, куда споры не залетают и где
+// не появляются (при респавне выбирается пустая точка, при заносе ветром — отталкивание).
+// Реагируют на курсор (ветер + лопание с разлётом). Кладётся абсолютным слоем в
+// relative-контейнер ПЕРЕД контентом (контент — z-10, споры за ним по DOM-порядку).
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 
 type Spore = { id: number; top: string; left: string; size: number };
+type Zone = { x: number; y: number; w: number; h: number };
 
 const rnd = (seed: number) => { const x = Math.sin(seed) * 10000; return x - Math.floor(x); };
 const FILAMENTS = Array.from({ length: 12 }, (_, i) => {
@@ -86,6 +88,19 @@ function Burst({ left, top, size }: { left: number; top: number; size: number })
     );
 }
 
+const inZone = (px: number, py: number, zones: Zone[]) =>
+    zones.some((z) => px > z.x && px < z.x + z.w && py > z.y && py < z.y + z.h);
+
+// Случайная пустая точка (в %), не попадающая в зоны-исключения.
+function emptyPercent(zones: Zone[], w: number, h: number): { left: string; top: string } {
+    for (let i = 0; i < 30; i++) {
+        const px = w * (0.03 + Math.random() * 0.94);
+        const py = h * (0.05 + Math.random() * 0.9);
+        if (!inZone(px, py, zones)) return { left: (px / w * 100).toFixed(2) + '%', top: (py / h * 100).toFixed(2) + '%' };
+    }
+    return { left: (3 + Math.random() * 92).toFixed(2) + '%', top: (5 + Math.random() * 86).toFixed(2) + '%' };
+}
+
 export default function SporeField({ count = 14, className = '', fern = true }: { count?: number; className?: string; fern?: boolean }) {
     const reduce = useReducedMotion();
     const rootRef = useRef<HTMLDivElement>(null);
@@ -105,8 +120,58 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
     const mouse = useRef({ x: -9999, y: -9999, in: false, spd: 0 });
     const lastFern = useRef({ x: 0, y: 0, t: 0 });
     const idRef = useRef(10000);
+    const zonesRef = useRef<Zone[]>([]);
+    const sizeRef = useRef({ w: 1000, h: 1000 });
 
     useEffect(() => { sporesRef.current = spores; }, [spores]);
+
+    // Пересчёт зон-исключений («забора»): карточки и картинки контента. Позиции
+    // считаются относительно слоя спор; и слой, и карточки скроллятся вместе, поэтому
+    // пересчёт нужен только при монтировании/resize/подгрузке контента, не на скролл.
+    const recompute = () => {
+        const el = rootRef.current; if (!el) return;
+        const rr = el.getBoundingClientRect();
+        sizeRef.current = { w: rr.width, h: rr.height };
+        const section = el.parentElement;
+        const zones: Zone[] = [];
+        if (section) {
+            const m = 14; // отступ забора вокруг элемента
+            const nodes = section.querySelectorAll('[class*="rounded-2xl"],[class*="rounded-xl"],img:not([aria-hidden])');
+            nodes.forEach((n) => {
+                const r = (n as HTMLElement).getBoundingClientRect();
+                if (r.width < 12 || r.height < 12) return;
+                zones.push({ x: r.left - rr.left - m, y: r.top - rr.top - m, w: r.width + 2 * m, h: r.height + 2 * m });
+            });
+        }
+        zonesRef.current = zones;
+        // Переселяем «домашние» точки спор, попавшие в зоны, в пустые места.
+        let changed = false;
+        const next = sporesRef.current.map((s) => {
+            const bx = parseFloat(s.left) / 100 * rr.width;
+            const by = parseFloat(s.top) / 100 * rr.height;
+            if (inZone(bx, by, zones)) {
+                changed = true;
+                return { ...s, ...emptyPercent(zones, rr.width, rr.height) };
+            }
+            return s;
+        });
+        if (changed) setSpores(next);
+    };
+
+    useEffect(() => {
+        recompute();
+        const timers = [80, 350, 900, 1800].map((ms) => setTimeout(recompute, ms));
+        const onResize = () => recompute();
+        window.addEventListener('resize', onResize);
+        let ro: ResizeObserver | null = null;
+        const section = rootRef.current?.parentElement;
+        if (section && typeof ResizeObserver !== 'undefined') {
+            ro = new ResizeObserver(() => recompute());
+            ro.observe(section);
+        }
+        return () => { timers.forEach(clearTimeout); window.removeEventListener('resize', onResize); ro?.disconnect(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const pop = (id: number, px: number, py: number, size: number) => {
         if (popping.current.has(id)) return;
@@ -116,12 +181,8 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
         setTimeout(() => { setBursts((b) => b.filter((z) => z.id !== bid)); popping.current.delete(id); }, 700);
         runtime.current.delete(id);
         spanRefs.current.delete(id);
-        const repl: Spore = {
-            id: idRef.current++,
-            top: (5 + Math.random() * 86).toFixed(2) + '%',
-            left: (3 + Math.random() * 92).toFixed(2) + '%',
-            size: Math.round(18 + Math.random() * 14),
-        };
+        const pos = emptyPercent(zonesRef.current, sizeRef.current.w, sizeRef.current.h);
+        const repl: Spore = { id: idRef.current++, ...pos, size: Math.round(18 + Math.random() * 14) };
         setSpores((prev) => prev.filter((z) => z.id !== id).concat(repl));
     };
 
@@ -168,6 +229,7 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
             const el = rootRef.current;
             const w = el ? el.clientWidth : 1000, h = el ? el.clientHeight : 1000;
             const m = mouse.current;
+            const zones = zonesRef.current;
             for (const s of sporesRef.current) {
                 const bx = (parseFloat(s.left) / 100) * w;
                 const by = (parseFloat(s.top) / 100) * h;
@@ -188,6 +250,15 @@ export default function SporeField({ count = 14, className = '', fern = true }: 
                 }
                 rt.vx += (ax - rt.x) * 0.02;
                 rt.vy += (ay - rt.y) * 0.02;
+                // «Забор»: если спору занесло в зону элемента — выталкиваем к ближайшей грани.
+                for (const z of zones) {
+                    if (rt.x > z.x && rt.x < z.x + z.w && rt.y > z.y && rt.y < z.y + z.h) {
+                        const dl = rt.x - z.x, dr = z.x + z.w - rt.x, dt = rt.y - z.y, db = z.y + z.h - rt.y;
+                        const mn = Math.min(dl, dr, dt, db);
+                        const F = 0.55;
+                        if (mn === dl) rt.vx -= F; else if (mn === dr) rt.vx += F; else if (mn === dt) rt.vy -= F; else rt.vy += F;
+                    }
+                }
                 rt.vx *= 0.87; rt.vy *= 0.87;
                 rt.x += rt.vx; rt.y += rt.vy;
                 const node = spanRefs.current.get(s.id);

@@ -10,7 +10,7 @@ export default function LegalLayout({ title, updated, children }: { title: strin
             <main className="min-h-screen bg-forest-ink font-body text-cream">
                 <section className="relative overflow-hidden border-b border-white/5 px-5 pb-8 pt-20 md:px-8 md:pt-28">
                     <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/90 to-forest-ink" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/93 via-forest-ink/93 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[820px]">
                         <h1 className="font-display text-[clamp(1.9rem,4.5vw,3.2rem)] font-black leading-[1.08] text-cream">{title}</h1>
                         {updated && <p className="mt-3 text-sm text-cream/50">Редакция от {updated}</p>}
