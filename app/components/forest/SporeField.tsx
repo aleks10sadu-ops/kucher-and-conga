@@ -86,7 +86,7 @@ function Burst({ left, top, size }: { left: number; top: number; size: number })
     );
 }
 
-export default function SporeField({ count = 14, className = '' }: { count?: number; className?: string }) {
+export default function SporeField({ count = 14, className = '', fern = true }: { count?: number; className?: string; fern?: boolean }) {
     const reduce = useReducedMotion();
     const rootRef = useRef<HTMLDivElement>(null);
     const makeInitial = (): Spore[] => Array.from({ length: count }, (_, i) => ({
@@ -143,7 +143,7 @@ export default function SporeField({ count = 14, className = '' }: { count?: num
             const inb = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
             m.spd = Math.min(70, Math.hypot(x - m.x, y - m.y));
             m.x = x; m.y = y; m.in = inb;
-            if (inb) {
+            if (inb && fern) {
                 const lf = lastFern.current;
                 const now = performance.now();
                 if (Math.hypot(x - lf.x, y - lf.y) > 44 && now - lf.t > 55) {
@@ -154,6 +154,8 @@ export default function SporeField({ count = 14, className = '' }: { count?: num
         };
         window.addEventListener('pointermove', onMove, { passive: true });
         return () => window.removeEventListener('pointermove', onMove);
+        // fern — константный проп на инстанс, читается из замыкания; размер deps постоянен.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reduce]);
 
     useEffect(() => {
