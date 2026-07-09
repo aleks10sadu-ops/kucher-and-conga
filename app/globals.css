@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Аккуратный тонкий скроллбар (латунь) для горизонтальных лент — категории меню и т.п. */
+.scrollbar-brass {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(194, 148, 85, 0.45) transparent;
+}
+.scrollbar-brass::-webkit-scrollbar { height: 6px; }
+.scrollbar-brass::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-brass::-webkit-scrollbar-thumb {
+  background: rgba(194, 148, 85, 0.4);
+  border-radius: 9999px;
+}
+.scrollbar-brass::-webkit-scrollbar-thumb:hover { background: rgba(194, 148, 85, 0.7); }
+
 /* Типографика статей «Перевёрнутого леса» (без плагина typography — самодостаточно).
    Применяется к HTML-контенту постов (события/вакансии/залы/блог). */
 .forest-prose {

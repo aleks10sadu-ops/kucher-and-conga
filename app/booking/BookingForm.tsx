@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createReservation } from '@/lib/reservations';
 import { composeReservationComment } from '@/lib/booking/composeReservation';
+import { useCart } from '@/lib/hooks/useCart';
+import {
+    evaluateBooking,
+    classifyHall,
+    banquetPackagesForHall,
+    type BookingType,
+} from '@/lib/booking/rules';
+import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquetPackages';
+import HallSelector from '../components/HallSelector';
+import BookingTypeSelector from '../components/BookingTypeSelector';
+import BanquetMenuModal from '../components/BanquetMenuModal';
 import { SITE } from '../components/forest/site';
 
 type Mode = 'admin' | 'self';
-type BookingType = 'onsite' | 'preorder' | 'banquet';
-
-const TYPE_OPTIONS: { id: BookingType; name: string; hint: string }[] = [
-    { id: 'onsite', name: 'В зале', hint: 'Закажете на месте' },
-    { id: 'preorder', name: 'Предзаказ', hint: 'Соберём блюда к приходу' },
-    { id: 'banquet', name: 'Банкет', hint: 'Сеты и меню под повод' },
-];
 
 const inputCls =
     'w-full rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
@@ -39,7 +43,45 @@ export default function BookingForm() {
     const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
 
+    // Выбор зала + банкетного пакета (режим «Выбрать зал и меню»)
+    const [hallId, setHallId] = useState<string | null>(null);
+    const [hallName, setHallName] = useState<string | null>(null);
+    const [banquetPackageId, setBanquetPackageId] = useState<string | null>(null);
+    const [banquetModalOpen, setBanquetModalOpen] = useState(false);
+    const cart = useCart();
+
     const step = (setter: (n: number) => void, val: number, delta: number, min: number) => setter(Math.max(min, val + delta));
+
+    const cartFoodSum = cart.items.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
+    const hallGroup = classifyHall(hallName);
+    const validation = evaluateBooking({
+        adults,
+        children,
+        eventDate: date,
+        eventTime: time,
+        now: new Date(),
+        hallGroup,
+        type: bookingType,
+        cartFoodSum,
+    });
+    const allowedSignature = validation.availableTypes.map((t) => (t.allowed ? '1' : '0')).join('');
+
+    // Авто-переключение типа брони, если выбранный стал недоступен (число гостей/срок изменились).
+    useEffect(() => {
+        if (mode !== 'self') return;
+        const current = validation.availableTypes.find((t) => t.type === bookingType);
+        if (current && !current.allowed) {
+            const firstAllowed = validation.availableTypes.find((t) => t.allowed);
+            if (firstAllowed) setBookingType(firstAllowed.type);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allowedSignature, bookingType, mode]);
+
+    const resetForm = () => {
+        setFirstName(''); setLastName(''); setPhone(''); setDate(''); setTime('');
+        setAdults(2); setChildren(0); setBookingType('onsite'); setComment(''); setConsent(false);
+        setHallId(null); setHallName(null); setBanquetPackageId(null);
+    };
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,18 +95,49 @@ export default function BookingForm() {
             setStatus('error');
             return;
         }
+
+        const effectiveType: BookingType = mode === 'admin' ? 'onsite' : bookingType;
+
+        // Доменные правила — только в режиме «Выбрать зал и меню».
+        if (mode === 'self') {
+            if (!hallId) {
+                setErrorMsg('Выберите зал.');
+                setStatus('error');
+                return;
+            }
+            if (!validation.canSubmit) {
+                setErrorMsg(validation.blocking[0] || 'Бронирование с такими параметрами недоступно — свяжитесь с администратором.');
+                setStatus('error');
+                return;
+            }
+            if (effectiveType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)) {
+                setErrorMsg('Выберите банкетный пакет для этого зала.');
+                setStatus('error');
+                return;
+            }
+        }
+
         setStatus('sending');
         setErrorMsg('');
 
-        const effectiveType: BookingType = mode === 'admin' ? 'onsite' : bookingType;
+        const banquetPackageName =
+            mode === 'self' && effectiveType === 'banquet'
+                ? BANQUET_PACKAGES.find((p) => p.id === banquetPackageId)?.name ?? null
+                : null;
+        const preorderItems =
+            mode === 'self' && effectiveType === 'preorder'
+                ? cart.items.map((c) => ({ name: c.name, qty: c.qty, price: c.price }))
+                : [];
+        const preorderSum = mode === 'self' && effectiveType === 'preorder' ? cartFoodSum : 0;
+
         const composedComment = composeReservationComment({
             adults,
             children,
             bookingType: effectiveType,
-            hallName: null,
-            cartItems: [],
-            cartFoodSum: 0,
-            banquetPackageName: null,
+            hallName: mode === 'self' ? hallName : null,
+            cartItems: preorderItems,
+            cartFoodSum: preorderSum,
+            banquetPackageName,
             comment,
         });
 
@@ -81,9 +154,9 @@ export default function BookingForm() {
                 adults,
                 children,
                 bookingType: effectiveType,
-                banquetPackageId: null,
+                banquetPackageId: mode === 'self' ? banquetPackageId : null,
                 comment,
-                hallId: null,
+                hallId: mode === 'self' ? hallId : null,
                 composedComment,
             });
             crmOk = !!result.success;
@@ -106,10 +179,10 @@ export default function BookingForm() {
                     adults,
                     children,
                     bookingType: effectiveType,
-                    hallName: null,
-                    cartItems: [],
-                    cartFoodSum: 0,
-                    banquetPackageName: null,
+                    hallName: mode === 'self' ? hallName : null,
+                    cartItems: preorderItems,
+                    cartFoodSum: preorderSum,
+                    banquetPackageName,
                     mode,
                     comment,
                 }),
@@ -121,6 +194,7 @@ export default function BookingForm() {
 
         if (crmOk || telegramOk) {
             setStatus('ok');
+            if (mode === 'self' && effectiveType === 'preorder') cart.clear();
         } else {
             setStatus('error');
             setErrorMsg('Не удалось отправить заявку. Позвоните нам, пожалуйста.');
@@ -133,10 +207,10 @@ export default function BookingForm() {
                 <div className="mb-3 text-3xl">🌿</div>
                 <h3 className="font-display text-2xl font-bold">Заявка принята</h3>
                 <p className="mx-auto mt-2 max-w-[42ch] text-cream/75">
-                    Администратор свяжется с вами, чтобы подтвердить бронь и подобрать стол.
+                    Бронь подтверждает администратор — он свяжется с вами, чтобы согласовать детали.
                 </p>
                 <button
-                    onClick={() => { setStatus('idle'); setFirstName(''); setLastName(''); setPhone(''); setDate(''); setTime(''); setComment(''); setConsent(false); }}
+                    onClick={() => { setStatus('idle'); resetForm(); }}
                     className="mt-6 rounded-lg border border-white/15 bg-white/[0.05] px-6 py-2.5 text-sm text-cream transition-colors hover:bg-white/[0.1]"
                 >
                     Оставить ещё одну
@@ -144,6 +218,12 @@ export default function BookingForm() {
             </div>
         );
     }
+
+    const selfSubmitBlocked =
+        mode === 'self' &&
+        (!validation.canSubmit ||
+            !hallId ||
+            (bookingType === 'banquet' && !isBanquetPackageAllowed(banquetPackagesForHall(hallGroup), banquetPackageId)));
 
     return (
         <form onSubmit={onSubmit} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 md:p-8">
@@ -163,6 +243,20 @@ export default function BookingForm() {
                 ))}
             </div>
 
+            {/* Карусель залов — только в режиме «Выбрать зал и меню» */}
+            {mode === 'self' && (
+                <div className="mb-6">
+                    <HallSelector
+                        selectedHallId={hallId}
+                        onSelect={(id, name) => {
+                            setHallId(id);
+                            setHallName(name ?? null);
+                            setBanquetPackageId(null);
+                        }}
+                    />
+                </div>
+            )}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <input value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={100} placeholder="Имя *" className={inputCls} />
                 <input value={lastName} onChange={(e) => setLastName(e.target.value)} maxLength={100} placeholder="Фамилия" className={inputCls} />
@@ -179,29 +273,61 @@ export default function BookingForm() {
                 <Stepper label="Детей" value={children} onDec={() => step(setChildren, children, -1, 0)} onInc={() => step(setChildren, children, 1, 0)} />
             </div>
 
-            {/* Тип меню — только в режиме «сам» */}
+            {/* Тип брони + правила — только в режиме «сам» */}
             {mode === 'self' && (
-                <div className="mt-5">
-                    <div className="mb-2 text-sm text-cream/70">Тип брони</div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        {TYPE_OPTIONS.map((t) => (
+                <div className="mt-5 space-y-4">
+                    <div className="text-sm text-cream/70">Тип брони</div>
+                    <BookingTypeSelector validation={validation} selectedType={bookingType} onSelect={setBookingType} />
+
+                    {/* Предзаказ: сводка корзины */}
+                    {bookingType === 'preorder' && (
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                            {cart.items.length === 0 ? (
+                                <p className="text-sm text-cream/70">
+                                    Наберите блюда в{' '}
+                                    <Link href="/menu" className="text-brass hover:underline">меню</Link>{' '}
+                                    — они попадут в предзаказ.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="text-sm font-semibold text-cream/85">Состав предзаказа</div>
+                                    <ul className="space-y-1">
+                                        {cart.items.map((it) => (
+                                            <li key={it.id} className="flex justify-between text-sm text-cream/70">
+                                                <span>{it.name} × {it.qty}</span>
+                                                <span>{(it.price || 0) * (it.qty || 0)} ₽</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className="flex justify-between border-t border-white/10 pt-2 text-sm font-semibold text-brass">
+                                        <span>Сумма предзаказа</span>
+                                        <span>{cartFoodSum} ₽</span>
+                                    </div>
+                                    <Link href="/menu" className="inline-block text-xs text-cream/55 hover:text-brass">
+                                        Добавить ещё блюда в меню →
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Банкет: выбор пакета */}
+                    {bookingType === 'banquet' && (
+                        <div className="space-y-2">
                             <button
-                                key={t.id}
                                 type="button"
-                                onClick={() => setBookingType(t.id)}
-                                className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                                    bookingType === t.id ? 'border-brass bg-brass/10' : 'border-white/12 bg-white/[0.03] hover:bg-white/[0.06]'
-                                }`}
+                                onClick={() => setBanquetModalOpen(true)}
+                                className="w-full rounded-xl bg-white/10 py-3 font-semibold text-cream transition hover:bg-white/20"
                             >
-                                <div className="text-sm font-semibold text-cream">{t.name}</div>
-                                <div className="mt-0.5 text-[12px] text-cream/55">{t.hint}</div>
+                                {banquetPackageId ? 'Изменить банкетный пакет' : 'Выбрать банкетный пакет'}
                             </button>
-                        ))}
-                    </div>
-                    <p className="mt-2 text-[12px] text-cream/45">
-                        Хотите конкретный зал — напишите в комментарии. Все залы:{' '}
-                        <Link href="/halls" className="text-brass hover:underline">залы и банкеты</Link>.
-                    </p>
+                            {banquetPackageId && (
+                                <p className="text-center text-sm text-brass">
+                                    Выбран пакет: {BANQUET_PACKAGES.find((p) => p.id === banquetPackageId)?.name}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -227,16 +353,29 @@ export default function BookingForm() {
             <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                 <button
                     type="submit"
-                    disabled={status === 'sending'}
+                    disabled={status === 'sending' || selfSubmitBlocked}
                     className="w-full rounded-lg bg-terracotta px-8 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50 sm:w-auto"
                 >
                     {status === 'sending' ? 'Отправляем…' : 'Забронировать стол'}
                 </button>
                 <span className="text-[13px] text-cream/50">
-                    или позвоните{' '}
+                    Бронь подтверждает администратор — или позвоните{' '}
                     <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">{SITE.phones[0].label}</a>
                 </span>
             </div>
+
+            {/* Модалка выбора банкетного пакета */}
+            <BanquetMenuModal
+                isOpen={banquetModalOpen}
+                onClose={() => setBanquetModalOpen(false)}
+                selectable
+                hallFilter={banquetPackagesForHall(hallGroup)}
+                selectedPackageId={banquetPackageId}
+                onSelectPackage={(id) => {
+                    setBanquetPackageId(id);
+                    setBanquetModalOpen(false);
+                }}
+            />
         </form>
     );
 }

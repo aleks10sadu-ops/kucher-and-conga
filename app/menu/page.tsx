@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Search, X } from 'lucide-react';
 import { getMenuData } from '../actions/getMenu';
 import BanquetMenuModal from '../components/BanquetMenuModal';
 import BusinessLunchConstructor from '../components/BusinessLunchConstructor';
@@ -44,6 +44,7 @@ function MenuContent() {
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [query, setQuery] = useState('');
 
     // Заказ: корзина + модалка блюда + оформление доставки
     const cart = useCart();
@@ -80,6 +81,14 @@ function MenuContent() {
     ];
     const availableTypes = TYPE_DEFS.filter((t) => t.id === 'banquet' || (menuByType[t.id]?.categories?.length ?? 0) > 0);
     const categories = menuByType[activeType]?.categories || [];
+
+    // Быстрый поиск по названию/описанию/тегам блюда в текущем разделе меню.
+    const q = query.trim().toLowerCase();
+    const itemMatches = (it: any) =>
+        !q || [it.name, it.description, it.type, it.grape].some((v) => String(v || '').toLowerCase().includes(q));
+    const shownCategories = q
+        ? categories.map((c: any) => ({ ...c, items: c.items.filter(itemMatches) })).filter((c: any) => c.items.length)
+        : categories;
 
     const selectType = (id: string) => {
         if (id === 'banquet') { setIsBanquetOpen(true); return; }
@@ -139,9 +148,32 @@ function MenuContent() {
                             </div>
                         )}
 
-                        {activeType !== 'business' && categories.length > 0 && (
+                        {activeType !== 'business' && (
+                            <div className="relative mb-2">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cream/40" />
+                                <input
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Поиск по меню…"
+                                    aria-label="Поиск по меню"
+                                    className="w-full rounded-lg border border-white/12 bg-white/[0.04] py-2 pl-9 pr-9 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/50"
+                                />
+                                {query && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuery('')}
+                                        aria-label="Очистить поиск"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-cream/50 transition-colors hover:bg-white/10 hover:text-cream"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {activeType !== 'business' && categories.length > 0 && !q && (
                             <>
-                                <div className="hidden gap-5 overflow-x-auto pb-1 md:flex">
+                                <div className="scrollbar-brass hidden gap-5 overflow-x-auto pb-1 md:flex">
                                     {categories.map((category: any) => (
                                         <button
                                             key={category.id}
@@ -197,7 +229,10 @@ function MenuContent() {
                         <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items)} onAddToCart={cart.add} />
                     ) : (
                         <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
-                            {categories.map((category: any) => (
+                            {q && shownCategories.length === 0 && (
+                                <p className="py-16 text-center text-cream/55">По запросу «{query}» ничего не нашлось.</p>
+                            )}
+                            {shownCategories.map((category: any) => (
                                 <section key={category.id} id={category.id} className="scroll-mt-[172px]">
                                     <h2 className="mb-7 border-b border-white/10 pb-3 font-display text-2xl font-bold text-cream md:text-3xl">
                                         {category.name}

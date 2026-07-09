@@ -29,13 +29,13 @@ export default function BookingTypeSelector({ validation, selectedType, onSelect
               onClick={() => t.allowed && onSelect(t.type)}
               className={`text-left rounded-xl border px-3 py-2 transition ${
                 active
-                  ? 'border-amber-400 bg-amber-400/10'
+                  ? 'border-brass bg-brass/10'
                   : 'border-white/15 bg-white/5 hover:bg-white/10'
               } ${!t.allowed ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
-              <div className="font-semibold text-sm">{LABEL[t.type]}</div>
+              <div className="font-semibold text-sm text-cream">{LABEL[t.type]}</div>
               {!t.allowed && t.reason && (
-                <div className="text-[11px] text-neutral-400 mt-0.5">{t.reason}</div>
+                <div className="text-[11px] text-cream/55 mt-0.5">{t.reason}</div>
               )}
             </button>
           );
@@ -43,7 +43,7 @@ export default function BookingTypeSelector({ validation, selectedType, onSelect
       </div>
 
       {validation.info.map((m, i) => (
-        <div key={`info-${i}`} className="text-xs text-amber-300/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
+        <div key={`info-${i}`} className="text-xs text-brass bg-brass/10 border border-brass/25 rounded-lg px-3 py-2">
           {m}
         </div>
       ))}
