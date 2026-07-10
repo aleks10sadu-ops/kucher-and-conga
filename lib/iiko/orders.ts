@@ -25,6 +25,8 @@ export interface CreateSiteDeliveryArgs {
     full: string;
     city: string | null;
     street: string | null;
+    /** реальный streetId из справочника iiko; при наличии передаётся вместо имени */
+    streetId?: string | null;
     house: string | null;
     building?: string | null;
     entrance?: string | null;
@@ -85,10 +87,10 @@ export async function createSiteDelivery(args: CreateSiteDeliveryArgs): Promise<
         ? { coordinates: { latitude: args.address.latitude, longitude: args.address.longitude } }
         : {}),
       address: {
-        street: {
-          name: args.address.street || args.address.full,
-          city: args.address.city || 'Дмитров',
-        },
+        // streetId из справочника iiko — касса всегда покажет улицу; иначе имя строкой (fallback)
+        street: args.address.streetId
+          ? { id: args.address.streetId }
+          : { name: args.address.street || args.address.full, city: args.address.city || 'Дмитров' },
         house: args.address.house || '-',
         ...(args.address.building ? { building: args.address.building } : {}),
         ...(args.address.entrance ? { entrance: args.address.entrance } : {}),

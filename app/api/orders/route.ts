@@ -3,6 +3,7 @@
 // поэтому здесь в TG ничего не отправляем.
 import { NextResponse, NextRequest } from 'next/server';
 import { createSiteDelivery, type SiteOrderItem } from '@/lib/iiko/orders';
+import { resolveStreet } from '@/lib/iiko/streets';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
@@ -144,6 +145,9 @@ export async function POST(req: NextRequest) {
     }
 
     const parsed = parseAddress(p.address);
+    // Резолвим улицу в реальный streetId справочника iiko, чтобы касса показывала
+    // название, а не прочерки. Не нашли/ошибка — откат на имя строкой внутри createSiteDelivery.
+    const resolved = await resolveStreet(parsed.city, parsed.street);
     const details = composeAddressDetails(p);
     const { orderId } = await createSiteDelivery({
       phone: normalizePhone(p.phone),
@@ -153,6 +157,7 @@ export async function POST(req: NextRequest) {
       items,
       address: {
         ...parsed,
+        streetId: resolved?.streetId ?? null,
         // Явное поле «дом» с формы имеет приоритет над разбором строки адреса.
         house: (p.house && p.house.trim()) || parsed.house,
         building: p.building?.trim() || null,
