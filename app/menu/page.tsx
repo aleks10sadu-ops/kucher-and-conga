@@ -5,6 +5,9 @@ import MenuClient from './MenuClient';
 // Холодный запрос к iiko (~17 с) происходит только при фоновой пересборке —
 // пользователь его никогда не ждёт. Принудительное обновление после правок меню
 // в iiko — POST /api/iiko/revalidate (вебхук/админ) или плановый cron.
+// force-static обязателен: внутренние fetch'и iiko идут с cache:'no-store',
+// без него Next переводит роут в динамический рендер на каждый запрос.
+export const dynamic = 'force-static';
 export const revalidate = 600;
 
 export default async function MenuPage() {

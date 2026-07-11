@@ -25,6 +25,7 @@ async function resolveExternalMenuId(token: string): Promise<string> {
     const target = externalMenuName.toLowerCase();
     const found = (list.externalMenus ?? []).find((m) => (m.name ?? '').trim().toLowerCase() === target);
     if (found) {
+      console.log(`[iiko] external menu resolved by name: "${externalMenuName}" -> ${found.id} (of ${(list.externalMenus ?? []).length}: ${(list.externalMenus ?? []).map((m) => `${m.name}=${m.id}`).join(', ')})`);
       resolvedMenu = { id: found.id, expiresAt: now + MENU_ID_TTL_MS };
       return found.id;
     }
