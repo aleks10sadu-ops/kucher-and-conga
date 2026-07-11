@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 type Props = { vacancyTitle: string };
 
-const inputCls = 'w-full rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
+const inputCls = 'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
 
 // Анкета отклика на вакансию. Пишется в Google Таблицу через /api/vacancy-apply.
 export default function VacancyApplyForm({ vacancyTitle }: Props) {

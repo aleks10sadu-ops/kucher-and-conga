@@ -1,51 +1,19 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
-import { createSupabaseBrowserClient } from '../../../lib/supabase/client';
+import { loadContentPostServer } from '@/lib/content/loadContentPosts.server';
 import VacancyApplyForm from '../../components/VacancyApplyForm';
-import ForestPostView, { ForestPostLoading, ForestPostNotFound, ForestPost } from '../../components/forest/ForestPostView';
+import ForestPostView, { ForestPostNotFound } from '../../components/forest/ForestPostView';
 
-export default function VacancyPostPage() {
-    const params = useParams();
-    const slug = params?.slug as string;
-    const [post, setPost] = useState<(ForestPost & { title: string }) | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+// ISR: пост рендерится на сервере — браузер посетителя не ходит в Supabase (замедлен в РФ).
+export const dynamic = 'force-static';
+export const revalidate = 300;
 
-    useEffect(() => {
-        if (!slug) return;
-        (async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const supabase = createSupabaseBrowserClient() as any;
-                if (!supabase) {
-                    setError('Supabase не настроен');
-                    return;
-                }
-                const { data, error: fetchError } = await supabase
-                    .from('content_posts')
-                    .select('*')
-                    .eq('category', 'vacancies')
-                    .eq('slug', slug)
-                    .eq('is_published', true)
-                    .maybeSingle();
-                if (fetchError) setError('Ошибка загрузки');
-                else if (!data) setError('Запись не найдена');
-                else setPost(data);
-            } catch (err) {
-                console.error('Error:', err);
-                setError('Ошибка загрузки');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [slug]);
+export default async function VacancyPostPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    const post = await loadContentPostServer('vacancies', slug);
 
-    if (loading) return <ForestPostLoading />;
-    if (error || !post) return <ForestPostNotFound backHref="/vacancies" backLabel="Ко всем вакансиям" title="Вакансия не найдена" message={error || undefined} />;
+    if (!post) {
+        return <ForestPostNotFound backHref="/vacancies" backLabel="Ко всем вакансиям" title="Вакансия не найдена" />;
+    }
 
     return (
         <ForestPostView

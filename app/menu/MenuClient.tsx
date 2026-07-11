@@ -100,7 +100,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
 
     const pill = (active: boolean) =>
         `rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            active ? 'bg-terracotta text-[#FBF3EA]' : 'border border-white/12 bg-white/[0.04] text-cream/75 hover:bg-white/[0.09]'
+            active ? 'bg-terracotta text-[#FBF3EA]' : 'border border-white/10 bg-white/[0.04] text-cream/75 hover:bg-white/[0.09]'
         }`;
 
     return (
@@ -110,7 +110,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                 {/* Компактный заголовок */}
                 <section className="relative overflow-hidden border-b border-white/5 px-5 pb-7 pt-10 md:px-8 md:pt-14">
                     <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/92 via-forest-ink/93 to-forest-ink" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1000px]">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Кухня, бар, доставка</span>
                         <h1 className="mt-2 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-black leading-[1.05] text-cream">Меню</h1>
@@ -138,7 +138,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder="Поиск по меню…"
                                     aria-label="Поиск по меню"
-                                    className="w-full rounded-lg border border-white/12 bg-white/[0.04] py-2 pl-9 pr-9 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/50"
+                                    className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 pl-9 pr-9 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/50"
                                 />
                                 {query && (
                                     <button
@@ -288,7 +288,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                                                                         <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-cream/80 md:text-sm">
                                                                             <span>{group.name}</span>
                                                                             {group.min > 0 && (
-                                                                                <span className="rounded bg-brass/12 px-1.5 py-0.5 text-[10px] text-brass md:text-xs">обязательно</span>
+                                                                                <span className="rounded bg-brass/10 px-1.5 py-0.5 text-[10px] text-brass md:text-xs">обязательно</span>
                                                                             )}
                                                                         </div>
                                                                         <div className="flex flex-wrap gap-2">
@@ -328,7 +328,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                                                                             <Plus className="h-4 w-4" /> В корзину
                                                                         </button>
                                                                     ) : (
-                                                                        <div className="inline-flex items-center gap-3 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1.5">
+                                                                        <div className="inline-flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
                                                                             <button type="button" onClick={() => cart.dec(item.id)} aria-label="Меньше" className="grid h-8 w-8 place-items-center rounded-md bg-white/[0.06] text-cream transition-colors hover:bg-white/[0.12]"><Minus className="h-4 w-4" /></button>
                                                                             <span className="min-w-[2ch] text-center font-semibold text-cream">{qty}</span>
                                                                             <button type="button" onClick={() => setQty(qty + 1)} aria-label="Больше" className="grid h-8 w-8 place-items-center rounded-md bg-terracotta text-[#FBF3EA] transition-colors hover:bg-terracotta-dark"><Plus className="h-4 w-4" /></button>

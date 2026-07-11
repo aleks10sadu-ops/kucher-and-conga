@@ -1,10 +1,56 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { CartItem } from '@/types/index';
+
+// Корзина живёт в localStorage: переживает переходы между страницами
+// (меню → бронь с предзаказом) и синхронизируется между вкладками —
+// блюда, добавленные в меню в соседней вкладке, сразу видны в форме брони.
+const STORAGE_KEY = 'kucher-cart-v1';
+const SYNC_EVENT = 'kucher-cart-updated';
+
+function readStoredCart(): CartItem[] {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
 
 export function useCart() {
     const [items, setItems] = useState<CartItem[]>([]);
+    // Именно state, а не ref: эффект сохранения при первом прогоне должен увидеть
+    // false и пропустить запись (ref выставился бы синхронно в том же коммите —
+    // и пустой initial-state затёр бы сохранённую корзину).
+    const [hydrated, setHydrated] = useState(false);
+
+    // Восстановление после mount (не в инициализаторе — иначе рассинхрон гидрации)
+    // + подписка на изменения из других вкладок (storage) и этой же вкладки (SYNC_EVENT).
+    useEffect(() => {
+        setItems(readStoredCart());
+        setHydrated(true);
+        const sync = () => setItems(readStoredCart());
+        const onStorage = (e: StorageEvent) => { if (e.key === STORAGE_KEY) sync(); };
+        window.addEventListener('storage', onStorage);
+        window.addEventListener(SYNC_EVENT, sync);
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener(SYNC_EVENT, sync);
+        };
+    }, []);
+
+    // Сохранение изменений; если состояние совпадает с хранилищем (пришло извне) — не эхаем.
+    useEffect(() => {
+        if (!hydrated) return;
+        try {
+            const json = JSON.stringify(items);
+            if (localStorage.getItem(STORAGE_KEY) === json) return;
+            localStorage.setItem(STORAGE_KEY, json);
+            window.dispatchEvent(new Event(SYNC_EVENT));
+        } catch { /* private mode и т.п. — корзина работает в памяти */ }
+    }, [items, hydrated]);
 
     const add = useCallback((product: CartItem) => {
         setItems(prev => {

@@ -10,35 +10,17 @@ import HallEditor from './HallEditor';
 import HallViewer from './HallViewer';
 import { createCrmBrowserClient } from '@/lib/supabase/crm-client';
 
-type Hall = {
-    id: string; // The ID to use for API (from CRM or fallback)
-    name: string;
-    capacity: number | string;
-    description: string;
-    image: string;
-    gallery?: string[];
-    dbId?: number | string; // The ID in local Supabase for content
-};
-
-// Базовые данные залов (фолбэк для первого рендера / если CRM недоступна).
-// Реальные ID подтягиваются из CRM в loadHallsFromDB.
-const initialHalls: Hall[] = [
-    { id: 'fallback-1', name: 'Conga', capacity: 140, description: 'Главный зал ресторана Conga — подвешенный лес и лампы-грибы.', image: '/halls/conga.jpg' },
-    { id: 'fallback-2', name: 'Морской (Кучер)', capacity: 52, description: 'Морской зал ресторана Кучер.', image: '/halls/morskoy.jpg' },
-    { id: 'fallback-3', name: 'Барный (Кучер)', capacity: 36, description: 'Уютный барный зал.', image: '/halls/bar.jpg' },
-    { id: 'fallback-4', name: 'Веранда (Кучер)', capacity: 20, description: 'Веранда ресторана Кучер.', image: '/halls/veranda.jpg' },
-    { id: 'fallback-5', name: 'Кальянная зона (Кучер)', capacity: 50, description: 'Летняя веранда с кальянной зоной.', image: '/halls/letka.jpg' },
-    { id: 'fallback-6', name: 'Беседки (Кучер)', capacity: '6–8', description: 'Беседки с первой по четвёртую.', image: '/halls/gazebo.jpg' },
-    { id: 'fallback-7', name: 'Банкетные залы (Кучер)', capacity: 25, description: 'Шоколад, Рубин, Изумруд — для банкетов.', image: '/halls/banquet.jpg' },
-];
+import { type Hall, FALLBACK_HALLS, mergeHalls } from '@/lib/halls/halls-data';
 
 type HallSelectorProps = {
     selectedHallId: string | null;
     onSelect: (id: string | null, name?: string | null) => void;
+    /** Залы, загруженные на сервере (ISR): браузер не ходит в Supabase/CRM (замедлены в РФ). */
+    initialHallsData?: Hall[];
 };
 
-export default function HallSelector({ selectedHallId, onSelect }: HallSelectorProps) {
-    const [halls, setHalls] = useState<Hall[]>(initialHalls);
+export default function HallSelector({ selectedHallId, onSelect, initialHallsData }: HallSelectorProps) {
+    const [halls, setHalls] = useState<Hall[]>(initialHallsData?.length ? initialHallsData : FALLBACK_HALLS);
     const [currentIndex, setCurrentIndex] = useState<number>(0);
     const { isAdmin } = useAdminCheck();
     const [editingHall, setEditingHall] = useState<Hall | null>(null);
@@ -73,44 +55,8 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
                 else localContent = data || [];
             }
 
-            if (crmHalls.length > 0) {
-                const nameMapping: Record<string, string> = { 'Летка': 'Кальянная зона (Кучер)' };
-                const mergedHalls = crmHalls.map((crmHall) => {
-                    const normalizedName = nameMapping[crmHall.name] || crmHall.name;
-                    const localEntry =
-                        localContent.find((p: any) => p.title.toLowerCase() === normalizedName.toLowerCase()) ||
-                        localContent.find((p: any) => p.title.toLowerCase() === crmHall.name.toLowerCase());
-                    const initialEntry =
-                        initialHalls.find((h) => h.name.toLowerCase() === normalizedName.toLowerCase()) ||
-                        initialHalls.find((h) => h.name.toLowerCase() === crmHall.name.toLowerCase());
-                    return {
-                        id: crmHall.id,
-                        name: normalizedName,
-                        capacity: crmHall.capacity || localEntry?.metadata?.capacity || initialEntry?.capacity || 0,
-                        description: localEntry?.content || initialEntry?.description || '',
-                        image: localEntry?.image_url || initialEntry?.image || '/halls/placeholder.jpg',
-                        gallery: localEntry?.metadata?.gallery || [],
-                        dbId: localEntry?.id,
-                    };
-                });
-                setHalls(mergedHalls);
-            } else if (localContent.length > 0) {
-                setHalls((prevHalls) =>
-                    prevHalls.map((hall) => {
-                        const dbEntry = localContent.find((p: any) => p.title.toLowerCase() === hall.name.toLowerCase());
-                        if (dbEntry) {
-                            return {
-                                ...hall,
-                                description: dbEntry.content || hall.description,
-                                image: dbEntry.image_url || hall.image,
-                                capacity: dbEntry.metadata?.capacity || hall.capacity,
-                                gallery: dbEntry.metadata?.gallery || [],
-                                dbId: dbEntry.id,
-                            };
-                        }
-                        return hall;
-                    }),
-                );
+            if (crmHalls.length > 0 || localContent.length > 0) {
+                setHalls(mergeHalls(crmHalls, localContent));
             }
         } catch (err) {
             console.error('Error loading halls:', err);
@@ -118,7 +64,10 @@ export default function HallSelector({ selectedHallId, onSelect }: HallSelectorP
     };
 
     useEffect(() => {
-        loadHallsFromDB();
+        // Данные уже пришли с сервера — клиентский поход в Supabase/CRM не нужен
+        // (и не сработал бы у посетителей без VPN). Редактор админа по-прежнему
+        // вызывает loadHallsFromDB после сохранения.
+        if (!initialHallsData?.length) loadHallsFromDB();
     }, []);
 
     useEffect(() => {

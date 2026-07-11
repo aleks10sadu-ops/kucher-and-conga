@@ -4,6 +4,12 @@ import ForestFooter from '../components/forest/ForestFooter';
 import { SITE } from '../components/forest/site';
 import SporeField from '../components/forest/SporeField';
 import BookingForm from './BookingForm';
+import { loadHallsServer } from '@/lib/halls/loadHalls.server';
+
+// ISR: залы (CRM + контент) запекаются на сервере — карусель в форме брони
+// работает и у посетителей без VPN (браузер не ходит в Supabase/CRM).
+export const dynamic = 'force-static';
+export const revalidate = 300;
 
 export const metadata: Metadata = {
     title: 'Забронировать стол — Кучер & Conga, Дмитров',
@@ -19,7 +25,8 @@ export const metadata: Metadata = {
     },
 };
 
-export default function BookingPage() {
+export default async function BookingPage() {
+    const halls = await loadHallsServer();
     return (
         <>
             <ForestHeader />
@@ -27,7 +34,7 @@ export default function BookingPage() {
                 {/* Герой */}
                 <section className="relative overflow-hidden">
                     <img src="/redesign/bron-real.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/92 via-forest-ink/93 to-forest-ink" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1080px] px-5 pb-12 pt-20 md:px-8 md:pb-16 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Бронь · {SITE.city}</span>
                         <h1 className="mt-2 max-w-[16ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04] text-cream">
@@ -46,7 +53,7 @@ export default function BookingPage() {
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <SporeField count={16} fern={false} />
                     <div className="relative z-10 mx-auto grid max-w-[1080px] grid-cols-1 gap-8 px-5 md:px-8 lg:grid-cols-[1.6fr_1fr]">
-                        <BookingForm />
+                        <BookingForm serverHalls={halls} />
 
                         <aside className="flex flex-col gap-6">
                             <InfoCard title="Часы для броней">

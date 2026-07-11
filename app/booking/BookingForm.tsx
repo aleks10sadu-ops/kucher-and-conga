@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createReservation } from '@/lib/reservations';
 import { composeReservationComment } from '@/lib/booking/composeReservation';
 import { useCart } from '@/lib/hooks/useCart';
+import type { Hall } from '@/lib/halls/halls-data';
 import {
     evaluateBooking,
     classifyHall,
@@ -20,7 +21,7 @@ import { SITE } from '../components/forest/site';
 type Mode = 'admin' | 'self';
 
 const inputCls =
-    'w-full rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
+    'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
 
 const todayISO = () => {
     const d = new Date();
@@ -28,7 +29,8 @@ const todayISO = () => {
     return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
 };
 
-export default function BookingForm() {
+
+export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
     const [mode, setMode] = useState<Mode>('admin');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -253,6 +255,7 @@ export default function BookingForm() {
             {mode === 'self' && (
                 <div className="mb-6">
                     <HallSelector
+                        initialHallsData={serverHalls}
                         selectedHallId={hallId}
                         onSelect={(id, name) => {
                             setHallId(id);
@@ -290,11 +293,19 @@ export default function BookingForm() {
                     {bookingType === 'preorder' && (
                         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                             {cart.items.length === 0 ? (
-                                <p className="text-sm text-cream/70">
-                                    Наберите блюда в{' '}
-                                    <Link href="/menu" className="text-brass hover:underline">меню</Link>{' '}
-                                    — они попадут в предзаказ.
-                                </p>
+                                <div className="space-y-3 text-sm text-cream/70">
+                                    <p>Наберите блюда в меню — они попадут в предзаказ.</p>
+                                    {/* Новая вкладка: форма брони не сбрасывается, корзина подтянется сюда сама */}
+                                    <a
+                                        href="/menu"
+                                        target="_blank"
+                                        rel="noopener"
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-brass/40 bg-white/[0.04] px-4 py-2 font-medium text-brass transition-colors hover:bg-white/[0.09]"
+                                    >
+                                        Открыть меню в новой вкладке →
+                                    </a>
+                                    <p className="text-xs text-cream/50">Добавленные блюда появятся здесь автоматически, форма не сбросится.</p>
+                                </div>
                             ) : (
                                 <div className="space-y-2">
                                     <div className="text-sm font-semibold text-cream/85">Состав предзаказа</div>
@@ -310,9 +321,9 @@ export default function BookingForm() {
                                         <span>Сумма предзаказа</span>
                                         <span>{cartFoodSum} ₽</span>
                                     </div>
-                                    <Link href="/menu" className="inline-block text-xs text-cream/55 hover:text-brass">
-                                        Добавить ещё блюда в меню →
-                                    </Link>
+                                    <a href="/menu" target="_blank" rel="noopener" className="inline-block text-xs text-cream/55 hover:text-brass">
+                                        Добавить ещё блюда в меню (новая вкладка) →
+                                    </a>
                                 </div>
                             )}
                         </div>
@@ -393,7 +404,7 @@ export default function BookingForm() {
 
 function Stepper({ label, value, onDec, onInc }: { label: string; value: number; onDec: () => void; onInc: () => void }) {
     return (
-        <div className="rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-2.5">
+        <div className="rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-2.5">
             <div className="text-[12px] text-cream/55">{label}</div>
             <div className="mt-1 flex items-center justify-between">
                 <button type="button" onClick={onDec} aria-label={`${label}: меньше`} className="grid h-8 w-8 place-items-center rounded-md bg-white/[0.06] text-lg text-cream transition-colors hover:bg-white/[0.12]">−</button>

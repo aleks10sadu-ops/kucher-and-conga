@@ -9,7 +9,7 @@ import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { SITE } from '../components/forest/site';
 
 const inputCls =
-    'w-full rounded-lg border border-white/12 bg-forest-ink/60 px-4 py-3 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
+    'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
 
 // Определение зоны по ключевым словам улицы (fallback без Яндекс-карт).
 // Точные полигональные зоны подключаются, когда на странице загружен ymaps.
@@ -243,7 +243,7 @@ export default function DeliveryCheckout({
                                 type="button"
                                 onClick={() => set({ deliveryTime: v, deliveryTimeCustom: v === 'asap' ? '' : f.deliveryTimeCustom })}
                                 className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
-                                    f.deliveryTime === v ? 'border-brass bg-brass/10 text-cream' : 'border-white/12 bg-white/[0.03] text-cream/70 hover:bg-white/[0.06]'
+                                    f.deliveryTime === v ? 'border-brass bg-brass/10 text-cream' : 'border-white/10 bg-white/[0.03] text-cream/70 hover:bg-white/[0.06]'
                                 }`}
                             >
                                 {v === 'asap' ? 'Как можно быстрее' : 'К времени'}
@@ -265,7 +265,7 @@ export default function DeliveryCheckout({
                                 type="button"
                                 onClick={() => set({ paymentMethod: v, changeAmount: v === 'cash' ? f.changeAmount : 'no-change' })}
                                 className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
-                                    f.paymentMethod === v ? 'border-brass bg-brass/10 text-cream' : 'border-white/12 bg-white/[0.03] text-cream/70 hover:bg-white/[0.06]'
+                                    f.paymentMethod === v ? 'border-brass bg-brass/10 text-cream' : 'border-white/10 bg-white/[0.03] text-cream/70 hover:bg-white/[0.06]'
                                 }`}
                             >
                                 {label}
