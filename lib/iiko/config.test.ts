@@ -6,6 +6,7 @@ describe('getIikoConfig', () => {
     delete process.env.IIKO_API_LOGIN;
     delete process.env.IIKO_ORGANIZATION_ID;
     delete process.env.IIKO_EXTERNAL_MENU_ID;
+    delete process.env.IIKO_EXTERNAL_MENU_NAME;
     delete process.env.IIKO_BASE_URL;
   });
 
@@ -23,6 +24,7 @@ describe('getIikoConfig', () => {
       apiLogin: 'login',
       organizationId: 'org',
       externalMenuId: '79802',
+      externalMenuName: 'Сайт', // дефолт: сайт ищет внешнее меню «Сайт» по имени
       baseUrl: 'https://api-ru.iiko.services',
     });
   });

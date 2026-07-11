@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { revalidatePath } from 'next/cache';
 import { invalidateMenuCache, getIikoMenu } from '@/lib/iiko';
 import { collectImageUrls, mirrorIikoImages } from '@/lib/iiko/imageMirror';
 
@@ -44,6 +45,7 @@ function tune(req: NextRequest, defBudgetMs: number, defConcurrency: number) {
 
 async function runRevalidate(opts: { budgetMs: number; concurrency: number }) {
   invalidateMenuCache();
+  revalidatePath('/menu'); // ISR-страница меню пересоберётся на ближайшем запросе
   try {
     const menu = await getIikoMenu();
     const urls = collectImageUrls(menu);

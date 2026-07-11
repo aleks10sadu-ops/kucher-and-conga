@@ -2,6 +2,9 @@ export interface IikoConfig {
   apiLogin: string;
   organizationId: string;
   externalMenuId: string;
+  /** Имя внешнего меню iiko, которое сайт ищет в списке /api/2/menu (цены без наценки).
+   *  Если меню с таким именем нет — используется externalMenuId. Пустая строка отключает поиск. */
+  externalMenuName: string;
   baseUrl: string;
 }
 
@@ -28,6 +31,7 @@ export function getIikoConfig(): IikoConfig {
     apiLogin: apiLogin!,
     organizationId: organizationId!,
     externalMenuId: externalMenuId!,
+    externalMenuName: (process.env.IIKO_EXTERNAL_MENU_NAME ?? 'Сайт').trim(),
     baseUrl: process.env.IIKO_BASE_URL || 'https://api-ru.iiko.services',
   };
 }
