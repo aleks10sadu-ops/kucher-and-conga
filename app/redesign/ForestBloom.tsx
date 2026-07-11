@@ -72,7 +72,8 @@ const FERN = Array.from({ length: 9 }, (_, i) => {
     return { y, len };
 });
 const YANDEX_REVIEWS = 'https://yandex.ru/maps-reviews-widget/10214255530?comments';
-const YANDEX_MAP = 'https://yandex.ru/map-widget/v1/?um=constructor%3A1c90c41847ab12bb686f7ffc03fcb5b1930c854da9e094965c7ac7ad24f8e4b7&source=constructor';
+// theme=dark — нативная тёмная тема виджета карты (проверено: фон rgb(33,35,38)).
+const YANDEX_MAP = 'https://yandex.ru/map-widget/v1/?um=constructor%3A1c90c41847ab12bb686f7ffc03fcb5b1930c854da9e094965c7ac7ad24f8e4b7&source=constructor&theme=dark';
 const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
 
 // Полная навигация для выдвижного меню.
@@ -95,9 +96,12 @@ function useHeroVideo() {
             setSrc(mq.matches
                 ? { mp4: `${A}/hero-desktop.mp4`, poster: `${A}/hero-desktop-poster.jpg` }
                 : { mp4: `${A}/hero-mobile.mp4`, poster: `${A}/hero-mobile-poster.jpg` });
-        pick();
-        mq.addEventListener('change', pick);
-        return () => mq.removeEventListener('change', pick);
+        // Видео — прогрессивное улучшение поверх постера: стартуем после window.load,
+        // чтобы тяжёлый mp4 не отбирал канал у критических ресурсов первого экрана.
+        const start = () => { pick(); mq.addEventListener('change', pick); };
+        if (document.readyState === 'complete') start();
+        else window.addEventListener('load', start, { once: true });
+        return () => { window.removeEventListener('load', start); mq.removeEventListener('change', pick); };
     }, []);
     return src;
 }
@@ -158,6 +162,8 @@ export default function RedesignClient() {
                 @keyframes rfTwinkle { from{opacity:.2} to{opacity:.9} }
                 @keyframes rfSweep { from{transform:translateX(-240%) skewX(-14deg)} to{transform:translateX(340%) skewX(-14deg)} }
                 @keyframes rfFloat { 0%{transform:translate(0,0) rotate(0deg);opacity:.72} 50%{transform:translate(10px,-26px) rotate(9deg);opacity:1} 100%{transform:translate(0,0) rotate(0deg);opacity:.72} }
+                @keyframes rfHeroIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+                .rf-hero-in { animation: rfHeroIn .65s cubic-bezier(.22,1,.36,1) both; }
                 .rf-bb .rf-photo { transition: transform .7s cubic-bezier(.22,1,.36,1); will-change: transform; }
                 .rf-bb .rf-arrow { transition: transform .35s cubic-bezier(.22,1,.36,1); }
                 .rf-bb .rf-sweep { opacity: 0; }
@@ -243,6 +249,11 @@ export default function RedesignClient() {
             <div className="rf-anim">
                 {/* HERO: живой полог на видео, на весь экран */}
                 <section style={{ position: 'relative', overflow: 'hidden', height: '100svh', minHeight: 560, background: '#16211B' }}>
+                    {/* Постер в SSR-разметке: первый экран виден мгновенно, ещё до загрузки JS */}
+                    <picture>
+                        <source media="(min-width: 768px)" srcSet={`${A}/hero-desktop-poster.jpg`} />
+                        <img src={`${A}/hero-mobile-poster.jpg`} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </picture>
                     {video && (
                         <video key={video.mp4} autoPlay loop muted playsInline poster={video.poster} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
                             <source src={video.mp4} type="video/mp4" />
@@ -252,25 +263,26 @@ export default function RedesignClient() {
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(11,16,12,0.34)' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(11,16,12,0.5) 0%,rgba(11,16,12,0.18) 32%,rgba(11,16,12,0.55) 66%,rgba(11,16,12,0.94) 100%)' }} />
 
+                    {/* Вход hero-текста — чистый CSS: играет сразу с HTML, не ждёт гидрации JS */}
                     <div className="rf-hero-pad" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start', gap: 20, maxWidth: 880 }}>
-                        <motion.div style={{ display: 'flex', alignItems: 'center', gap: 14 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+                        <div className="rf-hero-in" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <span className="rf-serif" style={{ fontWeight: 900, fontSize: 'clamp(19px,2vw,27px)', color: '#F8FAF6', textShadow: '0 2px 16px rgba(0,0,0,0.55)' }}>Кучер &amp; Conga</span>
                             <span style={{ width: 34, height: 3, background: '#C0492A' }} />
                             <span style={{ fontSize: 13, color: 'rgba(248,250,246,0.84)', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>ресторан · Дмитров</span>
-                        </motion.div>
+                        </div>
 
-                        <motion.h1 className="rf-serif rf-h1" style={{ fontWeight: 900, margin: 0, lineHeight: 1.04, color: '#F8FAF6', textWrap: 'balance' as any, textShadow: '0 4px 30px rgba(0,0,0,0.55)' }} initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.08, ease: EASE }}>
+                        <h1 className="rf-serif rf-h1 rf-hero-in" style={{ fontWeight: 900, margin: 0, lineHeight: 1.04, color: '#F8FAF6', textWrap: 'balance' as any, textShadow: '0 4px 30px rgba(0,0,0,0.55)', animationDelay: '.08s' }}>
                             Здесь лес растёт с&nbsp;потолка
-                        </motion.h1>
+                        </h1>
 
-                        <motion.p className="rf-lede" style={{ margin: 0, lineHeight: 1.58, color: 'rgba(248,250,246,0.9)', maxWidth: 565, textWrap: 'pretty' as any, textShadow: '0 2px 18px rgba(0,0,0,0.6)' }} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.16, ease: EASE }}>
+                        <p className="rf-lede rf-hero-in" style={{ margin: 0, lineHeight: 1.58, color: 'rgba(248,250,246,0.9)', maxWidth: 565, textWrap: 'pretty' as any, textShadow: '0 2px 18px rgba(0,0,0,0.6)', animationDelay: '.16s' }}>
                             Над залом висит настоящий сад, а среди зелени светятся войлочные лампы-грибы. Внизу — авторская кухня, мангал и тёплый свет над каждым столом.
-                        </motion.p>
+                        </p>
 
-                        <motion.div className="rf-btns" style={{ display: 'flex', gap: 12, marginTop: 4 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.24, ease: EASE }}>
+                        <div className="rf-btns rf-hero-in" style={{ display: 'flex', gap: 12, marginTop: 4, animationDelay: '.24s' }}>
                             <Link href={LINKS.booking} className="rf-btn rf-btn-primary rf-hero-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 600, fontSize: 16, letterSpacing: '0.01em', padding: '0 36px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 8px 24px rgba(172,72,35,0.32)' }}>Забронировать стол</Link>
                             <Link href={LINKS.menu} className="rf-btn rf-btn-ghost rf-hero-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontWeight: 500, fontSize: 16, padding: '0 36px', border: '1px solid rgba(244,247,242,0.45)', color: '#FFFFFF', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(6px)' }}>Заказать доставку</Link>
-                        </motion.div>
+                        </div>
                     </div>
 
                     <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -448,13 +460,7 @@ export default function RedesignClient() {
                                 <div>
                                     <SectionHead kicker="Нам доверяют" title="Отзывы гостей" />
                                     <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', ...glass }}>
-                                        <iframe
-                                            src={YANDEX_REVIEWS}
-                                            title="Отзывы о ресторане на Яндекс.Картах"
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                            style={{ width: '100%', height: 560, border: 0, display: 'block', background: '#fff' }}
-                                        />
+                                        <LazyFrame src={YANDEX_REVIEWS} title="Отзывы о ресторане на Яндекс.Картах" height={560} dark note="Загружаем отзывы…" />
                                     </div>
                                     <div style={{ marginTop: 14 }}>
                                         <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" style={{ color: C.brass, fontSize: 14 }}>Читать все отзывы на Яндекс.Картах →</a>
@@ -465,13 +471,7 @@ export default function RedesignClient() {
                                 <div id="find">
                                     <SectionHead kicker="Дмитров" title="Как нас найти" />
                                     <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                        <iframe
-                                            src={YANDEX_MAP}
-                                            title="Ресторан Кучер и Конга на карте Дмитрова"
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                            style={{ width: '100%', height: 360, border: 0, display: 'block' }}
-                                        />
+                                        <LazyFrame src={YANDEX_MAP} title="Ресторан Кучер и Конга на карте Дмитрова" height={360} note="Загружаем карту…" />
                                     </div>
                                     <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
                                         <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Адрес</div><div style={{ fontSize: 18, color: '#EDF2EA' }}>Дмитров, Промышленная улица, 20Б</div></div>
@@ -590,9 +590,28 @@ function Fern({ x, y, rot, scale }: { x: number; y: number; rot: number; scale: 
     );
 }
 
+// Атмосферные эффекты — только на десктопе с мышью: споры и папоротник завязаны
+// на курсор, а на телефонах их рендер и rAF-физика только жгут CPU и батарею.
+function useDesktopFX() {
+    const [ok, setOk] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)');
+        const upd = () => setOk(mq.matches);
+        upd();
+        mq.addEventListener('change', upd);
+        return () => mq.removeEventListener('change', upd);
+    }, []);
+    return ok;
+}
+
+function AtmosphereFX() {
+    const desktop = useDesktopFX();
+    return desktop ? <AtmosphereFXDesktop /> : null;
+}
+
 // Атмосфера нижнего блока: споры за контентом (только в пустых местах) реагируют
 // на ветер курсора и сдуваются при резком рывке; поверх — прорастающий след-папоротник.
-function AtmosphereFX() {
+function AtmosphereFXDesktop() {
     const reduce = useReducedMotion();
     const rootRef = useRef<HTMLDivElement>(null);
     const [spores, setSpores] = useState<Spore[]>(INITIAL_SPORES);
@@ -727,9 +746,16 @@ function AtmosphereFX() {
     );
 }
 
-// Счётчик лопнутых спор (ПК). Появляется на бенто справа сверху и съезжает вниз
-// по мере скролла, паркуясь на уровне заголовка «Атмосфера»; дальше исчезает.
+// Счётчик лопнутых спор (ПК). На телефонах не монтируется вовсе — иначе его
+// scroll-обработчик крутился бы вхолостую под скрывающим CSS-классом.
 function PopCounter() {
+    const desktop = useDesktopFX();
+    return desktop ? <PopCounterDesktop /> : null;
+}
+
+// Появляется на бенто справа сверху и съезжает вниз
+// по мере скролла, паркуясь на уровне заголовка «Атмосфера»; дальше исчезает.
+function PopCounterDesktop() {
     const count = usePopCount();
     const [pos, setPos] = useState({ top: 96, visible: false });
     useEffect(() => {
@@ -756,6 +782,44 @@ function PopCounter() {
                 <span style={{ fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.brass, whiteSpace: 'nowrap' }}>Спор лопнуто</span>
                 <motion.span key={count} className="rf-serif" initial={{ scale: 1.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 15 }} style={{ fontSize: 30, fontWeight: 900, color: '#F6F9F3', lineHeight: 1 }}>{count}</motion.span>
             </div>
+        </div>
+    );
+}
+
+// Ленивый iframe: монтируется, только когда секция подъезжает к вьюпорту, — виджеты
+// Яндекса (12+ секунд загрузки) больше не тормозят первый экран. До готовности —
+// тёмная заглушка. dark — инверсия цветов для виджетов без нативной тёмной темы:
+// invert+hue-rotate возвращает оттенки на место, светлый фон становится тёмным
+// (побочный эффект — фото/аватары в отзывах тоже инвертируются).
+function LazyFrame({ src, title, height, dark = false, note }: { src: string; title: string; height: number; dark?: boolean; note: string }) {
+    const hostRef = useRef<HTMLDivElement>(null);
+    const [show, setShow] = useState(false);
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        const el = hostRef.current;
+        if (!el) return;
+        if (!('IntersectionObserver' in window)) { setShow(true); return; }
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some((e) => e.isIntersecting)) { setShow(true); io.disconnect(); }
+        }, { rootMargin: '360px 0px' });
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
+    return (
+        <div ref={hostRef} style={{ position: 'relative', height, background: '#121A15' }}>
+            {!ready && (
+                <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'rgba(244,247,242,0.55)' }}>{note}</div>
+            )}
+            {show && (
+                <iframe
+                    src={src}
+                    title={title}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    onLoad={() => setReady(true)}
+                    style={{ width: '100%', height: '100%', border: 0, display: 'block', background: '#fff', opacity: ready ? 1 : 0, transition: 'opacity .35s ease', filter: dark ? 'invert(0.92) hue-rotate(180deg)' : undefined }}
+                />
+            )}
         </div>
     );
 }
