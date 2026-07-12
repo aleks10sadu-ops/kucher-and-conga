@@ -16,8 +16,11 @@ export default async function MenuPage() {
         getFullMenu(),
         loadContentPostsServer('business_lunch_week'),
     ]);
-    // Свежая опубликованная афиша меню недели (посты уже отсортированы по дате).
+    // Афиша меню недели: свежая опубликованная из админки, иначе — статичный файл
+    // из репозитория (запасной вариант, чтобы блок не пустовал; админ может перекрыть).
     const latest = weekPosts.find((p: any) => p.image_url);
-    const weeklyLunch = latest ? { image: latest.image_url as string, title: latest.title as string } : null;
+    const weeklyLunch = latest
+        ? { image: latest.image_url as string, title: latest.title as string }
+        : { image: '/business-lunch/week-current.webp', title: 'Бизнес-ланч на неделю' };
     return <MenuClient initialMenu={menu} weeklyLunch={weeklyLunch} />;
 }
