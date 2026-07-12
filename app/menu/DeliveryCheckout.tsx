@@ -47,7 +47,7 @@ export default function DeliveryCheckout({
         comment: '',
         deliveryTime: 'asap' as 'asap' | 'custom',
         deliveryTimeCustom: '',
-        paymentMethod: 'card' as 'card' | 'transfer' | 'cash',
+        paymentMethod: 'card' as 'card' | 'cash',
         changeAmount: 'no-change',
         hasAllergy: false,
         allergyDetails: '',
@@ -266,7 +266,7 @@ export default function DeliveryCheckout({
                 <div>
                     <div className="mb-1.5 text-sm text-cream/70">Оплата</div>
                     <div className="flex flex-wrap gap-2">
-                        {([['card', 'Картой при получении'], ['transfer', 'Переводом'], ['cash', 'Наличными']] as const).map(([v, label]) => (
+                        {([['card', 'Картой при получении'], ['cash', 'Наличными']] as const).map(([v, label]) => (
                             <button
                                 key={v}
                                 type="button"
@@ -284,7 +284,7 @@ export default function DeliveryCheckout({
                     )}
                 </div>
 
-                <textarea placeholder="Комментарий к заказу" rows={2} className={inputCls} value={f.comment} onChange={(e) => set({ comment: e.target.value })} />
+                <textarea placeholder="Комментарий к заказу" rows={4} className={`${inputCls} min-h-[112px] resize-y leading-relaxed`} value={f.comment} onChange={(e) => set({ comment: e.target.value })} />
 
                 <label className="flex items-center gap-2 text-sm text-cream/70">
                     <input type="checkbox" checked={f.hasAllergy} onChange={(e) => set({ hasAllergy: e.target.checked })} className="h-4 w-4 accent-terracotta" />
