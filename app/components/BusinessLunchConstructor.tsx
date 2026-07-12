@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import type { MenuItem, CartItem, ModifierGroup } from '@/types/index';
+import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
 
 type Props = {
   sets: MenuItem[];
@@ -35,6 +36,16 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
     defaultChoices(sets.find((s) => String(s.id) === String(sets[0]?.id)) || null),
   );
 
+  // Окно заказа считаем на клиенте (страница — ISR, серверное время закешировано).
+  // Пересчитываем раз в минуту, чтобы кнопка ожила/погасла на границе часов без перезагрузки.
+  const [orderingOpen, setOrderingOpen] = useState(true);
+  useEffect(() => {
+    const tick = () => setOrderingOpen(isBusinessLunchOpen());
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const selectedSet = useMemo(
     () => sets.find((s) => String(s.id) === String(selectedSetId)) || null,
     [sets, selectedSetId],
@@ -58,7 +69,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   };
 
   const handleAdd = () => {
-    if (!selectedSet || !requiredOk) return;
+    if (!selectedSet || !requiredOk || !orderingOpen) return;
     const chosen = groups
       .map((g) => {
         const optId = choices[g.id];
@@ -149,19 +160,30 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
         </div>
       )}
 
+      {/* Окно заказа закрыто: меню видно, но добавить в корзину нельзя */}
+      {!orderingOpen && (
+        <div className="rounded-2xl border border-brass/30 bg-brass/10 px-4 py-3 text-sm text-cream/80">
+          Бизнес-ланчи заказывают {BUSINESS_LUNCH_WINDOW_TEXT} (по Москве). Сейчас можно посмотреть меню и собрать сет, а оформить заказ получится в рабочие часы.
+        </div>
+      )}
+
       {/* Добавить */}
       {selectedSet && (
         <div className="flex items-center justify-between gap-3 pt-2">
           <div className="text-sm text-cream/55">
-            {requiredOk ? 'Готово к добавлению' : `Выберите: ${missingGroups.map((g) => g.name).join(', ')}`}
+            {!orderingOpen
+              ? `Заказ ${BUSINESS_LUNCH_WINDOW_TEXT}`
+              : requiredOk
+                ? 'Готово к добавлению'
+                : `Выберите: ${missingGroups.map((g) => g.name).join(', ')}`}
           </div>
           <button
             type="button"
-            disabled={!requiredOk}
+            disabled={!requiredOk || !orderingOpen}
             onClick={handleAdd}
             className="px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Добавить — {(selectedSet.price || 0).toLocaleString('ru-RU')} ₽
+            {orderingOpen ? `Добавить — ${(selectedSet.price || 0).toLocaleString('ru-RU')} ₽` : 'Заказ закрыт'}
           </button>
         </div>
       )}

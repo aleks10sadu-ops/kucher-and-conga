@@ -1,4 +1,5 @@
 import { getFullMenu } from '@/lib/menu/getFullMenu';
+import { loadContentPostsServer } from '@/lib/content/loadContentPosts.server';
 import MenuClient from './MenuClient';
 
 // ISR: страница меню пререндерена вместе с блюдами и отдаётся с CDN мгновенно.
@@ -11,6 +12,12 @@ export const dynamic = 'force-static';
 export const revalidate = 600;
 
 export default async function MenuPage() {
-    const menu = await getFullMenu();
-    return <MenuClient initialMenu={menu} />;
+    const [menu, weekPosts] = await Promise.all([
+        getFullMenu(),
+        loadContentPostsServer('business_lunch_week'),
+    ]);
+    // Свежая опубликованная афиша меню недели (посты уже отсортированы по дате).
+    const latest = weekPosts.find((p: any) => p.image_url);
+    const weeklyLunch = latest ? { image: latest.image_url as string, title: latest.title as string } : null;
+    return <MenuClient initialMenu={menu} weeklyLunch={weeklyLunch} />;
 }

@@ -139,7 +139,7 @@ export default function DeliveryCheckout({
             comment: f.comment,
             ...allergyInfo,
             coordinates: coords,
-            items: items.map((c) => ({ id: c.id, name: c.name, qty: c.qty, price: c.price, productId: (c as any).productId, modifiers: (c as any).modifiers })),
+            items: items.map((c) => ({ id: c.id, name: c.name, qty: c.qty, price: c.price, productId: (c as any).productId, isBusinessLunch: (c as any).isBusinessLunch, modifiers: (c as any).modifiers })),
             subtotal,
             deliveryPrice,
             total,
@@ -158,11 +158,11 @@ export default function DeliveryCheckout({
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
-            // Стоп-лист: осознанный отказ сервера, НЕ уходим в TG-фолбэк —
-            // иначе заказ с недоступными блюдами утёк бы мимо проверки.
-            if (res.status === 409 && data.error === 'stop_list') {
+            // Осознанный отказ сервера (стоп-лист или закрытое окно бизнес-ланча):
+            // НЕ уходим в TG-фолбэк, иначе заказ утёк бы мимо проверки.
+            if (res.status === 409 && (data.error === 'stop_list' || data.error === 'business_lunch_closed')) {
                 setStatus('error');
-                setErrorMsg(data.message || 'Часть блюд закончилась. Обновите корзину.');
+                setErrorMsg(data.message || 'Часть позиций сейчас недоступна. Обновите корзину.');
                 return;
             }
             if (!data.ok) throw new Error(data.error || 'iiko order failed');

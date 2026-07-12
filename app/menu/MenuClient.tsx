@@ -10,10 +10,16 @@ import FoodDetailModal from '../components/FoodDetailModal';
 import CartDrawer from '../components/CartDrawer';
 import DeliveryCheckout from './DeliveryCheckout';
 import { useCart } from '@/lib/hooks/useCart';
+import useAdminCheck from '@/lib/hooks/useAdminCheck';
+import ContentManager from '../components/ContentManager';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
 
 type MenuByType = Record<string, { categories: any[] }>;
+
+// Меню бизнес-ланчей на неделю: картинка-афиша, которую админ загружает сам
+// (категория content_posts 'business_lunch_week', берётся свежая опубликованная).
+type WeeklyLunch = { image: string; title?: string | null } | null;
 
 // Миниатюра блюда. Зеркалированные картинки (быстрый Supabase-origin) гоняем
 // через оптимизатор Next → ~10–15 КБ WebP/AVIF нужного размера, иммутабельный
@@ -42,8 +48,10 @@ const TYPE_ORDER = ['main', 'business', 'bar', 'wine', 'kids', 'promotions'];
 
 // Меню приходит пропсом из серверного компонента (ISR): страница отдаётся с CDN
 // уже с блюдами и ценами — ни «Загрузка меню…», ни запроса к iiko на пути пользователя.
-export default function MenuClient({ initialMenu }: { initialMenu: MenuByType }) {
+export default function MenuClient({ initialMenu, weeklyLunch = null }: { initialMenu: MenuByType; weeklyLunch?: WeeklyLunch }) {
     const menuByType = initialMenu || {};
+    const { isAdmin } = useAdminCheck();
+    const [weekManagerOpen, setWeekManagerOpen] = useState(false);
     const firstKey = TYPE_ORDER.find((k) => menuByType[k]?.categories?.length) || 'main';
     const [activeType, setActiveType] = useState<string>(firstKey);
     const [isBanquetOpen, setIsBanquetOpen] = useState(false);
@@ -218,7 +226,36 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                 {/* Контент */}
                 <div className="mx-auto max-w-[1000px] px-5 pt-10 md:px-8">
                     {activeType === 'business' ? (
-                        <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items).filter((s: any) => !isStopped(s))} onAddToCart={cart.add} />
+                        <div className="mx-auto max-w-3xl space-y-8">
+                            {/* Меню бизнес-ланчей на неделю (афиша от админа) */}
+                            {(weeklyLunch?.image || isAdmin) && (
+                                <section>
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <h2 className="font-display text-xl font-bold text-cream md:text-2xl">Бизнес-ланч на неделю</h2>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => setWeekManagerOpen(true)}
+                                                className="rounded-lg border border-brass/40 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-brass transition-colors hover:bg-white/[0.08]"
+                                            >
+                                                Обновить картинку
+                                            </button>
+                                        )}
+                                    </div>
+                                    {weeklyLunch?.image ? (
+                                        <a href={weeklyLunch.image} target="_blank" rel="noopener noreferrer" title="Открыть в полном размере" className="block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                                            <img src={weeklyLunch.image} alt={weeklyLunch.title || 'Бизнес-ланч на неделю'} loading="lazy" className="h-auto w-full" />
+                                        </a>
+                                    ) : (
+                                        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-10 text-center text-sm text-cream/50">
+                                            Картинка меню на неделю ещё не загружена. Нажмите «Обновить картинку».
+                                        </div>
+                                    )}
+                                </section>
+                            )}
+
+                            {/* Конструктор сета: виден всегда, заказ — только в рабочее окно */}
+                            <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items)} onAddToCart={cart.add} />
+                        </div>
                     ) : (
                         <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
                             {q && shownCategories.length === 0 && (
@@ -410,6 +447,9 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                 )}
 
                 <BanquetMenuModal isOpen={isBanquetOpen} onClose={() => setIsBanquetOpen(false)} />
+                {isAdmin && (
+                    <ContentManager category="business_lunch_week" isOpen={weekManagerOpen} onClose={() => setWeekManagerOpen(false)} />
+                )}
             </main>
             <ForestFooter />
         </>

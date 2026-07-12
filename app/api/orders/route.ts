@@ -6,6 +6,7 @@ import { createSiteDelivery, type SiteOrderItem } from '@/lib/iiko/orders';
 import { resolveStreet } from '@/lib/iiko/streets';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
+import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -15,6 +16,7 @@ interface IncomingItem {
   qty: number;
   price: number;
   productId?: string;
+  isBusinessLunch?: boolean;
   modifiers?: { group: string; option: string; groupId?: string; optionId?: string }[];
 }
 
@@ -98,6 +100,19 @@ export async function POST(req: NextRequest) {
 
     if (!p.phone || !p.address || !Array.isArray(p.items) || p.items.length === 0) {
       return NextResponse.json({ ok: false, error: 'phone, address и items обязательны' }, { status: 400 });
+    }
+
+    // Окно бизнес-ланча: сеты заказывают только Пн–Пт 12:00–16:00 по Москве.
+    // Проверяем на сервере — клиент мог держать вкладку открытой с рабочих часов.
+    if (p.items.some((it) => it.isBusinessLunch) && !isBusinessLunchOpen()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'business_lunch_closed',
+          message: `Бизнес-ланчи можно заказать только ${BUSINESS_LUNCH_WINDOW_TEXT} (по Москве). Уберите сет из корзины или оформите заказ в рабочие часы.`,
+        },
+        { status: 409 },
+      );
     }
 
     // Стоп-лист: блюда и модификаторы «на стопе» отклоняем ДО создания заказа в iiko.

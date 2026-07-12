@@ -38,6 +38,7 @@ const CATEGORY_NAMES: Record<string, string> = {
     events: 'События',
     blog: 'Новостной блог',
     halls: 'Залы',
+    business_lunch_week: 'Бизнес-ланч на неделю',
 };
 
 interface ContentManagerProps {
