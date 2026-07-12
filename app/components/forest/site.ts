@@ -9,6 +9,11 @@ export const SITE = {
         { label: '+7 (916) 297-78-87', tel: '+79162977887' },
     ],
     telegram: 'https://t.me/Kvazar27',
+    // Соцсети ресторана (кнопки в подвале).
+    socials: [
+        { id: 'telegram', label: 'Telegram', href: 'https://t.me/kucherandconga' },
+        { id: 'vk', label: 'ВКонтакте', href: 'https://vk.com/restoran_kucher' },
+    ],
     yandexOrg: 'https://yandex.ru/maps/org/kucher_conga/10214255530/',
     hours: [
         { d: 'Пн–Чт', t: '12:00 — 23:00', note: 'вход до 22:00' },
