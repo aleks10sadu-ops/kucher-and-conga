@@ -158,6 +158,13 @@ export default function DeliveryCheckout({
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
+            // Стоп-лист: осознанный отказ сервера, НЕ уходим в TG-фолбэк —
+            // иначе заказ с недоступными блюдами утёк бы мимо проверки.
+            if (res.status === 409 && data.error === 'stop_list') {
+                setStatus('error');
+                setErrorMsg(data.message || 'Часть блюд закончилась. Обновите корзину.');
+                return;
+            }
             if (!data.ok) throw new Error(data.error || 'iiko order failed');
             ok = true;
         } catch (err) {

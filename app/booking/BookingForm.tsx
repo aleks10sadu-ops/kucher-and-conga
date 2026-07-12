@@ -16,6 +16,7 @@ import { BANQUET_PACKAGES, isBanquetPackageAllowed } from '@/lib/booking/banquet
 import HallSelector from '../components/HallSelector';
 import BookingTypeSelector from '../components/BookingTypeSelector';
 import BanquetMenuModal from '../components/BanquetMenuModal';
+import PreorderMenuModal from '../components/PreorderMenuModal';
 import { SITE } from '../components/forest/site';
 
 type Mode = 'admin' | 'self';
@@ -47,6 +48,7 @@ export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
 
     // Выбор зала + банкетного пакета (режим «Выбрать зал и меню»)
     const [hallId, setHallId] = useState<string | null>(null);
+    const [preorderOpen, setPreorderOpen] = useState(false);
     const [hallName, setHallName] = useState<string | null>(null);
     const [banquetPackageId, setBanquetPackageId] = useState<string | null>(null);
     const [banquetSalads, setBanquetSalads] = useState<string[]>([]);
@@ -134,9 +136,26 @@ export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
             : null;
         const preorderItems =
             mode === 'self' && effectiveType === 'preorder'
-                ? cart.items.map((c) => ({ name: c.name, qty: c.qty, price: c.price }))
+                ? cart.items.map((c) => ({ name: c.name, qty: c.qty, price: c.price, productId: (c as any).productId || String(c.id) }))
                 : [];
         const preorderSum = mode === 'self' && effectiveType === 'preorder' ? cartFoodSum : 0;
+
+        // Стоп-лист: проверяем предзаказ ДО создания брони в CRM и отправки в TG
+        // (сервер /api/telegram проверит ещё раз — это бэкстоп для устаревших клиентов).
+        if (preorderItems.length > 0) {
+            try {
+                const sl = await fetch('/api/stop-list').then((r) => r.json());
+                const stoppedIds = new Set<string>((sl?.productIds || []).map(String));
+                const blocked = preorderItems.filter((i) => i.productId && stoppedIds.has(String(i.productId))).map((i) => i.name);
+                if (blocked.length > 0) {
+                    setErrorMsg(`Увы, уже закончилось: ${blocked.join(', ')}. Уберите эти блюда из предзаказа и отправьте заявку снова.`);
+                    setStatus('error');
+                    return;
+                }
+            } catch {
+                /* стоп-лист недоступен — заявку не блокируем, сервер проверит сам */
+            }
+        }
 
         const composedComment = composeReservationComment({
             adults,
@@ -294,16 +313,14 @@ export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
                         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                             {cart.items.length === 0 ? (
                                 <div className="space-y-3 text-sm text-cream/70">
-                                    <p>Наберите блюда в меню — они попадут в предзаказ.</p>
-                                    {/* Новая вкладка: форма брони не сбрасывается, корзина подтянется сюда сама */}
-                                    <a
-                                        href="/menu"
-                                        target="_blank"
-                                        rel="noopener"
+                                    <p>Выберите блюда — они попадут в предзаказ.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreorderOpen(true)}
                                         className="inline-flex items-center gap-1.5 rounded-lg border border-brass/40 bg-white/[0.04] px-4 py-2 font-medium text-brass transition-colors hover:bg-white/[0.09]"
                                     >
-                                        Открыть меню в новой вкладке →
-                                    </a>
+                                        Выбрать блюда из меню →
+                                    </button>
                                     <p className="text-xs text-cream/50">Добавленные блюда появятся здесь автоматически, форма не сбросится.</p>
                                 </div>
                             ) : (
@@ -321,9 +338,9 @@ export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
                                         <span>Сумма предзаказа</span>
                                         <span>{cartFoodSum} ₽</span>
                                     </div>
-                                    <a href="/menu" target="_blank" rel="noopener" className="inline-block text-xs text-cream/55 hover:text-brass">
-                                        Добавить ещё блюда в меню (новая вкладка) →
-                                    </a>
+                                    <button type="button" onClick={() => setPreorderOpen(true)} className="inline-block text-xs text-cream/55 hover:text-brass">
+                                        Добавить ещё блюда →
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -398,6 +415,9 @@ export default function BookingForm({ serverHalls }: { serverHalls?: Hall[] }) {
                     setBanquetModalOpen(false);
                 }}
             />
+
+            {/* Модалка предзаказа: выбор блюд прямо на странице брони */}
+            <PreorderMenuModal isOpen={preorderOpen} onClose={() => setPreorderOpen(false)} />
         </form>
     );
 }

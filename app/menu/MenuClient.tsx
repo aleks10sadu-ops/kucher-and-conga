@@ -57,7 +57,17 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
     const [cartOpen, setCartOpen] = useState(false);
     const [deliveryOpen, setDeliveryOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
+    // Стоп-лист iiko: недоступные блюда помечаются и не добавляются в корзину
+    // (страница — ISR раз в 10 минут, стопы свежее: /api/stop-list кешируется на минуту).
+    const [stopSet, setStopSet] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        setMounted(true);
+        fetch('/api/stop-list')
+            .then((r) => r.json())
+            .then((d) => setStopSet(new Set<string>((d?.productIds || []).map(String))))
+            .catch(() => {});
+    }, []);
+    const isStopped = (it: any) => stopSet.has(String(it.id));
 
     const TYPE_DEFS: { id: string; name: string }[] = [
         { id: 'main', name: 'Кухня' },
@@ -208,7 +218,7 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                 {/* Контент */}
                 <div className="mx-auto max-w-[1000px] px-5 pt-10 md:px-8">
                     {activeType === 'business' ? (
-                        <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items)} onAddToCart={cart.add} />
+                        <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items).filter((s: any) => !isStopped(s))} onAddToCart={cart.add} />
                     ) : (
                         <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
                             {q && shownCategories.length === 0 && (
@@ -225,9 +235,9 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                                                 key={item.id}
                                                 role="button"
                                                 tabIndex={0}
-                                                onClick={() => setSelectedItem(item)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') setSelectedItem(item); }}
-                                                className="group cursor-pointer rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-brass/25 hover:bg-white/[0.06] md:p-6"
+                                                onClick={() => { if (!isStopped(item)) setSelectedItem(item); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' && !isStopped(item)) setSelectedItem(item); }}
+                                                className={`group cursor-pointer rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 transition-colors hover:border-brass/25 hover:bg-white/[0.06] md:p-6 ${isStopped(item) ? 'opacity-55' : ''}`}
                                             >
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="min-w-0 flex-1">
@@ -308,7 +318,9 @@ export default function MenuClient({ initialMenu }: { initialMenu: MenuByType })
                                                             блюда с вариантами/модификаторами — «Выбрать» (открывает карточку). */}
                                                         {item.price ? (
                                                             <div className="mt-4 border-t border-white/[0.07] pt-3" onClick={(e) => e.stopPropagation()}>
-                                                                {(item.variants?.length || item.modifierGroups?.length) ? (
+                                                                {isStopped(item) ? (
+                                                                    <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1.5 text-xs text-cream/60">Закончилось — временно недоступно</span>
+                                                                ) : (item.variants?.length || item.modifierGroups?.length) ? (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setSelectedItem(item)}

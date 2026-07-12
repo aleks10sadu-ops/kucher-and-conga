@@ -5,6 +5,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { createSiteDelivery, type SiteOrderItem } from '@/lib/iiko/orders';
 import { resolveStreet } from '@/lib/iiko/streets';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
+import { getStopListProductIds } from '@/lib/iiko/stopList';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -97,6 +98,26 @@ export async function POST(req: NextRequest) {
 
     if (!p.phone || !p.address || !Array.isArray(p.items) || p.items.length === 0) {
       return NextResponse.json({ ok: false, error: 'phone, address и items обязательны' }, { status: 400 });
+    }
+
+    // Стоп-лист: блюда и модификаторы «на стопе» отклоняем ДО создания заказа в iiko.
+    // Клиент обязан обработать 409 без TG-фолбэка — иначе стоп-лист обходится.
+    const stopped = await getStopListProductIds();
+    const blockedNames = p.items
+      .filter((it) =>
+        (it.productId && stopped.has(String(it.productId))) ||
+        (it.modifiers || []).some((m) => m.optionId && stopped.has(String(m.optionId))))
+      .map((it) => it.name);
+    if (blockedNames.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'stop_list',
+          message: `Увы, уже закончилось: ${blockedNames.join(', ')}. Уберите эти блюда из корзины и оформите заказ снова.`,
+          blocked: blockedNames,
+        },
+        { status: 409 },
+      );
     }
 
     const items: SiteOrderItem[] = [];

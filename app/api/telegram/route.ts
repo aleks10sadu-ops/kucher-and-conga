@@ -2,6 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { formatBookingTelegram } from '@/lib/booking/formatTelegram';
 import { visibleModifiers } from '@/lib/booking/modifiers';
+import { getStopListProductIds } from '@/lib/iiko/stopList';
 
 const TG_API = (token: string) => `https://api.telegram.org/bot${token}/sendMessage`;
 
@@ -34,6 +35,7 @@ interface OrderItem {
   name: string;
   qty: number;
   price: number;
+  productId?: string;
   modifiers?: { group: string; option: string }[];
 }
 
@@ -181,6 +183,27 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await req.json() as TelegramPayload;
+
+    // Стоп-лист для предзаказа к брони: блюда «на стопе» отклоняем до отправки заявки.
+    // (Доставки сюда попадают только TG-фолбэком после /api/orders, где проверка уже была.)
+    if (payload.type === 'booking' && payload.bookingType === 'preorder' && Array.isArray(payload.cartItems)) {
+      const stopped = await getStopListProductIds();
+      const blocked = payload.cartItems
+        .filter((it) => it.productId && stopped.has(String(it.productId)))
+        .map((it) => it.name);
+      if (blocked.length > 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: 'stop_list',
+            message: `Увы, уже закончилось: ${blocked.join(', ')}. Уберите эти блюда из предзаказа и отправьте заявку снова.`,
+            blocked,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     // Брони — в отдельную группу, чтобы доставщики не видели лишнего;
     // доставки (fallback при недоступной iiko) — в общую группу доставок.
     const chatId = payload.type === 'booking'
