@@ -177,6 +177,10 @@ export default function RedesignClient() {
                 }
                 .rf-btn { transition: transform .15s cubic-bezier(.22,1,.36,1), background .2s ease, border-color .2s ease; cursor: pointer; }
                 .rf-btn:active { transform: scale(.97); }
+                .rf-social { transition: background .2s ease, border-color .2s ease, color .2s ease; }
+                @media (hover: hover) and (pointer: fine) {
+                    .rf-social:hover { background: #C9A24B !important; border-color: #C9A24B !important; color: #1B140E !important; }
+                }
                 .rf-btn-primary:hover { background: #8F3A1B; }
                 .rf-btn-ghost:hover { background: rgba(244,247,242,0.14); border-color: rgba(244,247,242,0.6); }
                 .rf-nav a { padding: 8px 14px; border-radius: 8px; color: #FFFFFF; transition: background .2s ease; }
@@ -494,6 +498,16 @@ export default function RedesignClient() {
                         <Col label="Телефоны">
                             <a href="tel:+79162977887" style={{ fontSize: 16, color: '#EFE9E0' }}>+7 (916) 297-78-87</a>
                             <a href="tel:+79163177887" style={{ fontSize: 16, color: '#EFE9E0' }}>+7 (916) 317-78-87</a>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 12 }}>
+                                <a href="https://t.me/kucherandconga" target="_blank" rel="noopener noreferrer" aria-label="Мы в Telegram" className="rf-social" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 999, border: '1px solid rgba(239,233,224,0.15)', background: 'rgba(239,233,224,0.06)', padding: '8px 16px 8px 10px', fontSize: 14, color: '#EFE9E0' }}>
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden><path d="M9.78 15.6 9.6 20c.53 0 .76-.23 1.03-.5l2.48-2.37 5.14 3.76c.94.52 1.61.25 1.86-.87l3.38-15.83c.3-1.4-.5-1.94-1.42-1.6L1.14 9.9c-1.37.53-1.35 1.29-.23 1.63l5.1 1.6L17.8 6.32c.56-.37 1.06-.16.65.2Z" /></svg>
+                                    Мы в Telegram
+                                </a>
+                                <a href="https://vk.com/restoran_kucher" target="_blank" rel="noopener noreferrer" aria-label="Мы ВКонтакте" className="rf-social" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 999, border: '1px solid rgba(239,233,224,0.15)', background: 'rgba(239,233,224,0.06)', padding: '8px 16px 8px 10px', fontSize: 14, color: '#EFE9E0' }}>
+                                    <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden><path d="M13.16 17.36c-5.46 0-8.98-3.84-9.12-10.2h2.79c.1 4.68 2.26 6.68 3.9 7.09V7.16h2.66v3.94c1.6-.17 3.28-2.03 3.85-3.94h2.6c-.43 2.35-2.23 4.2-3.5 4.97 1.27.62 3.32 2.24 4.12 5.23h-2.86c-.62-1.98-2.15-3.5-4.21-3.71v3.71h-.32Z" /></svg>
+                                    Мы ВКонтакте
+                                </a>
+                            </div>
                         </Col>
                         <Col label="Часы работы">
                             <span style={{ fontSize: 15, color: '#EFE9E0' }}>Пн–Чт&nbsp;&nbsp;12:00 — 23:00 <span style={{ color: 'rgba(239,233,224,0.5)' }}>(вход до 22:00)</span></span>
