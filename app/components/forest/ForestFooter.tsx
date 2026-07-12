@@ -15,6 +15,21 @@ export default function ForestFooter() {
                             {p.label}
                         </a>
                     ))}
+                    <div className="mt-3 flex flex-col items-start gap-2">
+                        {SITE.socials.map((s) => (
+                            <a
+                                key={s.id}
+                                href={s.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={s.cta}
+                                className="inline-flex items-center gap-2.5 rounded-full border border-[#EFE9E0]/15 bg-[#EFE9E0]/[0.06] py-2 pl-2.5 pr-4 text-[14px] text-[#EFE9E0] transition-colors hover:border-brass hover:bg-brass hover:text-bark"
+                            >
+                                <SocialIcon id={s.id} />
+                                {s.cta}
+                            </a>
+                        ))}
+                    </div>
                 </FootCol>
                 <FootCol label="Часы работы">
                     {SITE.hours.map((h) => (
@@ -23,21 +38,6 @@ export default function ForestFooter() {
                         </span>
                     ))}
                     <span className="mt-1 text-[13px] text-brass">{SITE.hoursNote}</span>
-                    <div className="mt-3 flex items-center gap-3">
-                        {SITE.socials.map((s) => (
-                            <a
-                                key={s.id}
-                                href={s.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={s.label}
-                                title={s.label}
-                                className="grid h-11 w-11 place-items-center rounded-full bg-[#EFE9E0]/[0.06] text-[#EFE9E0] ring-1 ring-inset ring-[#EFE9E0]/10 transition-colors hover:bg-brass hover:text-bark"
-                            >
-                                <SocialIcon id={s.id} />
-                            </a>
-                        ))}
-                    </div>
                 </FootCol>
             </div>
             <div className="mx-auto mt-6 flex max-w-[1280px] flex-wrap items-center justify-between gap-3.5 border-t border-[#EFE9E0]/10 px-5 pb-8 pt-4 md:px-8">
@@ -67,14 +67,14 @@ function FootCol({ label, children }: { label: string; children: React.ReactNode
 function SocialIcon({ id }: { id: string }) {
     if (id === 'telegram') {
         return (
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden>
-                <path d="M21.94 4.9 18.6 19.2c-.25 1.1-.9 1.37-1.83.85l-5.05-3.72-2.44 2.35c-.27.27-.5.5-1.02.5l.36-5.14L16.98 6.7c.4-.36-.09-.56-.63-.2L6.79 12.4l-5.03-1.57c-1.09-.34-1.11-1.09.23-1.61L20.53 3.3c.91-.34 1.7.2 1.41 1.6Z" />
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden>
+                <path d="M9.78 15.6 9.6 20c.53 0 .76-.23 1.03-.5l2.48-2.37 5.14 3.76c.94.52 1.61.25 1.86-.87l3.38-15.83c.3-1.4-.5-1.94-1.42-1.6L1.14 9.9c-1.37.53-1.35 1.29-.23 1.63l5.1 1.6L17.8 6.32c.56-.37 1.06-.16.65.2Z" />
             </svg>
         );
     }
     if (id === 'vk') {
         return (
-            <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden>
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden>
                 <path d="M13.16 17.36c-5.46 0-8.98-3.84-9.12-10.2h2.79c.1 4.68 2.26 6.68 3.9 7.09V7.16h2.66v3.94c1.6-.17 3.28-2.03 3.85-3.94h2.6c-.43 2.35-2.23 4.2-3.5 4.97 1.27.62 3.32 2.24 4.12 5.23h-2.86c-.62-1.98-2.15-3.5-4.21-3.71v3.71h-.32Z" />
             </svg>
         );

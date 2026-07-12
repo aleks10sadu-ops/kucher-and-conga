@@ -11,8 +11,8 @@ export const SITE = {
     telegram: 'https://t.me/Kvazar27',
     // Соцсети ресторана (кнопки в подвале).
     socials: [
-        { id: 'telegram', label: 'Telegram', href: 'https://t.me/kucherandconga' },
-        { id: 'vk', label: 'ВКонтакте', href: 'https://vk.com/restoran_kucher' },
+        { id: 'telegram', label: 'Telegram', cta: 'Мы в Telegram', href: 'https://t.me/kucherandconga' },
+        { id: 'vk', label: 'ВКонтакте', cta: 'Мы ВКонтакте', href: 'https://vk.com/restoran_kucher' },
     ],
     yandexOrg: 'https://yandex.ru/maps/org/kucher_conga/10214255530/',
     hours: [
