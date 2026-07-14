@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import type { CartItem } from '@/types/index';
 import { deliveryZones, checkDeliveryZoneForCoords, type DeliveryZone } from '../data/deliveryZones';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
+import { validateMinOrder } from '@/lib/delivery/minOrder';
 import { SITE } from '../components/forest/site';
 
 const inputCls =
@@ -94,8 +95,15 @@ export default function DeliveryCheckout({
         });
     };
 
+    const minOrder = validateMinOrder(items, subtotal);
+
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!minOrder.isValid) {
+            setErrorMsg(minOrder.message || 'Заказ не проходит по условиям доставки.');
+            setStatus('error');
+            return;
+        }
         if (!f.name.trim() || !f.phone.trim() || !f.address.trim()) {
             setErrorMsg('Заполните имя, телефон и адрес.');
             setStatus('error');
@@ -158,11 +166,16 @@ export default function DeliveryCheckout({
                 body: JSON.stringify(payload),
             });
             const data = await res.json();
-            // Осознанный отказ сервера (стоп-лист или закрытое окно бизнес-ланча):
-            // НЕ уходим в TG-фолбэк, иначе заказ утёк бы мимо проверки.
+            // Осознанный отказ сервера (стоп-лист, закрытое окно бизнес-ланча,
+            // минимальный заказ): НЕ уходим в TG-фолбэк, иначе заказ утёк бы мимо проверки.
             if (res.status === 409 && (data.error === 'stop_list' || data.error === 'business_lunch_closed')) {
                 setStatus('error');
                 setErrorMsg(data.message || 'Часть позиций сейчас недоступна. Обновите корзину.');
+                return;
+            }
+            if (!data.ok && data.code === 'MIN_ORDER') {
+                setStatus('error');
+                setErrorMsg(data.error);
                 return;
             }
             if (!data.ok) throw new Error(data.error || 'iiko order failed');
@@ -298,6 +311,7 @@ export default function DeliveryCheckout({
                 </label>
 
                 {status === 'error' && <p className="text-sm text-red-400">{errorMsg}</p>}
+                {!minOrder.isValid && <p className="text-sm text-brass">{minOrder.message}</p>}
 
                 <div className="mt-1 flex items-center justify-between border-t border-white/10 pt-3">
                     <div className="text-sm text-cream/70">
@@ -305,7 +319,7 @@ export default function DeliveryCheckout({
                         {deliveryPrice != null && <span className="text-cream/45"> {deliveryPrice === 0 ? '· доставка бесплатно' : `· доставка ${deliveryPrice} ₽`}</span>}
                     </div>
                 </div>
-                <button type="submit" disabled={status === 'sending' || items.length === 0} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
+                <button type="submit" disabled={status === 'sending' || items.length === 0 || !minOrder.isValid} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
                     {status === 'sending' ? 'Отправляем…' : 'Заказать доставку'}
                 </button>
                 <p className="text-center text-[12px] text-cream/45">или позвоните <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">{SITE.phones[0].label}</a></p>

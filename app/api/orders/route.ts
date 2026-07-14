@@ -7,6 +7,7 @@ import { resolveStreet } from '@/lib/iiko/streets';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
 import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
+import { validateMinOrder } from '@/lib/delivery/minOrder';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -112,6 +113,15 @@ export async function POST(req: NextRequest) {
           message: `Бизнес-ланчи можно заказать только ${BUSINESS_LUNCH_WINDOW_TEXT} (по Москве). Уберите сет из корзины или оформите заказ в рабочие часы.`,
         },
         { status: 409 },
+      );
+    }
+
+    // Минимальный заказ: от 1000 ₽ или от 2 бизнес-ланчей (по сумме позиций, без стоимости доставки).
+    const minOrder = validateMinOrder(p.items);
+    if (!minOrder.isValid) {
+      return NextResponse.json(
+        { ok: false, code: 'MIN_ORDER', error: minOrder.message },
+        { status: 422 },
       );
     }
 

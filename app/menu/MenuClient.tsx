@@ -254,7 +254,15 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                             )}
 
                             {/* Конструктор сета: виден всегда, заказ — только в рабочее окно */}
-                            <BusinessLunchConstructor sets={categories.flatMap((c: any) => c.items)} onAddToCart={cart.add} />
+                            <BusinessLunchConstructor
+                                sets={categories.flatMap((c: any) => c.items)}
+                                // cart.add с тем же id заменяет количество, а не суммирует —
+                                // повторное «Добавить» того же набора должно давать +1 (условие «от 2 ланчей»).
+                                onAddToCart={(item) => {
+                                    const existing = cart.items.find((c) => c.id === item.id);
+                                    cart.add({ ...item, qty: (existing?.qty || 0) + item.qty });
+                                }}
+                            />
                         </div>
                     ) : (
                         <div className="mx-auto max-w-4xl space-y-16 md:space-y-20">
@@ -439,7 +447,6 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     count={cart.count}
                     total={cart.total}
                     onDeliveryClick={() => { setCartOpen(false); setDeliveryOpen(true); }}
-                    businessLunchValidation={{ businessLunchCount: 0, isValid: true }}
                     isMounted={mounted}
                 />
                 {deliveryOpen && (

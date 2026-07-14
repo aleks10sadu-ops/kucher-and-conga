@@ -4,12 +4,7 @@ import React from 'react';
 import { ShoppingCart, X, Plus, Minus, Trash2, AlertCircle } from 'lucide-react';
 import { CartItem } from '@/types/index';
 import { visibleModifiers } from '@/lib/booking/modifiers';
-
-type BusinessLunchValidation = {
-    businessLunchCount: number;
-    isValid: boolean;
-    message?: string;
-};
+import { validateMinOrder } from '@/lib/delivery/minOrder';
 
 type CartDrawerProps = {
     isOpen: boolean;
@@ -21,7 +16,6 @@ type CartDrawerProps = {
     count: number;
     total: number;
     onDeliveryClick: () => void;
-    businessLunchValidation: BusinessLunchValidation;
     isMounted: boolean;
 };
 
@@ -35,11 +29,10 @@ export default function CartDrawer({
     count,
     total,
     onDeliveryClick,
-    businessLunchValidation,
     isMounted
 }: CartDrawerProps) {
-    const canOrder = items.length > 0 &&
-        (businessLunchValidation.businessLunchCount === 0 || businessLunchValidation.isValid);
+    const minOrder = validateMinOrder(items, total);
+    const canOrder = items.length > 0 && minOrder.isValid;
 
     return (
         <>
@@ -103,19 +96,19 @@ export default function CartDrawer({
                         <span className="text-xl font-bold">{total.toLocaleString('ru-RU')} ₽</span>
                     </div>
 
-                    {/* Предупреждение о бизнес-ланчах */}
-                    {businessLunchValidation.businessLunchCount > 0 && !businessLunchValidation.isValid && (
+                    {/* Предупреждение о минимальном заказе на доставку */}
+                    {items.length > 0 && !minOrder.isValid && (
                         <div className="p-3 bg-brass/10 border border-brass/25 rounded-lg flex items-start gap-2">
                             <AlertCircle className="w-5 h-5 text-brass flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
                                 <p className="text-brass text-sm font-semibold mb-1">
-                                    Условия заказа бизнес-ланчей
+                                    Условия доставки
                                 </p>
                                 <p className="text-cream/70 text-xs">
-                                    {businessLunchValidation.message}
+                                    {minOrder.message}
                                 </p>
                                 <p className="text-cream/55 text-xs mt-1">
-                                    Бизнес-ланчей в заказе: {businessLunchValidation.businessLunchCount} |
+                                    {minOrder.businessLunchCount > 0 && <>Бизнес-ланчей в заказе: {minOrder.businessLunchCount} | </>}
                                     Сумма: {total.toLocaleString('ru-RU')} ₽
                                 </p>
                             </div>
