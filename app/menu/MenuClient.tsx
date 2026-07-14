@@ -10,6 +10,7 @@ import FoodDetailModal from '../components/FoodDetailModal';
 import CartDrawer from '../components/CartDrawer';
 import DeliveryCheckout from './DeliveryCheckout';
 import { useCart } from '@/lib/hooks/useCart';
+import { isDeliveryOpen, todayDeliveryWindowText } from '@/lib/delivery/schedule';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
 import ContentManager from '../components/ContentManager';
 import ForestHeader from '../components/forest/ForestHeader';
@@ -65,6 +66,15 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
     const [cartOpen, setCartOpen] = useState(false);
     const [deliveryOpen, setDeliveryOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    // График приёма доставок (МСК): вне окна показываем баннер вверху страницы.
+    // Рендерим только после mounted (страница — ISR-пререндер, на сервере время другое).
+    // Пересчёт раз в полминуты — окно открывается/закрывается без перезагрузки.
+    const [scheduleOpen, setScheduleOpen] = useState(true);
+    useEffect(() => {
+        setScheduleOpen(isDeliveryOpen());
+        const id = setInterval(() => setScheduleOpen(isDeliveryOpen()), 30_000);
+        return () => clearInterval(id);
+    }, []);
     // Стоп-лист iiko: недоступные блюда помечаются и не добавляются в корзину
     // (страница — ISR раз в 10 минут, стопы свежее: /api/stop-list кешируется на минуту).
     const [stopSet, setStopSet] = useState<Set<string>>(new Set());
@@ -134,6 +144,18 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                         <h1 className="mt-2 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-black leading-[1.05] text-cream">Меню</h1>
                     </div>
                 </section>
+
+                {/* Вне графика доставки — баннер с расписанием на сегодня.
+                    В рабочее время гость ничего не видит. */}
+                {mounted && !scheduleOpen && (
+                    <div className="border-b border-brass/25 bg-brass/10 px-5 py-3 md:px-8">
+                        <div className="mx-auto max-w-[1000px] text-sm text-cream">
+                            <span className="font-semibold text-brass">Сейчас доставка не принимается.</span>{' '}
+                            Приём заказов сегодня: <span className="font-semibold">{todayDeliveryWindowText()}</span> (по Москве).
+                            Меню можно смотреть и собирать корзину — оформить доставку получится в рабочее время.
+                        </div>
+                    </div>
+                )}
 
                 {/* Липкая навигация: типы меню + категории */}
                 <div className="sticky top-16 z-30 border-b border-white/10 bg-forest-ink/90 backdrop-blur-md">
