@@ -7,6 +7,7 @@ import type { CartItem } from '@/types/index';
 import { deliveryZones, checkDeliveryZoneForCoords, type DeliveryZone } from '../data/deliveryZones';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { validateMinOrder } from '@/lib/delivery/minOrder';
+import { isDeliveryOpen, todayDeliveryWindowText } from '@/lib/delivery/schedule';
 import { SITE } from '../components/forest/site';
 
 const inputCls =
@@ -64,6 +65,15 @@ export default function DeliveryCheckout({
     const deliveryPrice = zone?.price ?? null;
     const total = subtotal + (deliveryPrice || 0);
 
+    // График приёма доставок (МСК). Пока открыто — гость ничего не видит;
+    // вне графика показываем расписание на сегодня и блокируем отправку.
+    // Пересчёт раз в полминуты, чтобы окно закрывалось/открывалось без перезагрузки.
+    const [scheduleOpen, setScheduleOpen] = useState(() => isDeliveryOpen());
+    useEffect(() => {
+        const id = setInterval(() => setScheduleOpen(isDeliveryOpen()), 30_000);
+        return () => clearInterval(id);
+    }, []);
+
     // Подгружаем Яндекс-карты для точного определения зоны по адресу (полигоны).
     useEffect(() => {
         if ((window as any).ymaps || document.querySelector('script[src*="api-maps.yandex.ru"]')) return;
@@ -99,6 +109,12 @@ export default function DeliveryCheckout({
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isDeliveryOpen()) {
+            setScheduleOpen(false);
+            setErrorMsg(`Сейчас доставка не принимается. Приём заказов сегодня: ${todayDeliveryWindowText()} (по Москве).`);
+            setStatus('error');
+            return;
+        }
         if (!minOrder.isValid) {
             setErrorMsg(minOrder.message || 'Заказ не проходит по условиям доставки.');
             setStatus('error');
@@ -168,7 +184,7 @@ export default function DeliveryCheckout({
             const data = await res.json();
             // Осознанный отказ сервера (стоп-лист, закрытое окно бизнес-ланча,
             // минимальный заказ): НЕ уходим в TG-фолбэк, иначе заказ утёк бы мимо проверки.
-            if (res.status === 409 && (data.error === 'stop_list' || data.error === 'business_lunch_closed')) {
+            if (res.status === 409 && (data.error === 'stop_list' || data.error === 'business_lunch_closed' || data.error === 'delivery_closed')) {
                 setStatus('error');
                 setErrorMsg(data.message || 'Часть позиций сейчас недоступна. Обновите корзину.');
                 return;
@@ -228,6 +244,15 @@ export default function DeliveryCheckout({
     return (
         <Shell onClose={onClose} title="Оформление доставки">
             <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+                {!scheduleOpen && (
+                    <div className="rounded-lg border border-brass/30 bg-brass/10 p-3 text-sm text-cream">
+                        <p className="font-semibold text-brass">Сейчас доставка не принимается</p>
+                        <p className="mt-1 text-cream/80">
+                            Приём заказов сегодня: <span className="font-semibold text-cream">{todayDeliveryWindowText()}</span> (по Москве).
+                            Возвращайтесь в рабочее время — или позвоните нам.
+                        </p>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input placeholder="Имя *" className={inputCls} value={f.name} onChange={(e) => set({ name: e.target.value })} />
                     <input placeholder="Телефон *" type="tel" className={inputCls} value={f.phone} onChange={(e) => set({ phone: e.target.value })} />
@@ -319,7 +344,7 @@ export default function DeliveryCheckout({
                         {deliveryPrice != null && <span className="text-cream/45"> {deliveryPrice === 0 ? '· доставка бесплатно' : `· доставка ${deliveryPrice} ₽`}</span>}
                     </div>
                 </div>
-                <button type="submit" disabled={status === 'sending' || items.length === 0 || !minOrder.isValid} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
+                <button type="submit" disabled={status === 'sending' || items.length === 0 || !minOrder.isValid || !scheduleOpen} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
                     {status === 'sending' ? 'Отправляем…' : 'Заказать доставку'}
                 </button>
                 <p className="text-center text-[12px] text-cream/45">или позвоните <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">{SITE.phones[0].label}</a></p>

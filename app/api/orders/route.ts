@@ -8,6 +8,8 @@ import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
 import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
 import { validateMinOrder } from '@/lib/delivery/minOrder';
+import { isDeliveryOpen, deliveryClosedMessage } from '@/lib/delivery/schedule';
+import { logOrderAttempt } from '@/lib/delivery/orderLog';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -97,22 +99,39 @@ function buildComment(p: IncomingPayload): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Хвост записи журнала — общий для всех исходов этой попытки.
+  let logTail: Partial<Parameters<typeof logOrderAttempt>[0]> = {};
   try {
     const p = (await req.json()) as IncomingPayload;
+    logTail = {
+      name: p.name, phone: p.phone, address: p.address,
+      items: (p.items || []).map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+      subtotal: p.subtotal, total: p.total,
+    };
 
     if (!p.phone || !p.address || !Array.isArray(p.items) || p.items.length === 0) {
+      await logOrderAttempt({ outcome: 'bad_request', detail: 'phone, address и items обязательны', ...logTail });
       return NextResponse.json({ ok: false, error: 'phone, address и items обязательны' }, { status: 400 });
+    }
+
+    // График приёма доставок (МСК): вне окна заказ не принимаем — гость видит
+    // расписание на сегодня. Проверка серверная: клиентские часы не важны.
+    if (!isDeliveryOpen()) {
+      const message = deliveryClosedMessage();
+      await logOrderAttempt({ outcome: 'rejected_schedule', detail: message, ...logTail });
+      return NextResponse.json(
+        { ok: false, error: 'delivery_closed', message },
+        { status: 409 },
+      );
     }
 
     // Окно бизнес-ланча: сеты заказывают только Пн–Пт 12:00–16:00 по Москве.
     // Проверяем на сервере — клиент мог держать вкладку открытой с рабочих часов.
     if (p.items.some((it) => it.isBusinessLunch) && !isBusinessLunchOpen()) {
+      const message = `Бизнес-ланчи можно заказать только ${BUSINESS_LUNCH_WINDOW_TEXT} (по Москве). Уберите сет из корзины или оформите заказ в рабочие часы.`;
+      await logOrderAttempt({ outcome: 'rejected_bl_window', detail: message, ...logTail });
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'business_lunch_closed',
-          message: `Бизнес-ланчи можно заказать только ${BUSINESS_LUNCH_WINDOW_TEXT} (по Москве). Уберите сет из корзины или оформите заказ в рабочие часы.`,
-        },
+        { ok: false, error: 'business_lunch_closed', message },
         { status: 409 },
       );
     }
@@ -120,6 +139,7 @@ export async function POST(req: NextRequest) {
     // Минимальный заказ: от 1000 ₽ или от 2 бизнес-ланчей (по сумме позиций, без стоимости доставки).
     const minOrder = validateMinOrder(p.items);
     if (!minOrder.isValid) {
+      await logOrderAttempt({ outcome: 'rejected_min_order', detail: minOrder.message ?? undefined, ...logTail });
       return NextResponse.json(
         { ok: false, code: 'MIN_ORDER', error: minOrder.message },
         { status: 422 },
@@ -135,6 +155,7 @@ export async function POST(req: NextRequest) {
         (it.modifiers || []).some((m) => m.optionId && stopped.has(String(m.optionId))))
       .map((it) => it.name);
     if (blockedNames.length > 0) {
+      await logOrderAttempt({ outcome: 'rejected_stop_list', detail: blockedNames.join(', '), ...logTail });
       return NextResponse.json(
         {
           ok: false,
@@ -232,9 +253,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await logOrderAttempt({ outcome: 'iiko_ok', detail: orderId, ...logTail });
     return NextResponse.json({ ok: true, orderId });
   } catch (e: any) {
     console.error('site order -> iiko failed:', e?.message || e);
+    await logOrderAttempt({ outcome: 'iiko_error', detail: String(e?.message || e), ...logTail });
     return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 502 });
   }
 }

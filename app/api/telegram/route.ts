@@ -2,6 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { formatBookingTelegram } from '@/lib/booking/formatTelegram';
 import { visibleModifiers } from '@/lib/booking/modifiers';
+import { logOrderAttempt } from '@/lib/delivery/orderLog';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
 
 const TG_API = (token: string) => `https://api.telegram.org/bot${token}/sendMessage`;
@@ -223,6 +224,20 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await res.json();
+    // Доставка попадает сюда только TG-фолбэком (iiko недоступна/отклонила) —
+    // фиксируем попытку в журнале site_order_log вместе с исходом отправки.
+    if (payload.type === 'delivery') {
+      await logOrderAttempt({
+        outcome: 'tg_fallback',
+        detail: data.ok ? 'отправлено в TG-группу' : `TG error: ${data.description || 'unknown'}`,
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        items: (payload.items || []).map((it) => ({ name: it.name, qty: it.qty, price: it.price })),
+        subtotal: payload.subtotal,
+        total: payload.total,
+      });
+    }
     if (!data.ok) {
       return NextResponse.json({ ok: false, error: data.description || 'Telegram API error' }, { status: 502 });
     }
