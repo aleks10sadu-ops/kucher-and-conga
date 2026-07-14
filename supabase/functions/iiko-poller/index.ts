@@ -5,9 +5,14 @@
 //    (orig_text) — не перерисовываем карточку: iiko обнуляет отменённые заказы
 //    (сумма 0, пустые позиции), и перерисовка стирала бы состав;
 //    отмена/удаление (isDeleted) — громкий reply, т.к. редактирование беззвучно.
+// 4) заказы с терминала (RMS OLAP): агрегаторы (Яндекс Еда/Деливери) и касса —
+//    облачное API их не видит, опрашиваем iikoServer напрямую (логин → отчёт →
+//    сразу logout, чтобы не держать лицензионный слот). Только объявление,
+//    каскада статусов для них нет.
 // Все сообщения — плоский текст без parse_mode: не нужно экранировать
 // названия блюд и можно безопасно редактировать сообщения вебхука.
-// Секреты: IIKO_API_LOGIN, IIKO_ORGANIZATION_ID, TG_TOKEN, TG_CHAT_ID, POLLER_KEY.
+// Секреты: IIKO_API_LOGIN, IIKO_ORGANIZATION_ID, TG_TOKEN, TG_CHAT_ID, POLLER_KEY;
+// для терминала (опционально): RMS_URL, RMS_LOGIN, RMS_PASS_SHA1.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const IIKO = 'https://api-ru.iiko.services';
@@ -183,8 +188,95 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // --- 3. Заказы с терминала (RMS OLAP): агрегаторы и касса ---
+    // Заказ виден в OLAP сразу после появления в iikoFront. Сайтовые (src='Сайт')
+    // пропускаем — их объявляет облачный канал. При любом сбое просто ждём
+    // следующего тика: дедуп по id 'rms-<номер>-<дата>' защищает от повторов.
+    let rmsSent = 0;
+    const RMS_URL = Deno.env.get('RMS_URL'), RMS_LOGIN = Deno.env.get('RMS_LOGIN'), RMS_PASS = Deno.env.get('RMS_PASS_SHA1');
+    if (RMS_URL && RMS_LOGIN && RMS_PASS) {
+      let rmsKey: string | null = null;
+      try {
+        const t = (ms: number) => ({ signal: AbortSignal.timeout(ms) });
+        const authR = await fetch(`${RMS_URL}/api/auth?login=${encodeURIComponent(RMS_LOGIN)}&pass=${RMS_PASS}`, t(8000));
+        if (!authR.ok) throw new Error(`rms auth ${authR.status}`);
+        rmsKey = (await authR.text()).trim();
+
+        // День по времени ресторана (МСК, UTC+3)
+        const mskDay = (off: number) => new Date(Date.now() + (3 + off * 24) * 3600e3).toISOString().slice(0, 10);
+        const rep = await fetch(`${RMS_URL}/api/v2/reports/olap?key=${rmsKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportType: 'DELIVERIES',
+            buildSummary: 'false',
+            groupByRowFields: ['Delivery.Number', 'Delivery.SourceKey', 'Delivery.CustomerName', 'Delivery.CustomerPhone', 'OpenTime', 'OrderType', 'DishName'],
+            aggregateFields: ['DishAmountInt', 'DishSumInt'],
+            filters: {
+              'OpenDate.Typed': { filterType: 'DateRange', periodType: 'CUSTOM', from: mskDay(0), to: mskDay(1) },
+              'OrderType': { filterType: 'IncludeValues', values: ['Доставка курьером', 'Доставка самовывоз'] },
+            },
+          }),
+          ...t(12000),
+        });
+        if (!rep.ok) throw new Error(`rms olap ${rep.status}`);
+        const rows = (await rep.json()).data || [];
+
+        const orders = new Map<string, any[]>();
+        for (const r of rows) {
+          if (r['Delivery.Number'] == null) continue;
+          const k = String(r['Delivery.Number']);
+          if (!orders.has(k)) orders.set(k, []);
+          orders.get(k)!.push(r);
+        }
+
+        for (const [num, its] of orders) {
+          const first = its[0];
+          if (first['Delivery.SourceKey'] === 'Сайт') continue;
+          const openDay = String(first.OpenTime || '').slice(0, 10) || mskDay(0);
+          const rmsId = `rms-${num}-${openDay}`;
+          const { error } = await sb.from('iiko_notified_orders').insert({
+            id: rmsId, number: Number(num) || 0, status: 'Rms', last_status: 'Rms', finalized: true,
+          });
+          if (error) continue; // конфликт по PK — уже объявлен
+
+          const total = its.reduce((s: number, r: any) => s + (Number(r.DishSumInt) || 0), 0);
+          const openTime = String(first.OpenTime || '').slice(11, 16);
+          const who = [first['Delivery.CustomerName'], first['Delivery.CustomerPhone']]
+            .map((v: unknown) => String(v || '').trim()).filter(Boolean).join(', ');
+          const lines = [
+            `🛵 Доставка с терминала №${num}`,
+            `Тип: ${first.OrderType === 'Доставка самовывоз' ? 'самовывоз' : 'курьером'}${openTime ? ` · открыт в ${openTime}` : ''}`,
+            'Источник: агрегатор (Яндекс/Деливери) или касса',
+          ];
+          if (who) lines.push(`Клиент: ${who}`);
+          lines.push('', 'Позиции:');
+          for (const r of its.slice(0, 30)) {
+            const sum = Number(r.DishSumInt) || 0;
+            lines.push(`• ${r.DishName} ×${r.DishAmountInt}${sum > 0 ? ` — ${sum} ₽` : ''}`);
+          }
+          if (its.length > 30) lines.push(`… и ещё ${its.length - 30} позиций`);
+          lines.push(`Итого: ${total} ₽`);
+          const text = lines.join('\n').slice(0, 4000);
+
+          const j = await tgCall('sendMessage', { text, disable_web_page_preview: true });
+          if (j.ok) {
+            await sb.from('iiko_notified_orders').update({ tg_message_id: j.result.message_id, orig_text: text }).eq('id', rmsId);
+            rmsSent++;
+          } else {
+            await sb.from('iiko_notified_orders').delete().eq('id', rmsId).is('tg_message_id', null);
+          }
+        }
+      } catch (e) {
+        console.error('rms poll failed (skip tick):', String(e).slice(0, 200));
+      } finally {
+        // Обязательный logout — иначе занимаем слот лицензии до таймаута сервера.
+        if (rmsKey) { try { await fetch(`${RMS_URL}/api/logout?key=${rmsKey}`, { signal: AbortSignal.timeout(5000) }); } catch { /* слот освободится сам */ } }
+      }
+    }
+
     await sb.from('iiko_notified_orders').delete().lt('notified_at', new Date(Date.now() - 3 * 864e5).toISOString());
-    return new Response(JSON.stringify({ ok: true, pending: pending.length, sent, edited }), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true, pending: pending.length, sent, edited, rmsSent }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('poller failed:', e);
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
