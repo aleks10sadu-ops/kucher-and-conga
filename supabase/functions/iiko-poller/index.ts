@@ -5,10 +5,13 @@
 //    (orig_text) — не перерисовываем карточку: iiko обнуляет отменённые заказы
 //    (сумма 0, пустые позиции), и перерисовка стирала бы состав;
 //    отмена/удаление (isDeleted) — громкий reply, т.к. редактирование беззвучно.
-// 4) заказы с терминала (RMS OLAP): агрегаторы (Яндекс Еда/Деливери) и касса —
-//    облачное API их не видит, опрашиваем iikoServer напрямую (логин → отчёт →
-//    сразу logout, чтобы не держать лицензионный слот). Только объявление,
-//    каскада статусов для них нет.
+// 4) заказы агрегаторов (Яндекс Еда/Деливери) с терминала: облачное API их
+//    не видит, опрашиваем iikoServer напрямую (логин → OLAP → сразу logout,
+//    чтобы не держать лицензионный слот). Агрегаторские распознаём по типу
+//    заказа/источнику («Яндекс Еда Курьеры ресторана» и т.п.); телефонные
+//    доставки, забитые оператором, НЕ объявляем. Статус вычисляем из
+//    тайм-полей (закрыт/отменён/сторно) и ведём каскад как у сайтовых:
+//    правка сообщения + громкий reply при отмене.
 // Все сообщения — плоский текст без parse_mode: не нужно экранировать
 // названия блюд и можно безопасно редактировать сообщения вебхука.
 // Секреты: IIKO_API_LOGIN, IIKO_ORGANIZATION_ID, TG_TOKEN, TG_CHAT_ID, POLLER_KEY;
@@ -152,9 +155,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- 2. Каскадное обновление ранее уведомлённых ---
+    // --- 2. Каскадное обновление ранее уведомлённых (только облачные id:
+    // rms-строки в deliveries/by_id нельзя — там не GUID) ---
     const { data: tracked } = await sb.from('iiko_notified_orders')
       .select('*').eq('finalized', false).not('tg_message_id', 'is', null)
+      .not('id', 'like', 'rms-%')
       .gt('notified_at', new Date(Date.now() - 864e5).toISOString());
     if (tracked && tracked.length) {
       const st = await iikoPost('/api/1/deliveries/by_id', { organizationId: orgId, orderIds: tracked.map((t: any) => t.id) }, token);
@@ -188,13 +193,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- 3. Заказы с терминала (RMS OLAP): агрегаторы и касса ---
-    // Заказ виден в OLAP сразу после появления в iikoFront. Сайтовые (src='Сайт')
-    // пропускаем — их объявляет облачный канал. При любом сбое просто ждём
-    // следующего тика: дедуп по id 'rms-<номер>-<дата>' защищает от повторов.
-    let rmsSent = 0;
+    // --- 3. Заказы агрегаторов с терминала (RMS OLAP) ---
+    // Заказ виден в OLAP сразу после появления в iikoFront. Объявляем ТОЛЬКО
+    // агрегаторские (Яндекс Еда/Деливери) — телефонные оператор пробивает сам
+    // и о них знает; сайтовые ведёт облачный канал. Статус вычисляем из
+    // тайм-полей и ведём каскад. При любом сбое просто ждём следующего тика:
+    // дедуп по id 'rms-<номер>-<дата>' защищает от повторов.
+    let rmsSent = 0, rmsEdited = 0;
     const RMS_URL = Deno.env.get('RMS_URL'), RMS_LOGIN = Deno.env.get('RMS_LOGIN'), RMS_PASS = Deno.env.get('RMS_PASS_SHA1');
     if (RMS_URL && RMS_LOGIN && RMS_PASS) {
+      const AGG = /яндекс|деливери|delivery/i;
+      const RMS_FOOTER: Record<string, string> = {
+        RmsOpen: '⚠️ Новый заказ агрегатора — примите в работу!',
+        RmsClosed: '✅ ЗАКРЫТ (выдан курьеру/доставлен)',
+        RmsCancelled: '❌ ОТМЕНЁН',
+      };
       let rmsKey: string | null = null;
       try {
         const t = (ms: number) => ({ signal: AbortSignal.timeout(ms) });
@@ -204,67 +217,133 @@ Deno.serve(async (req: Request) => {
 
         // День по времени ресторана (МСК, UTC+3)
         const mskDay = (off: number) => new Date(Date.now() + (3 + off * 24) * 3600e3).toISOString().slice(0, 10);
-        const rep = await fetch(`${RMS_URL}/api/v2/reports/olap?key=${rmsKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            reportType: 'DELIVERIES',
-            buildSummary: 'false',
-            groupByRowFields: ['Delivery.Number', 'Delivery.SourceKey', 'Delivery.CustomerName', 'Delivery.CustomerPhone', 'OpenTime', 'OrderType', 'DishName'],
-            aggregateFields: ['DishAmountInt', 'DishSumInt'],
-            filters: {
-              'OpenDate.Typed': { filterType: 'DateRange', periodType: 'CUSTOM', from: mskDay(0), to: mskDay(1) },
-              'OrderType': { filterType: 'IncludeValues', values: ['Доставка курьером', 'Доставка самовывоз'] },
-            },
-          }),
-          ...t(12000),
-        });
-        if (!rep.ok) throw new Error(`rms olap ${rep.status}`);
-        const rows = (await rep.json()).data || [];
+        // Сервер не тянет DishName вместе со статусными полями в одном отчёте
+        // (виснет) — поэтому два лёгких запроса: A — статусы заказов, B — состав.
+        const olap = async (fields: string[]) => {
+          const r = await fetch(`${RMS_URL}/api/v2/reports/olap?key=${rmsKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reportType: 'DELIVERIES',
+              buildSummary: 'false',
+              groupByRowFields: fields,
+              aggregateFields: ['DishAmountInt', 'DishSumInt'],
+              filters: {
+                'OpenDate.Typed': { filterType: 'DateRange', periodType: 'CUSTOM', from: mskDay(0), to: mskDay(1) },
+              },
+            }),
+            ...t(12000),
+          });
+          if (!r.ok) throw new Error(`rms olap ${r.status}`);
+          return (await r.json()).data || [];
+        };
 
+        // A: заказы со статусными полями. Без фильтра по типу заказа: у агрегаторов
+        // свои типы («Яндекс Еда Курьеры ресторана» и т.п.) — отбираем в коде.
+        const rows = await olap([
+          'Delivery.Number', 'Delivery.SourceKey', 'OpenTime', 'OrderType',
+          'Delivery.CloseTime', 'Delivery.CancelCause', 'Storned',
+        ]);
         const orders = new Map<string, any[]>();
         for (const r of rows) {
-          if (r['Delivery.Number'] == null) continue;
+          if (r['Delivery.Number'] == null || r['Delivery.Number'] === '') continue;
           const k = String(r['Delivery.Number']);
           if (!orders.has(k)) orders.set(k, []);
           orders.get(k)!.push(r);
         }
 
+        // B: состав заказов — запрашивается лениво, только когда есть что объявлять.
+        let dishRows: any[] | null = null;
+        const itemsOf = async (num: string) => {
+          if (!dishRows) dishRows = await olap(['Delivery.Number', 'DishName']);
+          return dishRows.filter((r: any) =>
+            String(r['Delivery.Number']) === num && (Number(r.DishAmountInt) || 0) > 0);
+        };
+
         for (const [num, its] of orders) {
           const first = its[0];
+          // Только агрегаторы: маркер в типе заказа или источнике.
+          if (!AGG.test(`${first.OrderType || ''} ${first['Delivery.SourceKey'] || ''}`)) continue;
           if (first['Delivery.SourceKey'] === 'Сайт') continue;
+
+          // Строк на заказ может быть несколько (сторно/обычные) — статус по совокупности.
+          const active = its.filter((r: any) => String(r.Storned).toUpperCase() !== 'TRUE');
+          const cancelCause = its.map((r: any) => String(r['Delivery.CancelCause'] || '').trim()).find(Boolean) || '';
+          const closeTime = its.map((r: any) => String(r['Delivery.CloseTime'] || '').trim()).find(Boolean) || '';
+          const status = (cancelCause || active.length === 0)
+            ? 'RmsCancelled'
+            : closeTime ? 'RmsClosed' : 'RmsOpen';
+
           const openDay = String(first.OpenTime || '').slice(0, 10) || mskDay(0);
           const rmsId = `rms-${num}-${openDay}`;
-          const { error } = await sb.from('iiko_notified_orders').insert({
-            id: rmsId, number: Number(num) || 0, status: 'Rms', last_status: 'Rms', finalized: true,
-          });
-          if (error) continue; // конфликт по PK — уже объявлен
+          const { data: seen } = await sb.from('iiko_notified_orders').select('*').eq('id', rmsId).maybeSingle();
 
-          const total = its.reduce((s: number, r: any) => s + (Number(r.DishSumInt) || 0), 0);
-          const openTime = String(first.OpenTime || '').slice(11, 16);
-          const who = [first['Delivery.CustomerName'], first['Delivery.CustomerPhone']]
-            .map((v: unknown) => String(v || '').trim()).filter(Boolean).join(', ');
-          const lines = [
-            `🛵 Доставка с терминала №${num}`,
-            `Тип: ${first.OrderType === 'Доставка самовывоз' ? 'самовывоз' : 'курьером'}${openTime ? ` · открыт в ${openTime}` : ''}`,
-            'Источник: агрегатор (Яндекс/Деливери) или касса',
-          ];
-          if (who) lines.push(`Клиент: ${who}`);
-          lines.push('', 'Позиции:');
-          for (const r of its.slice(0, 30)) {
-            const sum = Number(r.DishSumInt) || 0;
-            lines.push(`• ${r.DishName} ×${r.DishAmountInt}${sum > 0 ? ` — ${sum} ₽` : ''}`);
-          }
-          if (its.length > 30) lines.push(`… и ещё ${its.length - 30} позиций`);
-          lines.push(`Итого: ${total} ₽`);
-          const text = lines.join('\n').slice(0, 4000);
+          if (!seen) {
+            // Заказ закрыт/отменён больше часа назад (обнаружен после простоя) —
+            // фиксируем молча, не спамим задним числом.
+            const closedLongAgo = status !== 'RmsOpen' && closeTime &&
+              (Date.now() + 3 * 3600e3 - new Date(closeTime + 'Z').getTime()) > 3600e3;
+            if (closedLongAgo || (status === 'RmsCancelled' && !closeTime)) {
+              await sb.from('iiko_notified_orders').insert({
+                id: rmsId, number: Number(num) || 0, status, last_status: status, finalized: true,
+              });
+              continue;
+            }
 
-          const j = await tgCall('sendMessage', { text, disable_web_page_preview: true });
-          if (j.ok) {
-            await sb.from('iiko_notified_orders').update({ tg_message_id: j.result.message_id, orig_text: text }).eq('id', rmsId);
-            rmsSent++;
-          } else {
-            await sb.from('iiko_notified_orders').delete().eq('id', rmsId).is('tg_message_id', null);
+            const { error } = await sb.from('iiko_notified_orders').insert({
+              id: rmsId, number: Number(num) || 0, status, last_status: status,
+              finalized: status !== 'RmsOpen',
+            });
+            if (error) continue; // конфликт по PK — уже объявлен
+
+            const srcLabel = /яндекс/i.test(`${first.OrderType} ${first['Delivery.SourceKey']}`)
+              ? 'Яндекс Еда'
+              : /деливери|delivery/i.test(`${first.OrderType} ${first['Delivery.SourceKey']}`) ? 'Деливери' : 'Агрегатор';
+            const openTime = String(first.OpenTime || '').slice(11, 16);
+            const lines = [
+              `🟡 ${srcLabel} — доставка №${num}`,
+              `Тип: ${first.OrderType}${openTime ? ` · открыт в ${openTime}` : ''}`,
+            ];
+            lines.push('', 'Позиции:');
+            const items = await itemsOf(num);
+            const total = items.reduce((s: number, r: any) => s + (Number(r.DishSumInt) || 0), 0);
+            for (const r of items.slice(0, 30)) {
+              const sum = Number(r.DishSumInt) || 0;
+              lines.push(`• ${r.DishName} ×${r.DishAmountInt}${sum > 0 ? ` — ${sum} ₽` : ''}`);
+            }
+            if (items.length > 30) lines.push(`… и ещё ${items.length - 30} позиций`);
+            lines.push(`Итого: ${total} ₽`);
+            const base = lines.join('\n').slice(0, 3800);
+            const text = `${base}\n\n${RMS_FOOTER[status]}`.slice(0, 4000);
+
+            const j = await tgCall('sendMessage', { text, disable_web_page_preview: true });
+            if (j.ok) {
+              await sb.from('iiko_notified_orders')
+                .update({ tg_message_id: j.result.message_id, orig_text: base })
+                .eq('id', rmsId);
+              rmsSent++;
+            } else {
+              await sb.from('iiko_notified_orders').delete().eq('id', rmsId).is('tg_message_id', null);
+            }
+          } else if (!seen.finalized && seen.last_status !== status) {
+            // Каскад статуса: правим исходное сообщение, отмена — громкий reply.
+            if (seen.tg_message_id && seen.orig_text) {
+              await tgCall('editMessageText', {
+                message_id: seen.tg_message_id,
+                text: `${seen.orig_text}\n\n${RMS_FOOTER[status]}`.slice(0, 4000),
+                disable_web_page_preview: true,
+              });
+              rmsEdited++;
+              if (status === 'RmsCancelled') {
+                await tgCall('sendMessage', {
+                  text: `❌ Заказ агрегатора №${num} ОТМЕНЁН${cancelCause ? ` — ${cancelCause}` : ''}`,
+                  reply_to_message_id: seen.tg_message_id,
+                });
+              }
+            }
+            await sb.from('iiko_notified_orders').update({
+              status, last_status: status, finalized: status !== 'RmsOpen',
+            }).eq('id', rmsId);
           }
         }
       } catch (e) {
@@ -276,7 +355,7 @@ Deno.serve(async (req: Request) => {
     }
 
     await sb.from('iiko_notified_orders').delete().lt('notified_at', new Date(Date.now() - 3 * 864e5).toISOString());
-    return new Response(JSON.stringify({ ok: true, pending: pending.length, sent, edited, rmsSent }), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true, pending: pending.length, sent, edited, rmsSent, rmsEdited }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('poller failed:', e);
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
