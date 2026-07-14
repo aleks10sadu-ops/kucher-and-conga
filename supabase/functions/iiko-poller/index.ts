@@ -1,13 +1,17 @@
-// Опросник iiko (раз в минуту через pg_cron):
-// 1) новые внешние доставки → сообщение в Telegram;
+// Опросник iiko (раз в минуту через pg_cron) — страховка вебхука iiko-webhook:
+// 1) новые внешние доставки, которые вебхук не объявил → сообщение в Telegram;
 // 2) напоминание, если заказ не подтверждён > 7 минут;
-// 3) каскад: при смене статуса редактируем исходное сообщение;
+// 3) каскад: при смене статуса дописываем статус к ИСХОДНОМУ тексту сообщения
+//    (orig_text) — не перерисовываем карточку: iiko обнуляет отменённые заказы
+//    (сумма 0, пустые позиции), и перерисовка стирала бы состав;
 //    отмена/удаление (isDeleted) — громкий reply, т.к. редактирование беззвучно.
+// Все сообщения — плоский текст без parse_mode: не нужно экранировать
+// названия блюд и можно безопасно редактировать сообщения вебхука.
 // Секреты: IIKO_API_LOGIN, IIKO_ORGANIZATION_ID, TG_TOKEN, TG_CHAT_ID, POLLER_KEY.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const IIKO = 'https://api-ru.iiko.services';
-const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const DASHES = /^[-–—\s]*$/; // iiko ставит улицу «----------», если не нашёл её в справочнике
 
 async function iikoPost(path: string, body: unknown, token?: string) {
   const r = await fetch(IIKO + path, {
@@ -48,30 +52,52 @@ const TERMINAL = ['Delivered', 'Closed', 'Cancelled', 'Deleted'];
 // удалённый заказ (isDeleted) — отдельное «состояние» поверх статуса
 const effStatus = (ord: any) => (ord.isDeleted ? 'Deleted' : ord.status);
 
-function fmtOrder(ord: any): string {
-  const status = effStatus(ord);
+// Один адрес, каждая деталь один раз (то же правило, что в iiko-webhook).
+function fmtAddress(ord: any): string {
+  const a = ord.deliveryPoint?.address;
+  const street = a?.street?.name && !DASHES.test(a.street.name) ? a.street.name : null;
+  if (!street) {
+    const fromComment = String(ord.deliveryPoint?.comment || '').split('\n')[0].trim();
+    if (fromComment) return fromComment;
+  }
+  const parts = [
+    a?.street?.city?.name,
+    street,
+    a?.house && !DASHES.test(a.house) ? `д. ${a.house}` : null,
+    a?.building ? `корп. ${a.building}` : null,
+    a?.entrance ? `подъезд ${a.entrance}` : null,
+    a?.floor ? `этаж ${a.floor}` : null,
+    a?.flat ? `кв. ${a.flat}` : null,
+    a?.doorphone ? `домофон ${a.doorphone}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(', ') : String(a?.line1 || '');
+}
+
+// Карточка заказа БЕЗ статуса — статус дописывается отдельной строкой,
+// и именно эта база хранится в orig_text для каскадных редактирований.
+function fmtBase(ord: any): string {
   const lines: string[] = [];
-  lines.push(`🆕 <b>Доставка №${esc(ord.number)}</b> — ${FOOTER[status] || esc(status)}`);
-  if (ord.sourceKey) lines.push(`Источник: ${esc(ord.sourceKey)}`);
-  if (ord.externalNumber) lines.push(`Внешний №: ${esc(ord.externalNumber)}`);
+  lines.push(`🆕 Доставка №${ord.number}`);
+  if (ord.sourceKey) lines.push(`Источник: ${ord.sourceKey}`);
+  if (ord.externalNumber) lines.push(`Внешний №: ${ord.externalNumber}`);
+  const who = [ord.customer?.name, ord.phone].filter(Boolean).join(', ');
+  if (who) lines.push(`Клиент: ${who}`);
+  const addr = fmtAddress(ord);
+  if (addr) lines.push(`Адрес: ${addr}`);
   lines.push('');
   const items = ord.items || [];
   for (const it of items.slice(0, 25)) {
-    lines.push(`• ${esc(it.product?.name || '?')} ×${it.amount}${it.price ? ` — ${it.price * it.amount} ₽` : ''}`);
-    for (const m of it.modifiers || []) lines.push(`    ↳ ${esc(m.product?.name || '?')}${m.amount > 1 ? ` ×${m.amount}` : ''}`);
+    lines.push(`• ${it.product?.name || '?'} ×${it.amount}${it.price ? ` — ${it.price * it.amount} ₽` : ''}`);
+    for (const m of it.modifiers || []) lines.push(`    – ${m.product?.name || '?'}${m.amount > 1 ? ` ×${m.amount}` : ''}`);
   }
   if (items.length > 25) lines.push(`… и ещё ${items.length - 25} позиций (полный состав — на кассе)`);
-  lines.push('');
-  lines.push(`<b>Сумма: ${ord.sum} ₽</b>`);
-  const who = [ord.customer?.name, ord.phone].filter(Boolean).join(', ');
-  if (who) lines.push(`Клиент: ${esc(who)}`);
-  const addr = ord.deliveryPoint?.address?.line1 || ord.deliveryPoint?.address?.street?.name;
-  if (addr) lines.push(`Адрес: ${esc(addr)}`);
-  if (ord.comment) lines.push(`Комментарий: ${esc(String(ord.comment).slice(0, 300))}`);
-  lines.push('');
-  lines.push(FOOTER[status] || esc(status));
-  return lines.join('\n').slice(0, 4000);
+  lines.push(`Сумма: ${ord.sum} ₽`);
+  if (ord.comment) lines.push(`Комментарий: ${String(ord.comment).slice(0, 300)}`);
+  return lines.join('\n').slice(0, 3800);
 }
+
+const withStatus = (base: string, status: string) =>
+  `${base}\n\n${FOOTER[status] || status}`.slice(0, 4000);
 
 Deno.serve(async (req: Request) => {
   if (req.headers.get('x-poller-key') !== Deno.env.get('POLLER_KEY')) {
@@ -102,19 +128,19 @@ Deno.serve(async (req: Request) => {
 
       const { data: seen } = await sb.from('iiko_notified_orders').select('*').eq('id', o.id).maybeSingle();
       if (!seen) {
-        const j = await tgCall('sendMessage', { text: fmtOrder(ord), parse_mode: 'HTML' });
+        const base = fmtBase(ord);
+        const j = await tgCall('sendMessage', { text: withStatus(base, ord.status), disable_web_page_preview: true });
         if (j.ok) {
           await sb.from('iiko_notified_orders').insert({
             id: o.id, number: ord.number, status: ord.status,
-            last_status: ord.status, tg_message_id: j.result.message_id,
+            last_status: ord.status, tg_message_id: j.result.message_id, orig_text: base,
           });
           sent++;
         }
       } else if (ord.status === 'Unconfirmed' && seen.remind_count === 0
         && Date.now() - new Date(seen.notified_at).getTime() > 7 * 60 * 1000) {
         const j = await tgCall('sendMessage', {
-          text: `🔔 <b>Заказ №${esc(ord.number)} всё ещё НЕ ПОДТВЕРЖДЁН!</b>\nВисит больше 7 минут — подтвердите на кассе.`,
-          parse_mode: 'HTML',
+          text: `🔔 Заказ №${ord.number} всё ещё НЕ ПОДТВЕРЖДЁН!\nВисит больше 7 минут — подтвердите на кассе.`,
           ...(seen.tg_message_id ? { reply_to_message_id: seen.tg_message_id } : {}),
         });
         if (j.ok) { await sb.from('iiko_notified_orders').update({ remind_count: 1 }).eq('id', o.id); sent++; }
@@ -134,13 +160,20 @@ Deno.serve(async (req: Request) => {
         if (!ord) continue;
         const status = effStatus(ord);
         if (status === t.last_status) continue;
-        await tgCall('editMessageText', { message_id: t.tg_message_id, text: fmtOrder(ord), parse_mode: 'HTML' });
+        // База — исходный текст сообщения (вебхука или наш); для старых строк
+        // без orig_text рендерим карточку заново из текущего состояния заказа.
+        const base = t.orig_text || fmtBase(ord);
+        await tgCall('editMessageText', {
+          message_id: t.tg_message_id,
+          text: withStatus(base, status),
+          disable_web_page_preview: true,
+        });
         edited++;
         if (status === 'Cancelled' || status === 'Deleted') {
-          const cause = ord.cancelInfo?.cause?.name ? ` — ${esc(ord.cancelInfo.cause.name)}` : '';
+          const cause = ord.cancelInfo?.cause?.name ? ` — ${ord.cancelInfo.cause.name}` : '';
           await tgCall('sendMessage', {
-            text: `${status === 'Deleted' ? '🗑' : '❌'} <b>Заказ №${esc(ord.number)} ${status === 'Deleted' ? 'УДАЛЁН' : 'ОТМЕНЁН'}</b>${cause}`,
-            parse_mode: 'HTML', reply_to_message_id: t.tg_message_id,
+            text: `${status === 'Deleted' ? '🗑' : '❌'} Заказ №${ord.number} ${status === 'Deleted' ? 'УДАЛЁН' : 'ОТМЕНЁН'}${cause}`,
+            reply_to_message_id: t.tg_message_id,
           });
         }
         await sb.from('iiko_notified_orders').update({

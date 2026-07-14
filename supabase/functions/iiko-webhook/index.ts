@@ -7,6 +7,8 @@
 // поэтому поллер, увидев строку, не шлёт своё дублирующее сообщение, а его
 // каскад статусов / напоминание «не подтверждён 7 минут» / громкая отмена
 // продолжают работать поверх сообщения вебхука (tg_message_id сохраняем).
+// Исходный текст кладём в orig_text — каскад поллера дописывает статус к нему,
+// а не перерисовывает сообщение из обнулённого iiko-заказа.
 // Если TG-отправка не удалась — бронь снимаем, и поллер объявит заказ через минуту.
 //
 // Авторизация: iiko передаёт authToken настроек вебхука в заголовке Authorization;
@@ -15,6 +17,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const TERMINAL = ['Delivered', 'Closed', 'Cancelled', 'Deleted'];
+const DASHES = /^[-–—\s]*$/; // iiko ставит улицу «----------», если не нашёл её в справочнике
 
 async function tgCall(method: string, payload: Record<string, unknown>) {
   const r = await fetch(`https://api.telegram.org/bot${Deno.env.get('TG_TOKEN')}/${method}`, {
@@ -33,17 +36,26 @@ function fmtWhen(s: unknown): string | null {
   return m ? `${m[4]}:${m[5]} (${m[3]}.${m[2]})` : null;
 }
 
+// Один адрес, каждая деталь один раз. Улица не зарезолвилась в справочник
+// (прочерки) — берём строку, которую сайт положил курьеру в комментарий точки.
 function fmtAddress(ord: any): string {
   const a = ord.deliveryPoint?.address;
-  if (!a) return '';
+  const street = a?.street?.name && !DASHES.test(a.street.name) ? a.street.name : null;
+  if (!street) {
+    const fromComment = String(ord.deliveryPoint?.comment || '').split('\n')[0].trim();
+    if (fromComment) return fromComment;
+  }
   const parts = [
-    a.street?.city?.name,
-    a.street?.name,
-    a.house ? `д. ${a.house}` : null,
-    a.building ? `корп. ${a.building}` : null,
-    a.flat ? `кв. ${a.flat}` : null,
+    a?.street?.city?.name,
+    street,
+    a?.house && !DASHES.test(a.house) ? `д. ${a.house}` : null,
+    a?.building ? `корп. ${a.building}` : null,
+    a?.entrance ? `подъезд ${a.entrance}` : null,
+    a?.floor ? `этаж ${a.floor}` : null,
+    a?.flat ? `кв. ${a.flat}` : null,
+    a?.doorphone ? `домофон ${a.doorphone}` : null,
   ].filter(Boolean);
-  return parts.length ? parts.join(', ') : String(a.line1 || '');
+  return parts.length ? parts.join(', ') : String(a?.line1 || '');
 }
 
 function fmtOrder(ord: any): string {
@@ -53,7 +65,6 @@ function fmtOrder(ord: any): string {
   if (ord.phone) lines.push(`Телефон: ${ord.phone}`);
   const addr = fmtAddress(ord);
   if (addr) lines.push(`Адрес: ${addr}`);
-  if (ord.deliveryPoint?.comment) lines.push(`Адрес (комментарий): ${ord.deliveryPoint.comment}`);
   const when = fmtWhen(ord.completeBefore);
   if (when) lines.push(`Ко времени: ${when}`);
   if (ord.sourceKey) lines.push(`Источник: ${ord.sourceKey}`);
@@ -110,9 +121,12 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const j = await tgCall('sendMessage', { text: fmtOrder(ord), disable_web_page_preview: true });
+      const text = fmtOrder(ord);
+      const j = await tgCall('sendMessage', { text, disable_web_page_preview: true });
       if (j.ok) {
-        await sb.from('iiko_notified_orders').update({ tg_message_id: j.result.message_id }).eq('id', info.id);
+        await sb.from('iiko_notified_orders')
+          .update({ tg_message_id: j.result.message_id, orig_text: text })
+          .eq('id', info.id);
         sent++;
         console.log(`notified: order ${info.id} number ${ord.number} status ${ord.status}`);
       } else {

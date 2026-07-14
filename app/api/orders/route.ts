@@ -3,7 +3,7 @@
 // поэтому здесь в TG ничего не отправляем.
 import { NextResponse, NextRequest } from 'next/server';
 import { createSiteDelivery, type SiteOrderItem } from '@/lib/iiko/orders';
-import { resolveStreet } from '@/lib/iiko/streets';
+import { resolveStreetFromAddress, stripHouse } from '@/lib/iiko/streets';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
 import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
@@ -73,7 +73,8 @@ function parseAddress(full: string) {
 
 function buildComment(p: IncomingPayload): string {
   const lines: string[] = ['ЗАКАЗ С САЙТА'];
-  const details = composeAddressDetails(p);
+  // Дом не дублируем — он уже в самом адресе; тут только корпус/подъезд/этаж/кв/домофон.
+  const details = composeAddressDetails({ ...p, house: null });
   if (details) lines.push(`Детали адреса: ${details}`);
   if (p.deliveryTime === 'custom' && p.deliveryTimeCustom) {
     lines.push(`Время доставки: ${p.deliveryTimeCustom}`);
@@ -192,9 +193,21 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseAddress(p.address);
     // Резолвим улицу в реальный streetId справочника iiko, чтобы касса показывала
-    // название, а не прочерки. Не нашли/ошибка — откат на имя строкой внутри createSiteDelivery.
-    const resolved = await resolveStreet(parsed.city, parsed.street);
-    const details = composeAddressDetails(p);
+    // название, а не прочерки. Перебираем все части адреса — гость может написать
+    // «Промышленная», «Промышленная, дом 20Б» или полную строку из подсказок.
+    // Не нашли/ошибка — откат на имя строкой внутри createSiteDelivery.
+    const resolved = await resolveStreetFromAddress(p.address, parsed.city);
+    const streetName = resolved?.streetName || parsed.street || stripHouse(p.address) || p.address;
+    const house = (p.house && p.house.trim()) || parsed.house;
+
+    // Канонический адрес для курьера: каждая деталь ровно один раз.
+    const courierAddress = [
+      parsed.city || 'Дмитров',
+      streetName,
+      house ? `д. ${house}` : null,
+      composeAddressDetails({ ...p, house: null }) || null,
+    ].filter(Boolean).join(', ');
+
     const { orderId } = await createSiteDelivery({
       phone: normalizePhone(p.phone),
       customerName: p.name || 'Гость сайта',
@@ -203,16 +216,17 @@ export async function POST(req: NextRequest) {
       items,
       address: {
         ...parsed,
+        street: streetName,
         streetId: resolved?.streetId ?? null,
         // Явное поле «дом» с формы имеет приоритет над разбором строки адреса.
-        house: (p.house && p.house.trim()) || parsed.house,
+        house,
         building: p.building?.trim() || null,
         entrance: p.entrance?.trim() || null,
         floor: p.floor?.trim() || null,
         flat: p.apartment?.trim() || null,
         doorphone: p.intercom?.trim() || null,
         // deliveryPoint.comment покажет курьеру полный адрес с деталями.
-        full: details ? `${p.address}, ${details}` : p.address,
+        full: courierAddress,
         latitude: lat,
         longitude: lon,
       },

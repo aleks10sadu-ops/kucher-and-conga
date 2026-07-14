@@ -55,6 +55,27 @@ export interface ResolvedStreet {
   cityId: string;
 }
 
+// «Промышленная, дом 20Б» → «Промышленная»; «Загорская 32» → «Загорская».
+// Гости пишут дом в поле улицы как угодно — перед сопоставлением со
+// справочником хвост с номером дома отрезаем.
+export function stripHouse(part: string): string {
+  return String(part)
+    .replace(/,?\s*(?:дом|д\.)\s*[\wа-яё/\\-]+\s*$/i, '')
+    .replace(/,?\s+\d+[\wа-яё/\\-]*\s*$/i, '')
+    .trim();
+}
+
+/**
+ * Кандидаты в название улицы из свободной строки адреса.
+ * Части через запятую, без номеров домов; часть со словом «улица» — первая.
+ */
+export function streetCandidates(raw: string): string[] {
+  const parts = String(raw).split(',').map((s) => stripHouse(s)).filter(Boolean);
+  const withKeyword = parts.filter((p) => /(улица|ул\.)/i.test(p));
+  const rest = parts.filter((p) => !withKeyword.includes(p));
+  return [...withKeyword, ...rest];
+}
+
 /**
  * Находит streetId в справочнике улиц iiko по названию города и улицы.
  * Возвращает null, если улицы нет в справочнике или запрос упал —
@@ -82,4 +103,22 @@ export async function resolveStreet(
     console.error('resolveStreet failed:', e);
     return null;
   }
+}
+
+/**
+ * Резолвит улицу из свободной строки адреса: перебирает кандидатов
+ * (части адреса без номеров домов) до первого совпадения со справочником.
+ * «Промышленная», «Промышленная, дом 20Б», «Дмитров, Промышленная улица, 46» —
+ * все варианты находят улицу «Промышленная».
+ */
+export async function resolveStreetFromAddress(
+  rawAddress: string,
+  cityHint: string | null,
+): Promise<ResolvedStreet | null> {
+  for (const candidate of streetCandidates(rawAddress)) {
+    // кандидат может оказаться городом («Дмитров») — резолвер его просто не найдёт
+    const hit = await resolveStreet(cityHint, candidate);
+    if (hit) return hit;
+  }
+  return null;
 }
