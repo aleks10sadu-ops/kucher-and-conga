@@ -21,6 +21,7 @@
 // Все сообщения — плоский текст без parse_mode: не нужно экранировать
 // названия блюд и можно безопасно редактировать сообщения вебхука.
 // Секреты: IIKO_API_LOGIN, IIKO_ORGANIZATION_ID, TG_TOKEN, TG_CHAT_ID, POLLER_KEY;
+// для авторизации v2 (опционально, но обязательно после отключения v1): IIKO_APP_ID, IIKO_APP_SECRET;
 // для терминала (опционально): RMS_URL, RMS_LOGIN, RMS_PASS_SHA1.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -35,6 +36,18 @@ async function iikoPost(path: string, body: unknown, token?: string) {
   });
   if (!r.ok) throw new Error(`iiko ${path} -> ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return r.json();
+}
+
+// Авторизация: v2 (appId + clientSecret + apiKey) при заданных IIKO_APP_ID/IIKO_APP_SECRET,
+// иначе старый v1 (apiLogin). Старый /api/1/access_token iiko скоро отключит.
+async function iikoAuth(): Promise<string> {
+  const apiLogin = Deno.env.get('IIKO_API_LOGIN');
+  const appId = Deno.env.get('IIKO_APP_ID')?.trim();
+  const appSecret = Deno.env.get('IIKO_APP_SECRET')?.trim();
+  const { token } = appId && appSecret
+    ? await iikoPost('/api/v2/access_token', { apiKey: apiLogin, appId, clientSecret: appSecret })
+    : await iikoPost('/api/1/access_token', { apiLogin });
+  return token;
 }
 
 async function tgCall(method: string, payload: Record<string, unknown>) {
@@ -120,7 +133,7 @@ Deno.serve(async (req: Request) => {
   try {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const orgId = Deno.env.get('IIKO_ORGANIZATION_ID')!;
-    const { token } = await iikoPost('/api/1/access_token', { apiLogin: Deno.env.get('IIKO_API_LOGIN') });
+    const token = await iikoAuth();
 
     let sent = 0, edited = 0;
 
