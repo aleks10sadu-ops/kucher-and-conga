@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ShieldCheck } from 'lucide-react';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
 // Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
@@ -297,6 +297,9 @@ export default function RedesignClient() {
                     </div>
                 </section>
 
+                {/* Официальное уведомление: у ресторана один адрес, филиалов нет */}
+                <SingleLocationNotice />
+
                 {/* БЕНТО над фото зала — на весь экран */}
                 <section id="bento" style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                     <img src="/hero-image.webp" alt="Зал с подвешенным лесом" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -530,6 +533,30 @@ export default function RedesignClient() {
             {/* Лайтбокс галереи */}
             <Lightbox index={lightbox} onClose={() => setLightbox(null)} onNav={(d) => setLightbox((i) => i === null ? null : (i + d + GALLERY.length) % GALLERY.length)} />
         </main>
+    );
+}
+
+// Официальное уведомление: у ресторана единственный адрес, филиалов и других залов нет.
+// Без упоминания названий, адресов и фото сторонних заведений — по юридическим причинам.
+function SingleLocationNotice() {
+    return (
+        <section aria-label="Официальное уведомление" style={{ position: 'relative', zIndex: 3, background: '#120E0A', borderTop: '1px solid rgba(194,148,85,0.28)', borderBottom: '1px solid rgba(194,148,85,0.28)' }}>
+            <div className="rf-wrap rf-notice" style={{ maxWidth: 1280, margin: '0 auto', paddingTop: 22, paddingBottom: 22, display: 'flex', alignItems: 'flex-start', gap: 18 }}>
+                <div className="rf-notice-icon" style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(172,72,35,0.16)', border: '1px solid rgba(194,148,85,0.4)' }}>
+                    <ShieldCheck style={{ width: 24, height: 24, color: C.brass }} aria-hidden />
+                </div>
+                <div>
+                    <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 20, color: '#F4F7F2', lineHeight: 1.25 }}>
+                        У&nbsp;нас один ресторан
+                    </h2>
+                    <p style={{ margin: '8px 0 0', fontSize: 15, lineHeight: 1.6, color: 'rgba(244,247,242,0.82)', maxWidth: 760 }}>
+                        «Кучер&nbsp;&amp;&nbsp;Conga» работает по&nbsp;единственному адресу — Дмитров, Промышленная&nbsp;улица,&nbsp;20Б.
+                        Филиалов и&nbsp;других залов в&nbsp;городе у&nbsp;нас нет. Любые заведения с&nbsp;похожими названиями к&nbsp;нам
+                        не&nbsp;относятся и&nbsp;нашими партнёрами не&nbsp;являются.
+                    </p>
+                </div>
+            </div>
+        </section>
     );
 }
 
