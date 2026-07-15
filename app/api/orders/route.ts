@@ -229,6 +229,15 @@ export async function POST(req: NextRequest) {
       composeAddressDetails({ ...p, house: null }) || null,
     ].filter(Boolean).join(', ');
 
+    // line1 для нового формата адресов iiko: город, улица, дом, корпус одной строкой.
+    // Подъезд/этаж/кв/домофон сюда НЕ кладём — в city-формате они уходят отдельными полями.
+    const line1 = [
+      parsed.city || 'Дмитров',
+      streetName,
+      house ? `д. ${house}` : null,
+      p.building?.trim() ? `корп. ${p.building.trim()}` : null,
+    ].filter(Boolean).join(', ');
+
     const { orderId } = await createSiteDelivery({
       phone: normalizePhone(p.phone),
       customerName: p.name || 'Гость сайта',
@@ -248,6 +257,8 @@ export async function POST(req: NextRequest) {
         doorphone: p.intercom?.trim() || null,
         // deliveryPoint.comment покажет курьеру полный адрес с деталями.
         full: courierAddress,
+        // line1 — весь адрес одной строкой для нового формата адресов iiko.
+        line1,
         latitude: lat,
         longitude: lon,
       },
