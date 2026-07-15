@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
-import { Menu, X, ShieldCheck } from 'lucide-react';
+import { Menu, X, AlertTriangle } from 'lucide-react';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
 // Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
@@ -541,21 +541,21 @@ export default function RedesignClient() {
 function SingleLocationNotice() {
     return (
         <section aria-label="Официальное уведомление" style={{ position: 'relative', zIndex: 3, background: '#120E0A', borderTop: '1px solid rgba(194,148,85,0.28)', borderBottom: '1px solid rgba(194,148,85,0.28)' }}>
-            <div className="rf-wrap rf-notice" style={{ maxWidth: 1280, margin: '0 auto', paddingTop: 22, paddingBottom: 22, display: 'flex', alignItems: 'flex-start', gap: 18 }}>
-                <div className="rf-notice-icon" style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(172,72,35,0.16)', border: '1px solid rgba(194,148,85,0.4)' }}>
-                    <ShieldCheck style={{ width: 24, height: 24, color: C.brass }} aria-hidden />
+            <div className="rf-wrap rf-notice" style={{ maxWidth: 860, margin: '0 auto', paddingTop: 32, paddingBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+                <div className="rf-notice-icon" style={{ flexShrink: 0, width: 56, height: 56, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(172,72,35,0.16)', border: '1px solid rgba(194,148,85,0.4)' }}>
+                    <AlertTriangle style={{ width: 30, height: 30, color: C.brass }} aria-hidden />
                 </div>
-                <div>
-                    <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 20, color: '#F4F7F2', lineHeight: 1.25 }}>
-                        У&nbsp;нас один ресторан
-                    </h2>
-                    <p style={{ margin: '8px 0 0', fontSize: 15, lineHeight: 1.6, color: 'rgba(244,247,242,0.82)', maxWidth: 760 }}>
-                        Ресторан «Кучер&nbsp;&amp;&nbsp;Conga» работает по&nbsp;адресу: г.&nbsp;Дмитров, Промышленная&nbsp;улица,&nbsp;20Б.
-                        Других залов, филиалов или связанных с&nbsp;нами ресторанов в&nbsp;городе нет. Если заведение называет
-                        себя нашим филиалом или частью «Кучер&nbsp;&amp;&nbsp;Conga», к&nbsp;нам оно отношения не&nbsp;имеет.
-                        Мы&nbsp;дорожим своим именем и&nbsp;хотим, чтобы вы&nbsp;всегда точно знали, где нас найти.
-                    </p>
-                </div>
+                <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 22, color: '#F4F7F2', lineHeight: 1.25 }}>
+                    Уважаемые гости!
+                </h2>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'rgba(244,247,242,0.84)', maxWidth: 760 }}>
+                    Если вы услышали об&nbsp;открытии нового заведения в&nbsp;Дмитрове, и&nbsp;оно позиционирует себя частью
+                    Ресторанного комплекса «Кучер&nbsp;&amp;&nbsp;Conga», не&nbsp;дайте ввести себя в&nbsp;заблуждение.
+                    «Кучер»&nbsp;- он такой один! Другие рестораны, которые могут пытаться использовать репутацию нашего
+                    заведения в&nbsp;качестве своей рекламы, не&nbsp;имеют к&nbsp;«Кучер&nbsp;&amp;&nbsp;Conga» никакого
+                    отношения. Мы&nbsp;дорожим своим именем и&nbsp;всегда рады видеть вас в&nbsp;городе Дмитров, только
+                    по&nbsp;адресу Промышленная&nbsp;20Б.
+                </p>
             </div>
         </section>
     );
