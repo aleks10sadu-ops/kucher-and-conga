@@ -13,8 +13,21 @@ export async function getToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && cached && cached.expiresAt > now) {
     return cached.token;
   }
-  const { apiLogin } = getIikoConfig();
-  const data = await iikoPost<TokenResponse>('/api/1/access_token', { apiLogin });
+  const { apiLogin, appId, appSecret } = getIikoConfig();
+
+  // Авторизация v2 (Developer Portal iiko): appId + clientSecret + apiKey.
+  // apiKey — это существующий apiLogin, получать заново не нужно.
+  // Старый /api/1/access_token (только apiLogin) iiko скоро отключит — используем v2,
+  // как только в env заданы IIKO_APP_ID и IIKO_APP_SECRET; иначе откат на v1.
+  const data =
+    appId && appSecret
+      ? await iikoPost<TokenResponse>('/api/v2/access_token', {
+          apiKey: apiLogin,
+          appId,
+          clientSecret: appSecret,
+        })
+      : await iikoPost<TokenResponse>('/api/1/access_token', { apiLogin });
+
   cached = { token: data.token, expiresAt: now + TTL_MS };
   return data.token;
 }

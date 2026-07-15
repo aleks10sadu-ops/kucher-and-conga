@@ -38,5 +38,8 @@
 
 `IIKO_API_LOGIN`, `IIKO_ORGANIZATION_ID`, `TG_TOKEN`, `TG_CHAT_ID`, `POLLER_KEY`
 (+ автоматические `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+Для авторизации iiko v2 (обязательна после отключения старого `/api/1/access_token`):
+`IIKO_APP_ID`, `IIKO_APP_SECRET` — appId и clientSecret приложения из Developer Portal iiko.
+Пока они не заданы, поллер использует старый метод (только `IIKO_API_LOGIN`).
 У обеих функций `verify_jwt = false` — авторизация своя: поллер проверяет заголовок
 `x-poller-key`, вебхук — `Authorization` (значение = `POLLER_KEY`).
