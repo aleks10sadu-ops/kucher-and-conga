@@ -19,6 +19,8 @@ type FoodDetailModalProps = {
     categories?: { id: string | number; name: string }[];
     onUpdate?: (item: any) => void;
     onDelete?: (id: string | number) => void;
+    // Стоп-лист iiko (productId недоступных позиций). Опция в стопе не выбирается.
+    stopSet?: Set<string>;
 };
 
 /**
@@ -35,8 +37,10 @@ export default function FoodDetailModal({
     isAdmin = false,
     categories = [],
     onUpdate,
-    onDelete
+    onDelete,
+    stopSet,
 }: FoodDetailModalProps) {
+    const isOptStopped = (o: { id: string }) => !!stopSet && stopSet.has(String(o.id));
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(item?.name || '');
     const [editDescription, setEditDescription] = useState(item?.description || '');
@@ -82,20 +86,45 @@ export default function FoodDetailModal({
     const hasModifiers = modifierGroups.length > 0;
     const [modSel, setModSel] = useState<Record<string, string[]>>({});
 
-    // Предвыбор первой опции для обязательных одиночных групп при смене блюда
+    // Предвыбор первой ДОСТУПНОЙ опции для обязательных одиночных групп при смене блюда
+    // (позицию из стоп-листа не предвыбираем — иначе гость отправит недоступное).
     useEffect(() => {
         const init: Record<string, string[]> = {};
         for (const g of (((item as any)?.modifierGroups as ModifierGroup[]) || [])) {
-            if ((g.min ?? 0) > 0 && (g.max ?? 1) <= 1 && g.options[0]) {
-                init[g.id] = [g.options[0].id];
+            if ((g.min ?? 0) > 0 && (g.max ?? 1) <= 1) {
+                const first = g.options.find((o) => !isOptStopped(o));
+                if (first) init[g.id] = [first.id];
             }
         }
         setModSel(init);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [item]);
+
+    // Стоп-лист приходит асинхронно: если ранее выбранная опция попала в стоп —
+    // убираем её из выбора, чтобы недоступная позиция не ушла в корзину.
+    useEffect(() => {
+        setModSel((prev) => {
+            let changed = false;
+            const next: Record<string, string[]> = {};
+            for (const g of (((item as any)?.modifierGroups as ModifierGroup[]) || [])) {
+                const cur = prev[g.id] || [];
+                const kept = cur.filter((oid) => {
+                    const o = g.options.find((x) => x.id === oid);
+                    return o && !isOptStopped(o);
+                });
+                if (kept.length !== cur.length) changed = true;
+                if (kept.length) next[g.id] = kept;
+            }
+            return changed ? next : prev;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stopSet, item]);
 
     const cleanOptName = (n: string) => String(n).replace(/^[-–—]\s*/, '');
 
     const toggleMod = (g: ModifierGroup, optId: string) => {
+        const opt = g.options.find((o) => o.id === optId);
+        if (opt && isOptStopped(opt)) return; // опцию из стоп-листа выбрать нельзя
         setModSel((prev) => {
             const cur = prev[g.id] || [];
             const single = (g.max ?? 1) <= 1;
@@ -721,22 +750,27 @@ export default function FoodDetailModal({
                                                 <div className="space-y-2">
                                                     {g.options.map((opt) => {
                                                         const checked = sel.includes(opt.id);
+                                                        const stopped = isOptStopped(opt);
                                                         return (
                                                             <button
                                                                 key={opt.id}
                                                                 type="button"
+                                                                disabled={stopped}
+                                                                aria-disabled={stopped}
                                                                 onClick={() => toggleMod(g, opt.id)}
-                                                                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ${checked ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                                                                className={`w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ${stopped ? 'border-white/10 bg-white/[0.02] opacity-50 cursor-not-allowed' : checked ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
                                                             >
                                                                 <span className="flex items-center gap-3">
-                                                                    <span className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${single ? 'rounded-full' : 'rounded'} border ${checked ? 'border-brass bg-terracotta text-[#FBF3EA]' : 'border-white/30'}`}>
-                                                                        {checked && <Check className="w-3.5 h-3.5" />}
+                                                                    <span className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${single ? 'rounded-full' : 'rounded'} border ${checked && !stopped ? 'border-brass bg-terracotta text-[#FBF3EA]' : 'border-white/30'}`}>
+                                                                        {checked && !stopped && <Check className="w-3.5 h-3.5" />}
                                                                     </span>
-                                                                    <span className="text-sm text-white">{cleanOptName(opt.name)}</span>
+                                                                    <span className={`text-sm text-white ${stopped ? 'line-through' : ''}`}>{cleanOptName(opt.name)}</span>
                                                                 </span>
-                                                                {opt.price > 0 && (
+                                                                {stopped ? (
+                                                                    <span className="text-cream/55 text-sm whitespace-nowrap">нет в наличии</span>
+                                                                ) : opt.price > 0 ? (
                                                                     <span className="text-brass text-sm font-medium whitespace-nowrap">+{opt.price} ₽</span>
-                                                                )}
+                                                                ) : null}
                                                             </button>
                                                         );
                                                     })}

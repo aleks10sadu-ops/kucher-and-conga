@@ -245,6 +245,7 @@ export default function PreorderMenuModal({ isOpen, onClose }: { isOpen: boolean
                 onClose={() => setSelectedItem(null)}
                 onAddToCart={cart.add}
                 cartItems={cart.items}
+                stopSet={stopSet}
             />
         </div>
     );

@@ -8,6 +8,8 @@ import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/busi
 type Props = {
   sets: MenuItem[];
   onAddToCart: (item: CartItem) => void;
+  // Стоп-лист iiko (productId недоступных позиций). Модификатор в стопе нельзя выбрать.
+  stopSet?: Set<string>;
 };
 
 // Дефолт «С хлебом» ставим только для выделенной группы «Хлеб» (её создаёт mapMenu
@@ -29,7 +31,8 @@ function defaultChoices(set: MenuItem | null): Record<string, string> {
   return out;
 }
 
-export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
+export default function BusinessLunchConstructor({ sets, onAddToCart, stopSet }: Props) {
+  const isOptStopped = (o: { id: string }) => !!stopSet && stopSet.has(String(o.id));
   const [selectedSetId, setSelectedSetId] = useState<string | number | null>(sets[0]?.id ?? null);
   // выбранные опции: { [groupId]: optionId }
   const [choices, setChoices] = useState<Record<string, string>>(() =>
@@ -52,10 +55,34 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
   );
   const groups: ModifierGroup[] = selectedSet?.modifierGroups || [];
 
+  // Стоп-лист приходит асинхронно после монтирования: если ранее выбранная опция
+  // (в т.ч. дефолтный «С хлебом») попала в стоп — снимаем выбор, чтобы гость не
+  // отправил недоступную позицию. Пустая группа снова станет «нужно выбрать».
+  useEffect(() => {
+    setChoices((c) => {
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const g of groups) {
+        const optId = c[g.id];
+        const opt = optId ? g.options.find((o) => o.id === optId) : undefined;
+        if (opt && isOptStopped(opt)) { changed = true; continue; }
+        if (optId) next[g.id] = optId;
+      }
+      return changed ? next : c;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopSet, selectedSetId]);
+
   // Все группы бизнес-ланча обязательны: гость выбирает по одной позиции из каждой.
   // iiko отдаёт min=0 для гарнира/супа/салата/второго/напитка, поэтому опираемся не на min,
   // а на факт выбора в каждой группе (хлеб удовлетворён дефолтом «С хлебом»).
-  const missingGroups = groups.filter((g) => !choices[g.id]);
+  // Опция в стопе не должна попасть в заказ, даже если была выбрана до обновления стоп-листа.
+  const chosenOptStopped = (g: ModifierGroup) => {
+    const opt = g.options.find((o) => o.id === choices[g.id]);
+    return !!opt && isOptStopped(opt);
+  };
+
+  const missingGroups = groups.filter((g) => !choices[g.id] || chosenOptStopped(g));
   const requiredOk = missingGroups.length === 0;
 
   const selectSet = (id: string | number) => {
@@ -140,17 +167,25 @@ export default function BusinessLunchConstructor({ sets, onAddToCart }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {g.options.map((o) => {
                   const active = choices[g.id] === o.id;
+                  const stopped = isOptStopped(o);
                   return (
                     <button
                       key={o.id}
                       type="button"
-                      onClick={() => choose(g.id, o.id)}
+                      disabled={stopped}
+                      aria-disabled={stopped}
+                      onClick={() => { if (!stopped) choose(g.id, o.id); }}
                       className={`text-left rounded-xl border px-3 py-2 text-sm transition ${
-                        active ? 'border-brass bg-brass/10' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.09]'
+                        stopped
+                          ? 'border-white/10 bg-white/[0.02] opacity-50 cursor-not-allowed'
+                          : active
+                            ? 'border-brass bg-brass/10'
+                            : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.09]'
                       }`}
                     >
-                      {o.name}
-                      {o.price > 0 && <span className="text-cream/55"> +{o.price} ₽</span>}
+                      <span className={stopped ? 'line-through' : undefined}>{o.name}</span>
+                      {o.price > 0 && !stopped && <span className="text-cream/55"> +{o.price} ₽</span>}
+                      {stopped && <span className="text-cream/55"> — нет в наличии</span>}
                     </button>
                   );
                 })}
