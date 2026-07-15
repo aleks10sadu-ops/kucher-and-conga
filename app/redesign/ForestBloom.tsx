@@ -540,15 +540,18 @@ export default function RedesignClient() {
 // Без упоминания названий, адресов и фото сторонних заведений — по юридическим причинам.
 function SingleLocationNotice() {
     return (
-        <section aria-label="Официальное уведомление" style={{ position: 'relative', zIndex: 3, background: '#120E0A', borderTop: '1px solid rgba(194,148,85,0.28)', borderBottom: '1px solid rgba(194,148,85,0.28)' }}>
-            <div className="rf-wrap rf-notice" style={{ maxWidth: 860, margin: '0 auto', paddingTop: 32, paddingBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
-                <div className="rf-notice-icon" style={{ flexShrink: 0, width: 56, height: 56, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(172,72,35,0.16)', border: '1px solid rgba(194,148,85,0.4)' }}>
-                    <AlertTriangle style={{ width: 30, height: 30, color: C.brass }} aria-hidden />
-                </div>
-                <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 22, color: '#F4F7F2', lineHeight: 1.25 }}>
+        <section aria-label="Официальное уведомление" style={{ position: 'relative', zIndex: 3, overflow: 'hidden', borderTop: '3px solid #AC4823', borderBottom: '1px solid rgba(0,0,0,0.4)' }}>
+            {/* Фото зала на фоне — размыто и приглушено, работает как атмосфера, не как шум.
+                Blur убирает высокочастотные блики (лампы), чтобы под текстом был ровный контраст. */}
+            <img src="/hero-image.webp" alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(4px) brightness(0.72)', transform: 'scale(1.08)' }} />
+            {/* Плотная тёмная подложка гарантирует ровный контраст под любым участком фото */}
+            <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(9,14,11,0.86) 0%, rgba(9,14,11,0.8) 100%)' }} />
+            <div className="rf-wrap rf-notice" style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto', paddingTop: 44, paddingBottom: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
+                <AlertTriangle style={{ width: 40, height: 40, color: '#E9B949', strokeWidth: 2 }} aria-hidden />
+                <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 24, color: '#F5F1E8', lineHeight: 1.2, letterSpacing: '0.005em' }}>
                     Уважаемые гости!
                 </h2>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'rgba(244,247,242,0.84)', maxWidth: 760 }}>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.75, color: '#ECE6DA', maxWidth: 600 }}>
                     Если вы услышали об&nbsp;открытии нового заведения в&nbsp;Дмитрове, и&nbsp;оно позиционирует себя частью
                     Ресторанного комплекса «Кучер&nbsp;&amp;&nbsp;Conga», не&nbsp;дайте ввести себя в&nbsp;заблуждение.
                     «Кучер»&nbsp;- он такой один! Другие рестораны, которые могут пытаться использовать репутацию нашего
