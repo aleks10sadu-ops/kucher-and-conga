@@ -63,6 +63,9 @@ export default function DeliveryCheckout({
 
     const [zone, setZone] = useState<DeliveryZone | null>(null);
     const [coords, setCoords] = useState<number[] | null>(null);
+    // Полный адрес, который реально нашёл геокодер (с городом) — показываем гостю,
+    // чтобы адрес из другого города не «проходил» молча как дмитровский.
+    const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
     const deliveryPrice = zone?.price ?? null;
     const total = subtotal + (deliveryPrice || 0);
 
@@ -78,8 +81,17 @@ export default function DeliveryCheckout({
     // Яндекс-карты подгружает мини-карта зон (DeliveryZoneMiniMap) — она всегда
     // отрисована в форме, поэтому отдельный загрузчик скрипта не нужен.
 
+    // Убираем страну/область из адресной строки геокодера — гостю важнее город и улица.
+    const cleanAddress = (line: string) =>
+        line.replace(/^Россия,\s*/i, '').replace(/^Московская область,\s*/i, '');
+
+    // Габариты самой дальней зоны (600₽) — в этих границах ищем адрес в первую очередь.
+    const DELIVERY_BOUNDS = [[56.09, 37.03], [56.79, 38.05]];
+
     // Точная зона: геокодим адрес → координаты → проверка попадания в полигон.
-    // Fallback — по ключевым словам улицы (мгновенно, пока грузятся карты).
+    // Город НЕ подставляем принудительно: если гость указал другой город,
+    // геокодер найдёт именно его, а зона по полигонам честно окажется пустой.
+    // Fallback по ключевым словам улицы — только пока Яндекс-карты не загрузились.
     const resolveZone = (addr: string) => {
         const kw = zoneByKeyword(addr);
         const ym = (window as any).ymaps;
@@ -88,13 +100,23 @@ export default function DeliveryCheckout({
             return;
         }
         ym.ready(() => {
-            ym.geocode(`${addr}, Дмитров, Московская область`, { results: 1, boundedBy: [[56.2, 37.3], [56.5, 37.7]] })
+            // Сначала ищем строго в границах зон доставки; если там ничего нет —
+            // повторяем без строгих границ, чтобы показать гостю найденный город.
+            ym.geocode(addr, { results: 1, boundedBy: DELIVERY_BOUNDS, strictBounds: true })
                 .then((res: any) => {
                     const obj = res.geoObjects?.get(0);
-                    if (!obj) { setZone(kw); return; }
+                    if (obj) return obj;
+                    return ym.geocode(addr, { results: 1, boundedBy: DELIVERY_BOUNDS })
+                        .then((r2: any) => r2.geoObjects?.get(0));
+                })
+                .then((obj: any) => {
+                    if (!obj) { setZone(kw); setResolvedAddress(null); return; }
                     const c = obj.geometry.getCoordinates();
                     setCoords(c);
-                    setZone(checkDeliveryZoneForCoords(c) || kw);
+                    setResolvedAddress(obj.getAddressLine ? cleanAddress(obj.getAddressLine()) : null);
+                    // Координаты известны — доверяем только полигонам, без keyword-фолбэка:
+                    // улицы вроде «Центральная» есть в любом городе.
+                    setZone(checkDeliveryZoneForCoords(c));
                 })
                 .catch(() => setZone(kw));
         });
@@ -110,8 +132,11 @@ export default function DeliveryCheckout({
         setCoords(c);
         setZone(z);
         if (address) {
-            const cleaned = address.replace(/^Россия,\s*/i, '').replace(/^Московская область,\s*/i, '');
+            const cleaned = cleanAddress(address);
             set({ address: cleaned });
+            setResolvedAddress(cleaned);
+        } else {
+            setResolvedAddress(null);
         }
     };
 
@@ -130,6 +155,13 @@ export default function DeliveryCheckout({
         }
         if (!f.name.trim() || !f.phone.trim() || !f.address.trim()) {
             setErrorMsg('Заполните имя, телефон и адрес.');
+            setStatus('error');
+            return;
+        }
+        // Адрес распознан по координатам, но не попал ни в одну зону —
+        // доставка туда не осуществляется (например, другой город).
+        if (coords && !zone) {
+            setErrorMsg('Этот адрес вне зон доставки — привезти туда не сможем. Проверьте адрес или выберите точку на карте.');
             setStatus('error');
             return;
         }
@@ -269,7 +301,14 @@ export default function DeliveryCheckout({
                     placeholder="Улица *"
                     className={inputCls}
                     value={f.address}
-                    onChange={(e) => { set({ address: e.target.value }); setZone(zoneByKeyword(e.target.value)); }}
+                    onChange={(e) => {
+                        // Гость правит адрес руками — старые координаты и найденный
+                        // адрес больше не актуальны, зона пока по ключевым словам.
+                        set({ address: e.target.value });
+                        setCoords(null);
+                        setResolvedAddress(null);
+                        setZone(zoneByKeyword(e.target.value));
+                    }}
                     onBlur={() => resolveZone(f.address)}
                 />
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -280,15 +319,22 @@ export default function DeliveryCheckout({
                     <input placeholder="Квартира" className={inputCls} value={f.apartment} onChange={(e) => set({ apartment: e.target.value })} />
                     <input placeholder="Домофон" className={inputCls} value={f.intercom} onChange={(e) => set({ intercom: e.target.value })} />
                 </div>
+                {resolvedAddress && (
+                    <p className="text-xs text-cream/45">Найдено: {resolvedAddress}</p>
+                )}
                 {f.address.trim() && (
-                    <p className="text-xs text-cream/55">
-                        {zone ? (
-                            <>
-                                Зона: {zone.name} — {zone.price === 0 ? 'доставка бесплатно' : `доставка ${zone.price} ₽`}, заказ от {zone.minOrder.toLocaleString('ru-RU')} ₽
-                                {zone.price === 0 && ' (или от 2 бизнес-ланчей)'}
-                            </>
-                        ) : 'Зону доставки уточнит администратор при подтверждении.'}
-                    </p>
+                    zone ? (
+                        <p className="text-xs text-cream/55">
+                            Зона: {zone.name} — {zone.price === 0 ? 'доставка бесплатно' : `доставка ${zone.price} ₽`}, заказ от {zone.minOrder.toLocaleString('ru-RU')} ₽
+                            {zone.price === 0 && ' (или от 2 бизнес-ланчей)'}
+                        </p>
+                    ) : coords ? (
+                        <p className="text-xs text-terracotta">
+                            Адрес вне зон доставки — привезти туда не сможем. Проверьте адрес или выберите точку на карте.
+                        </p>
+                    ) : (
+                        <p className="text-xs text-cream/55">Зону доставки уточнит администратор при подтверждении.</p>
+                    )
                 )}
 
                 {/* Мини-карта зон: показывает зоны, метку выбранного адреса,
@@ -361,7 +407,7 @@ export default function DeliveryCheckout({
                         {deliveryPrice != null && <span className="text-cream/45"> {deliveryPrice === 0 ? '· доставка бесплатно' : `· доставка ${deliveryPrice} ₽`}</span>}
                     </div>
                 </div>
-                <button type="submit" disabled={status === 'sending' || items.length === 0 || !minOrder.isValid || !scheduleOpen} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
+                <button type="submit" disabled={status === 'sending' || items.length === 0 || !minOrder.isValid || !scheduleOpen || (!!coords && !zone)} className="rounded-lg bg-terracotta px-6 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark disabled:opacity-50">
                     {status === 'sending' ? 'Отправляем…' : 'Заказать доставку'}
                 </button>
                 <p className="text-center text-[12px] text-cream/45">или позвоните <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">{SITE.phones[0].label}</a></p>
