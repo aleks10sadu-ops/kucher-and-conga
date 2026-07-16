@@ -8,6 +8,7 @@ import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
 import { isBusinessLunchOpen, BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
 import { validateMinOrder } from '@/lib/delivery/minOrder';
+import { checkDeliveryZoneForCoords, findZoneByName } from '@/app/data/deliveryZones';
 import { isDeliveryOpen, deliveryClosedMessage } from '@/lib/delivery/schedule';
 import { logOrderAttempt } from '@/lib/delivery/orderLog';
 
@@ -136,8 +137,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Минимальный заказ: от 1000 ₽ или от 2 бизнес-ланчей (по сумме позиций, без стоимости доставки).
-    const minOrder = validateMinOrder(p.items);
+    // Минимальный заказ зависит от зоны доставки (по сумме позиций, без стоимости доставки):
+    // бесплатная зона — от 1000 ₽ или от 2 бизнес-ланчей, платные — от суммы зоны.
+    // Зону определяем по координатам (надёжнее), фолбэк — по имени зоны из payload.
+    const zone =
+      (Array.isArray(p.coordinates) && p.coordinates.length === 2
+        ? checkDeliveryZoneForCoords(p.coordinates)
+        : null) ?? findZoneByName(p.zoneName);
+    const minOrder = validateMinOrder(p.items, undefined, zone);
     if (!minOrder.isValid) {
       await logOrderAttempt({ outcome: 'rejected_min_order', detail: minOrder.message ?? undefined, ...logTail });
       return NextResponse.json(

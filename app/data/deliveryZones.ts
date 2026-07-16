@@ -4,6 +4,8 @@ export type DeliveryZone = {
     id: number;
     name: string;
     price: number;
+    /** Минимальная сумма заказа (по позициям, без стоимости доставки) для этой зоны. */
+    minOrder: number;
     coordinates: number[][][];
     color?: string;
     opacity?: number;
@@ -14,6 +16,8 @@ export const deliveryZones: DeliveryZone[] = [
         id: 1,
         name: 'Бесплатная доставка',
         price: 0,
+        // В бесплатной зоне действует исключение: от 2 бизнес-ланчей тоже можно.
+        minOrder: 1000,
         coordinates: [[
             [56.448083, 37.525316],
             [56.403938, 37.488497],
@@ -33,8 +37,9 @@ export const deliveryZones: DeliveryZone[] = [
     },
     {
         id: 2,
-        name: 'Зона 200₽',
-        price: 200,
+        name: 'Зона 300₽',
+        price: 300,
+        minOrder: 2000,
         coordinates: [[
             [56.458630, 37.515494],
             [56.446931, 37.477176],
@@ -56,8 +61,9 @@ export const deliveryZones: DeliveryZone[] = [
     },
     {
         id: 3,
-        name: 'Зона 300₽',
-        price: 300,
+        name: 'Зона 400₽',
+        price: 400,
+        minOrder: 3000,
         coordinates: [[
             [56.550812, 37.635052],
             [56.488691, 37.421440],
@@ -74,8 +80,9 @@ export const deliveryZones: DeliveryZone[] = [
     },
     {
         id: 4,
-        name: 'Зона 400₽',
-        price: 400,
+        name: 'Зона 500₽',
+        price: 500,
+        minOrder: 3000,
         coordinates: [[
             [56.581765, 37.384760],
             [56.480682, 37.355947],
@@ -91,8 +98,9 @@ export const deliveryZones: DeliveryZone[] = [
     },
     {
         id: 5,
-        name: 'Зона 500₽',
-        price: 500,
+        name: 'Зона 600₽',
+        price: 600,
+        minOrder: 3000,
         coordinates: [[
             [56.781361, 37.513940],
             [56.362147, 37.033288],
@@ -114,4 +122,14 @@ export function checkDeliveryZoneForCoords(coords: number[]) {
         }
     }
     return null;
+}
+
+// Поиск зоны по имени (сервер получает zoneName из payload заказа).
+// «Зона 200₽» — старое имя ближней платной зоны (открытая старая вкладка);
+// остальные старые имена совпадают с новыми и разрешаются напрямую,
+// а при наличии координат зона всё равно определяется по полигону.
+export function findZoneByName(name?: string | null): DeliveryZone | null {
+    if (!name) return null;
+    if (name === 'Зона 200₽') return deliveryZones[1];
+    return deliveryZones.find((z) => z.name === name) ?? null;
 }

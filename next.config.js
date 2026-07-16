@@ -141,6 +141,11 @@ const nextConfig = {
   },
   // Указываем корень проекта для устранения предупреждения о множественных lockfiles
   outputFileTracingRoot: path.join(__dirname),
+  // Явный корень для Turbopack: без него dev-сервер из git worktree не стартует
+  // (Turbopack выводит корень по родительскому lockfile и теряет пакет next)
+  turbopack: {
+    root: __dirname,
+  },
   // Настройки для обработки ошибок загрузки чанков
   onDemandEntries: {
     // Период времени в мс, в течение которого страница остается в памяти

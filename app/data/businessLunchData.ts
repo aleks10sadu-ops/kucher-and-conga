@@ -300,7 +300,7 @@ export const businessLunchData: BusinessLunchData = {
         ]
     },
     delivery: {
-        minimum_order: "от двух бизнес ланчей или от 1000₽",
+        minimum_order: "от двух бизнес ланчей или от 1000₽ (бесплатная зона; в платных зонах — от 2000–3000₽)",
         free_delivery: "Доставка по г. Дмитров - бесплатная",
         whatsapp: "+7 (916) 317-78-87",
         phone: "+7 (916) 297-78-87",
