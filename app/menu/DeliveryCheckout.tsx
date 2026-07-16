@@ -92,14 +92,16 @@ export default function DeliveryCheckout({
     // Габариты самой дальней зоны (600₽) — в этих границах ищем адрес в первую очередь.
     const DELIVERY_BOUNDS = [[56.09, 37.03], [56.79, 38.05]];
 
-    // Точная зона: геокодим адрес → координаты → проверка попадания в полигон.
-    // Город НЕ подставляем принудительно: если гость указал другой город,
-    // геокодер найдёт именно его, а зона по полигонам честно окажется пустой.
+    // Точная зона: геокодим адрес (улица + дом, если указан) → координаты →
+    // проверка попадания в полигон. Город НЕ подставляем принудительно: если
+    // гость указал другой город, геокодер найдёт именно его, а зона по
+    // полигонам честно окажется пустой.
     // Fallback по ключевым словам улицы — только пока Яндекс-карты не загрузились.
-    const resolveZone = (addr: string) => {
+    const resolveZone = (addrRaw: string, house?: string) => {
+        const addr = house?.trim() ? `${addrRaw.trim()}, ${house.trim()}` : addrRaw.trim();
         const kw = zoneByKeyword(addr);
         const ym = (window as any).ymaps;
-        if (!addr.trim() || !ym?.geocode) {
+        if (!addr || !ym?.geocode) {
             setZone(kw);
             return;
         }
@@ -321,10 +323,11 @@ export default function DeliveryCheckout({
                         setResolvedAddress(null);
                         setZone(zoneByKeyword(e.target.value));
                     }}
-                    onBlur={() => resolveZone(f.address)}
+                    onBlur={() => resolveZone(f.address, f.house)}
                 />
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <input placeholder="Дом" className={inputCls} value={f.house} onChange={(e) => set({ house: e.target.value })} />
+                    {/* Дом уточняет геокодинг: после ввода маркер встаёт на конкретное здание */}
+                    <input placeholder="Дом" className={inputCls} value={f.house} onChange={(e) => set({ house: e.target.value })} onBlur={() => resolveZone(f.address, f.house)} />
                     <input placeholder="Корпус" className={inputCls} value={f.building} onChange={(e) => set({ building: e.target.value })} />
                     <input placeholder="Подъезд" className={inputCls} value={f.entrance} onChange={(e) => set({ entrance: e.target.value })} />
                     <input placeholder="Этаж" className={inputCls} value={f.floor} onChange={(e) => set({ floor: e.target.value })} />
