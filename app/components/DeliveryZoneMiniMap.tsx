@@ -192,7 +192,7 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
 
     if (state === 'error') {
         return (
-            <div className="rounded-xl border border-white/10 bg-forest-ink/60 p-4 text-sm">
+            <div className="shrink-0 rounded-xl border border-white/10 bg-forest-ink/60 p-4 text-sm">
                 <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-brass" />
                     <span className="font-semibold text-cream/85">Карта зон доставки не загрузилась</span>
@@ -225,7 +225,9 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
     }
 
     return (
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-forest-ink/60">
+        // shrink-0 обязателен: форма — flex-колонка со скроллом, без него блок
+        // карты сжимается до тонкой полоски на невысоких экранах.
+        <div className="shrink-0 overflow-hidden rounded-xl border border-white/10 bg-forest-ink/60">
             {/* Шапка блока — как у остальных секций формы */}
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -239,7 +241,7 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
             <div className="relative">
                 <div
                     ref={mapRef}
-                    className="h-64 w-full"
+                    className="h-56 w-full"
                     style={{ filter: 'sepia(0.22) saturate(0.82) brightness(0.92) contrast(1.04)' }}
                 />
                 <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_28px_rgba(15,20,17,0.55)]" />

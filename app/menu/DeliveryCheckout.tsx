@@ -293,6 +293,10 @@ export default function DeliveryCheckout({
                         </p>
                     </div>
                 )}
+                {/* Мини-карта зон — первой в форме: гость сразу видит зоны и условия,
+                    может выбрать точку кликом, адрес подставится в поля ниже. */}
+                <DeliveryZoneMiniMap coords={coords} onPick={pickFromMap} />
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input placeholder="Имя *" className={inputCls} value={f.name} onChange={(e) => set({ name: e.target.value })} />
                     <input placeholder="Телефон *" type="tel" className={inputCls} value={f.phone} onChange={(e) => set({ phone: e.target.value })} />
@@ -336,10 +340,6 @@ export default function DeliveryCheckout({
                         <p className="text-xs text-cream/55">Зону доставки уточнит администратор при подтверждении.</p>
                     )
                 )}
-
-                {/* Мини-карта зон: показывает зоны, метку выбранного адреса,
-                    и позволяет выбрать точку доставки кликом. */}
-                <DeliveryZoneMiniMap coords={coords} onPick={pickFromMap} />
 
                 {/* Время */}
                 <div className="mt-1">
