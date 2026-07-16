@@ -81,9 +81,13 @@ export default function DeliveryCheckout({
     // Яндекс-карты подгружает мини-карта зон (DeliveryZoneMiniMap) — она всегда
     // отрисована в форме, поэтому отдельный загрузчик скрипта не нужен.
 
-    // Убираем страну/область из адресной строки геокодера — гостю важнее город и улица.
+    // Убираем страну/область/округ из адресной строки геокодера —
+    // гостю важнее населённый пункт и улица.
     const cleanAddress = (line: string) =>
-        line.replace(/^Россия,\s*/i, '').replace(/^Московская область,\s*/i, '');
+        line
+            .replace(/^Россия,\s*/i, '')
+            .replace(/^Московская область,\s*/i, '')
+            .replace(/^Дмитровский (муниципальный|городской) округ,\s*/i, '');
 
     // Габариты самой дальней зоны (600₽) — в этих границах ищем адрес в первую очередь.
     const DELIVERY_BOUNDS = [[56.09, 37.03], [56.79, 38.05]];
@@ -126,18 +130,22 @@ export default function DeliveryCheckout({
     // платные — от 2000/3000 ₽. Пока зона не определена, действует базовое правило.
     const minOrder = validateMinOrder(items, subtotal, zone);
 
-    // Гость выбрал точку на мини-карте: подставляем адрес (без страны/области),
-    // запоминаем координаты и зону.
-    const pickFromMap = (address: string, c: number[], z: DeliveryZone | null) => {
+    // Гость выбрал точку на мини-карте: раскладываем адрес по полям —
+    // улица/населённый пункт в «Улица», номер дома в «Дом».
+    const pickFromMap = (address: string, c: number[], z: DeliveryZone | null, house?: string) => {
         setCoords(c);
         setZone(z);
-        if (address) {
-            const cleaned = cleanAddress(address);
-            set({ address: cleaned });
-            setResolvedAddress(cleaned);
-        } else {
+        if (!address) {
             setResolvedAddress(null);
+            return;
         }
+        const cleaned = cleanAddress(address);
+        // Отрезаем номер дома с конца строки — он поедет в своё поле.
+        const street = house && cleaned.endsWith(`, ${house}`)
+            ? cleaned.slice(0, -(house.length + 2))
+            : cleaned;
+        set({ address: street, ...(house ? { house } : {}) });
+        setResolvedAddress(cleaned);
     };
 
     const submit = async (e: React.FormEvent) => {
