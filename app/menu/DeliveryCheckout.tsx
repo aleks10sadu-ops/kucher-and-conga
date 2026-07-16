@@ -411,6 +411,8 @@ export default function DeliveryCheckout({
                     {status === 'sending' ? 'Отправляем…' : 'Заказать доставку'}
                 </button>
                 <p className="text-center text-[12px] text-cream/45">или позвоните <a href={`tel:${SITE.phones[0].tel}`} className="text-brass hover:underline">{SITE.phones[0].label}</a></p>
+                {/* Метка версии формы — для быстрой проверки, что до браузера доехал свежий бандл. */}
+                <p className="text-center text-[10px] text-cream/25">форма v3 · карта зон</p>
             </form>
         </Shell>
     );
