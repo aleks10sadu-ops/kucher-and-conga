@@ -24,7 +24,12 @@ const RESTAURANT_COORDS = [56.390656, 37.527282];
 const BRAND_TERRACOTTA = '#AC4823';
 const BRAND_BRASS = '#C29455';
 
+// Причина, по которой карта не поднялась, — показываем гостю разные подсказки.
+export type MapLoadFailure = 'blocked' | 'timeout';
+
 // Загрузка Yandex Maps API один раз на страницу.
+// При ошибке сети/блокировке скрипт-неудачник удаляется из DOM,
+// чтобы повторная попытка («Повторить») начала загрузку заново.
 function loadYmaps(): Promise<any> {
     return new Promise((resolve, reject) => {
         const w = window as Window;
@@ -44,15 +49,22 @@ function loadYmaps(): Promise<any> {
             }, 100);
             setTimeout(() => {
                 clearInterval(poll);
-                if (!w.ymaps?.ready) reject(new Error('ymaps load timeout'));
-            }, 15_000);
+                if (!w.ymaps?.ready) {
+                    existing.remove();
+                    reject(new Error('timeout' satisfies MapLoadFailure));
+                }
+            }, 12_000);
             return;
         }
         const s = document.createElement('script');
         s.src = YMAPS_SRC;
         s.async = true;
         s.onload = onReady;
-        s.onerror = () => reject(new Error('ymaps load failed'));
+        s.onerror = () => {
+            // Типичная причина — блокировщик рекламы или недоступность Яндекса.
+            s.remove();
+            reject(new Error('blocked' satisfies MapLoadFailure));
+        };
         document.body.appendChild(s);
     });
 }
@@ -71,6 +83,9 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
     const onPickRef = useRef(onPick);
     onPickRef.current = onPick;
     const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+    const [failure, setFailure] = useState<MapLoadFailure>('timeout');
+    // Счётчик попыток: кнопка «Повторить» в фолбэке перезапускает эффект загрузки.
+    const [attempt, setAttempt] = useState(0);
 
     // Ставит/переставляет метку гостя на карте.
     const setGuestPlacemark = (ym: any, map: any, point: number[]) => {
@@ -148,8 +163,11 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
                 }
                 setState('ready');
             })
-            .catch(() => {
-                if (!cancelled) setState('error');
+            .catch((err: unknown) => {
+                if (!cancelled) {
+                    setFailure(err instanceof Error && err.message === 'blocked' ? 'blocked' : 'timeout');
+                    setState('error');
+                }
             });
         return () => {
             cancelled = true;
@@ -159,9 +177,9 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
                 placemarkRef.current = null;
             }
         };
-        // Карта создаётся один раз; coords дальше обрабатывает эффект ниже.
+        // Пересоздаём карту только по кнопке «Повторить»; coords обрабатывает эффект ниже.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [attempt]);
 
     // Адрес нашли через поле ввода → двигаем метку и центрируем карту.
     useEffect(() => {
@@ -174,9 +192,34 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
 
     if (state === 'error') {
         return (
-            <div className="rounded-xl border border-white/10 bg-forest-ink/60 p-4 text-sm text-cream/60">
-                <p className="font-semibold text-cream/80">Карта зон доставки не загрузилась</p>
-                <p className="mt-1 text-xs">Зону и стоимость доставки определим по адресу при подтверждении заказа.</p>
+            <div className="rounded-xl border border-white/10 bg-forest-ink/60 p-4 text-sm">
+                <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-brass" />
+                    <span className="font-semibold text-cream/85">Карта зон доставки не загрузилась</span>
+                </div>
+                <p className="mt-1.5 text-xs text-cream/55">
+                    {failure === 'blocked'
+                        ? 'Похоже, скрипт Яндекс-карт заблокирован (например, блокировщиком рекламы). Отключите его для этого сайта или попробуйте другой браузер.'
+                        : 'Яндекс-карты не ответили вовремя. Проверьте соединение и попробуйте ещё раз.'}
+                    {' '}Зону и стоимость всё равно определим по адресу.
+                </p>
+                {/* Легенда доступна и без карты — условия зон гость видит всегда */}
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {deliveryZones.map((zone) => (
+                        <span key={zone.id} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-cream/75">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: zone.color }} />
+                            {zone.price === 0 ? 'Бесплатно' : `${zone.price} ₽`}
+                            <span className="text-cream/45">· от {zone.minOrder.toLocaleString('ru-RU')} ₽</span>
+                        </span>
+                    ))}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => { setState('loading'); setAttempt((n) => n + 1); }}
+                    className="mt-3 rounded-lg border border-brass/40 bg-brass/10 px-4 py-1.5 text-xs font-semibold text-brass transition-colors hover:bg-brass/20"
+                >
+                    Повторить загрузку карты
+                </button>
             </div>
         );
     }
