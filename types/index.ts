@@ -2,6 +2,7 @@ export type DeliveryZone = {
     id: number;
     name: string;
     price: number;
+    minOrder?: number; // минимальная сумма заказа для зоны
     color?: string;
     opacity?: number;
     coordinates: number[][][]; // Polygon coordinates

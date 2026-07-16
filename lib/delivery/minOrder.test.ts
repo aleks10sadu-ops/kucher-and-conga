@@ -32,6 +32,40 @@ describe('validateMinOrder', () => {
     });
 });
 
+describe('validateMinOrder с зоной доставки', () => {
+    const freeZone = { name: 'Бесплатная доставка', price: 0, minOrder: 1000 };
+    const zone300 = { name: 'Зона 300₽', price: 300, minOrder: 2000 };
+    const zone600 = { name: 'Зона 600₽', price: 600, minOrder: 3000 };
+
+    it('в бесплатной зоне действует правило 1000 ₽ или 2 ланча', () => {
+        expect(validateMinOrder([dish(1000)], undefined, freeZone).isValid).toBe(true);
+        expect(validateMinOrder([lunch(450, 2)], undefined, freeZone).isValid).toBe(true);
+        expect(validateMinOrder([dish(900)], undefined, freeZone).isValid).toBe(false);
+    });
+
+    it('в зоне 300₽ минимум 2000 ₽', () => {
+        expect(validateMinOrder([dish(2000)], undefined, zone300).isValid).toBe(true);
+        const v = validateMinOrder([dish(1500)], undefined, zone300);
+        expect(v.isValid).toBe(false);
+        expect(v.message).toContain('Зона 300₽');
+        expect(v.message).toContain((2000).toLocaleString('ru-RU'));
+    });
+
+    it('в платной зоне 2 бизнес-ланча НЕ отменяют минимум по сумме', () => {
+        expect(validateMinOrder([lunch(450, 2)], undefined, zone300).isValid).toBe(false);
+    });
+
+    it('в дальних зонах минимум 3000 ₽', () => {
+        expect(validateMinOrder([dish(2999)], undefined, zone600).isValid).toBe(false);
+        expect(validateMinOrder([dish(3000)], undefined, zone600).isValid).toBe(true);
+    });
+
+    it('без зоны действует базовое правило (как раньше)', () => {
+        expect(validateMinOrder([dish(1000)], undefined, null).isValid).toBe(true);
+        expect(validateMinOrder([lunch(450, 2)], undefined, null).isValid).toBe(true);
+    });
+});
+
 describe('isBusinessLunchItem', () => {
     it('распознаёт ланч по флагу и по префиксам id (конструктор и билдер)', () => {
         expect(isBusinessLunchItem({ id: 'x', price: 1, qty: 1, isBusinessLunch: true })).toBe(true);

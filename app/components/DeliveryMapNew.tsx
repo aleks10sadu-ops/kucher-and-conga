@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { DeliveryZone } from '@/types/index';
+import { deliveryZones, type DeliveryZone } from '../data/deliveryZones';
 
 // Расширяем глобальный объект window для поддержки Yandex Maps API
 declare global {
@@ -14,111 +14,6 @@ type DeliveryMapProps = {
     onZoneChange?: (zone: DeliveryZone | null) => void;
     onAddressChange?: (address: string, coords: number[]) => void;
 };
-
-// Зоны доставки для Дмитрова и Дмитровского района
-// Расположены от центра (бесплатной) к окраинам (дорогой доставки)
-const deliveryZones: DeliveryZone[] = [
-    {
-        id: 1,
-        name: 'Бесплатная доставка',
-        price: 0,
-        color: '#4CAF50',
-        opacity: 0.3,
-        // Центр Дмитрова - маленький район в центре города
-        coordinates: [[
-            [56.448083, 37.525316],
-            [56.403938, 37.488497],
-            [56.389160, 37.503898],
-            [56.322309, 37.498645],
-            [56.330247, 37.544675],
-            [56.365411, 37.581519],
-            [56.373084, 37.579845],
-            [56.385925, 37.568143],
-            [56.404277, 37.572474],
-            [56.408275, 37.531050],
-            [56.447954, 37.525318],
-            [56.448083, 37.525316] // Замыкающая точка
-        ]]
-    },
-    {
-        id: 2,
-        name: 'Зона 200₽',
-        price: 200,
-        color: '#2196F3',
-        opacity: 0.25,
-        // Ближняя зона вокруг центра
-        coordinates: [[
-            [56.458630, 37.515494],
-            [56.446931, 37.477176],
-            [56.374354, 37.405090],
-            [56.299450, 37.469689],
-            [56.285367, 37.466610],
-            [56.281103, 37.475877],
-            [56.277785, 37.478084],
-            [56.276093, 37.506538],
-            [56.266275, 37.584660],
-            [56.380167, 37.632883],
-            [56.410302, 37.593016],
-            [56.418217, 37.561948],
-            [56.458601, 37.515380],
-            [56.458630, 37.515494] // Замыкающая точка
-        ]]
-    },
-    {
-        id: 3,
-        name: 'Зона 300₽',
-        price: 300,
-        color: '#FF9800',
-        opacity: 0.25,
-        // Средняя зона
-        coordinates: [[
-            [56.550812, 37.635052],
-            [56.488691, 37.421440],
-            [56.389231, 37.272855],
-            [56.229917, 37.491985],
-            [56.282713, 37.793475],
-            [56.417161, 37.642658],
-            [56.489450, 37.681509],
-            [56.550928, 37.635116],
-            [56.550812, 37.635052] // Замыкающая точка
-        ]]
-    },
-    {
-        id: 4,
-        name: 'Зона 400₽',
-        price: 400,
-        color: '#FF5722',
-        opacity: 0.25,
-        // Дальняя зона
-        coordinates: [[
-            [56.581765, 37.384760],
-            [56.480682, 37.355947],
-            [56.480682, 37.355947],
-            [56.480682, 37.355947],
-            [56.411939, 37.234555],
-            [56.311687, 37.252218],
-            [56.177398, 37.499376],
-            [56.304108, 37.955656],
-            [56.584128, 37.654163],
-            [56.581765, 37.384760] // Замыкающая точка
-        ]]
-    },
-    {
-        id: 5,
-        name: 'Зона 500₽',
-        price: 500,
-        color: '#9C27B0',
-        opacity: 0.25,
-        // Самая дальняя зона - окраины Дмитрова и Дмитровского района
-        coordinates: [[
-            [56.781361, 37.513940],
-            [56.362147, 37.033288],
-            [56.090705, 37.530669],
-            [56.310414, 38.048400],
-            [56.781361, 37.513940] // Замыкающая точка
-        ]]
-    }
-];
 
 export default function DeliveryMap({ onZoneChange, onAddressChange }: DeliveryMapProps) {
     const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
@@ -192,12 +87,13 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }: DeliveryM
                         const polygon = new window.ymaps.Polygon(
                             zone.coordinates,
                             {
-                                hintContent: `${zone.name}: ${zone.price === 0 ? 'Бесплатно' : zone.price + '₽'}`,
+                                hintContent: `${zone.name}: ${zone.price === 0 ? 'Бесплатно' : zone.price + '₽'} · заказ от ${zone.minOrder.toLocaleString('ru-RU')} ₽`,
                                 balloonContent: `
                   <div style="font-family: Arial, sans-serif; padding: 10px;">
                     <h4 style="margin: 0 0 8px 0; color: #333;">${zone.name}</h4>
                     <p style="margin: 0; color: #666;">
-                      Стоимость доставки: <strong>${zone.price === 0 ? 'Бесплатно' : zone.price + ' ₽'}</strong>
+                      Стоимость доставки: <strong>${zone.price === 0 ? 'Бесплатно' : zone.price + ' ₽'}</strong><br>
+                      Минимальный заказ: <strong>от ${zone.minOrder.toLocaleString('ru-RU')} ₽${zone.price === 0 ? ' или 2 бизнес-ланчей' : ''}</strong>
                     </p>
                   </div>
                 `
@@ -872,7 +768,7 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }: DeliveryM
                                 style={{ backgroundColor: zone.color, opacity: 0.8 }}
                             />
                             <span className="text-sm text-neutral-300">
-                                {zone.name} ({zone.price === 0 ? 'бесплатно' : `${zone.price}₽`})
+                                {zone.name} ({zone.price === 0 ? 'бесплатно' : `${zone.price}₽`}, заказ от {zone.minOrder.toLocaleString('ru-RU')}₽)
                             </span>
                         </div>
                     ))}

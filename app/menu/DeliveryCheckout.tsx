@@ -9,6 +9,7 @@ import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { validateMinOrder } from '@/lib/delivery/minOrder';
 import { isDeliveryOpen, todayDeliveryWindowText } from '@/lib/delivery/schedule';
 import { SITE } from '../components/forest/site';
+import DeliveryZoneMiniMap from '../components/DeliveryZoneMiniMap';
 
 const inputCls =
     'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
@@ -74,14 +75,8 @@ export default function DeliveryCheckout({
         return () => clearInterval(id);
     }, []);
 
-    // Подгружаем Яндекс-карты для точного определения зоны по адресу (полигоны).
-    useEffect(() => {
-        if ((window as any).ymaps || document.querySelector('script[src*="api-maps.yandex.ru"]')) return;
-        const s = document.createElement('script');
-        s.src = 'https://api-maps.yandex.ru/2.1/?apikey=058ef9d4-8dac-4162-a855-b1e7cf0878ef&lang=ru_RU&load=package.full';
-        s.async = true;
-        document.body.appendChild(s);
-    }, []);
+    // Яндекс-карты подгружает мини-карта зон (DeliveryZoneMiniMap) — она всегда
+    // отрисована в форме, поэтому отдельный загрузчик скрипта не нужен.
 
     // Точная зона: геокодим адрес → координаты → проверка попадания в полигон.
     // Fallback — по ключевым словам улицы (мгновенно, пока грузятся карты).
@@ -105,7 +100,20 @@ export default function DeliveryCheckout({
         });
     };
 
-    const minOrder = validateMinOrder(items, subtotal);
+    // Минимальный заказ зависит от зоны: бесплатная — от 1000 ₽ или 2 бизнес-ланчей,
+    // платные — от 2000/3000 ₽. Пока зона не определена, действует базовое правило.
+    const minOrder = validateMinOrder(items, subtotal, zone);
+
+    // Гость выбрал точку на мини-карте: подставляем адрес (без страны/области),
+    // запоминаем координаты и зону.
+    const pickFromMap = (address: string, c: number[], z: DeliveryZone | null) => {
+        setCoords(c);
+        setZone(z);
+        if (address) {
+            const cleaned = address.replace(/^Россия,\s*/i, '').replace(/^Московская область,\s*/i, '');
+            set({ address: cleaned });
+        }
+    };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -274,9 +282,18 @@ export default function DeliveryCheckout({
                 </div>
                 {f.address.trim() && (
                     <p className="text-xs text-cream/55">
-                        {zone ? <>Зона: {zone.name} — {zone.price === 0 ? 'бесплатно' : `${zone.price} ₽`}</> : 'Зону доставки уточнит администратор при подтверждении.'}
+                        {zone ? (
+                            <>
+                                Зона: {zone.name} — {zone.price === 0 ? 'доставка бесплатно' : `доставка ${zone.price} ₽`}, заказ от {zone.minOrder.toLocaleString('ru-RU')} ₽
+                                {zone.price === 0 && ' (или от 2 бизнес-ланчей)'}
+                            </>
+                        ) : 'Зону доставки уточнит администратор при подтверждении.'}
                     </p>
                 )}
+
+                {/* Мини-карта зон: показывает зоны, метку выбранного адреса,
+                    и позволяет выбрать точку доставки кликом. */}
+                <DeliveryZoneMiniMap coords={coords} onPick={pickFromMap} />
 
                 {/* Время */}
                 <div className="mt-1">
