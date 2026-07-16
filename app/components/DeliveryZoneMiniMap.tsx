@@ -72,8 +72,12 @@ function loadYmaps(): Promise<any> {
 type Props = {
     /** Координаты выбранного адреса [lat, lng] — метка на карте следует за ними. */
     coords: number[] | null;
-    /** Гость кликнул по карте: адрес из обратного геокодинга, координаты и зона. */
-    onPick: (address: string, coords: number[], zone: DeliveryZone | null) => void;
+    /**
+     * Гость кликнул по карте: адрес из обратного геокодинга, координаты и зона.
+     * house — номер дома отдельно (из метаданных геокодера), чтобы форма
+     * могла подставить его в своё поле «Дом», а не оставлять в строке улицы.
+     */
+    onPick: (address: string, coords: number[], zone: DeliveryZone | null, house?: string) => void;
 };
 
 export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
@@ -147,14 +151,17 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
                     setGuestPlacemark(ym, map, point);
                     const zone = checkDeliveryZoneForCoords(point);
                     let address = '';
+                    let house = '';
                     try {
                         const res = await ym.geocode(point, { results: 1 });
                         const obj = res?.geoObjects?.get(0);
                         if (obj?.getAddressLine) address = obj.getAddressLine();
+                        // Номер дома — из метаданных геокодера, надёжнее разбора строки.
+                        if (obj?.getPremiseNumber) house = obj.getPremiseNumber() || '';
                     } catch {
                         // адрес не определился — передаём только координаты и зону
                     }
-                    onPickRef.current(address, point, zone);
+                    onPickRef.current(address, point, zone, house);
                 });
 
                 if (coords) {
