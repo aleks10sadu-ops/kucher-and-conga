@@ -20,6 +20,7 @@ import MenuImageGallery from '../components/MenuImageGallery';
 import { readMenuSearch, resolveMenuCategoryDeepLink, resolveMenuDeepLink } from '@/lib/menu/deepLink';
 import { BAR_MENU_PAGES, MAIN_MENU_PAGES, WINE_MENU_PAGES } from '@/lib/menu/paperMenu';
 import { MENU_TYPE_DEFS } from '@/lib/menu/menuSections';
+import { startBusinessLunchRefresh, type BusinessLunchMenu } from '@/lib/menu/liveBusinessLunch';
 import { buildBookingHref } from '@/lib/booking/bookingContext';
 import {
     BANQUET_MENU_BOOKING_CTA,
@@ -181,6 +182,8 @@ function DishCard({ item, stopped, quantity, onOpen, onSetQuantity }: DishCardPr
 // уже с блюдами и ценами — ни «Загрузка меню…», ни запроса к iiko на пути пользователя.
 export default function MenuClient({ initialMenu, weeklyLunch = null }: { initialMenu: MenuByType; weeklyLunch?: WeeklyLunch }) {
     const router = useRouter();
+    const [liveBusiness, setLiveBusiness] = useState<BusinessLunchMenu | null>(null);
+    useEffect(() => startBusinessLunchRefresh(setLiveBusiness), []);
     const menuByType = useMemo<MenuByType>(
         () => ({ ...(initialMenu || {}), delivery: initialMenu?.main || { categories: [] } } as MenuByType),
         [initialMenu],
@@ -259,10 +262,11 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
     }, []);
     const isStopped = (it: any) => stopSet.has(String(it.id));
 
+    const businessMenu = liveBusiness ?? menuByType.business;
     const availableTypes = MENU_TYPE_DEFS.filter(
-        (t) => ['delivery', 'main', 'bar', 'wine', 'banquet'].includes(t.id) || (menuByType[t.id]?.categories?.length ?? 0) > 0,
+        (t) => ['delivery', 'main', 'bar', 'wine', 'banquet'].includes(t.id) || ((t.id === 'business' ? businessMenu : menuByType[t.id])?.categories?.length ?? 0) > 0,
     );
-    const categories = activeType === 'main' ? [] : (menuByType[activeType]?.categories || []);
+    const categories = activeType === 'main' ? [] : ((activeType === 'business' ? businessMenu : menuByType[activeType])?.categories || []);
 
     // Быстрый поиск по названию/описанию/тегам блюда в текущем разделе меню.
     const q = query.trim().toLowerCase();

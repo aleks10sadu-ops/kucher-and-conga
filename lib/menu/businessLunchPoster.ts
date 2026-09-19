@@ -1,4 +1,4 @@
 export const CURRENT_BUSINESS_LUNCH_POSTER = {
-    image: '/business-lunch/week-2026-08-24.webp',
-    title: 'Бизнес-ланч 24.08–28.08',
+    image: '/business-lunch/week-2026-09-14.webp',
+    title: 'Бизнес-ланч 14.09–18.09',
 } as const;

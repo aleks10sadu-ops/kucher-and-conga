@@ -71,6 +71,11 @@ export default function BusinessLunchConstructor({ sets, onAddToCart, stopSet }:
     () => sets.find((s) => String(s.id) === String(selectedSetId)) || null,
     [sets, selectedSetId],
   );
+  useEffect(() => {
+    if (selectedSet || !sets.length) return;
+    setSelectedSetId(sets[0].id);
+    setChoices(defaultChoices(sets[0]));
+  }, [sets, selectedSet]);
   const groups: ModifierGroup[] = selectedSet?.modifierGroups || [];
   const garnishDisabled = selectedDishHasNoGarnish(groups, choices);
 
@@ -84,13 +89,13 @@ export default function BusinessLunchConstructor({ sets, onAddToCart, stopSet }:
       for (const g of groups) {
         const optId = c[g.id];
         const opt = optId ? g.options.find((o) => o.id === optId) : undefined;
-        if (opt && isOptStopped(opt)) { changed = true; continue; }
+        if (optId && (!opt || isOptStopped(opt))) { changed = true; continue; }
         if (optId) next[g.id] = optId;
       }
       return changed ? next : c;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stopSet, selectedSetId]);
+    }, [stopSet, selectedSetId, selectedSet]);
 
   // При выборе блюда с пометкой «Без гарнира» снимаем ранее выбранный гарнир.
   // Если затем выбрать обычное блюдо, группа снова разблокируется и потребует
@@ -116,7 +121,7 @@ export default function BusinessLunchConstructor({ sets, onAddToCart, stopSet }:
   // Опция в стопе не должна попасть в заказ, даже если была выбрана до обновления стоп-листа.
   const chosenOptStopped = (g: ModifierGroup) => {
     const opt = g.options.find((o) => o.id === choices[g.id]);
-    return !!opt && isOptStopped(opt);
+    return !opt || isOptStopped(opt);
   };
 
   const missingGroups = groups.filter(

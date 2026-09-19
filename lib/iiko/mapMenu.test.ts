@@ -167,7 +167,7 @@ describe2('mapExternalMenu — business split + modifiers', () => {
     expect2(result.main.categories[0].items[0].modifierGroups).toBeUndefined();
   });
 
-  it2('restores the no-garnish marker for the stale iiko modifier id', () => {
+  it2('does not force the garnish marker onto a previously overridden pasta ID', () => {
     const staleModifierMenu = mapExternalMenu({
       itemCategories: [{
         id: 'cat-bl',
@@ -192,10 +192,38 @@ describe2('mapExternalMenu — business split + modifiers', () => {
     } as any);
 
     const option = staleModifierMenu.business!.categories[0].items[0].modifierGroups![0].options[0];
-    expect2(option.name).toBe('Паста Пене с митболами (свин/говяд) (БЕЗ ГАРНИРА)');
+    expect2(option.name).toBe('Паста Пене с митболами (свин/говяд)');
   });
 
-  it2('shows the current meatball soup name for the confirmed iiko modifier id', () => {
+  it2('does not force the garnish marker onto a previously overridden roast ID', () => {
+    const staleModifierMenu = mapExternalMenu({
+      itemCategories: [{
+        id: 'cat-bl',
+        name: 'БИЗНЕС ЛАНЧ',
+        items: [{
+          itemId: 'set1',
+          name: 'Сет №1',
+          itemSizes: [{
+            prices: [{ organizationId: 'o', price: 580 }],
+            itemModifierGroups: [{
+              name: 'Второе блюдо сегодня',
+              itemGroupId: 'g-main',
+              items: [{
+                itemId: 'b8cae6f5-181f-4ae6-8179-4640d875d1a2',
+                name: 'Жаркое по охотничьи',
+                prices: [{ organizationId: 'o', price: 0 }],
+              }],
+            }],
+          }],
+        }],
+      }],
+    } as any);
+
+    const option = staleModifierMenu.business!.categories[0].items[0].modifierGroups![0].options[0];
+    expect2(option.name).toBe('Жаркое по охотничьи');
+  });
+
+  it2('does not freeze the name of a previously overridden soup ID', () => {
     const menu = mapExternalMenu({
       itemCategories: [{
         id: 'cat-bl',
@@ -230,7 +258,7 @@ describe2('mapExternalMenu — business split + modifiers', () => {
     expect2(soups).toEqual([
       {
         id: '799d8622-36db-42a2-9684-c1de2103b9b5',
-        name: 'Суп с фрикадельками',
+        name: 'Суп фасолевый с говядиной',
         price: 0,
       },
       {
