@@ -1,6 +1,6 @@
 // app/api/telegram/route.ts
 import { NextResponse, NextRequest } from 'next/server';
-import { formatBookingTelegram } from '@/lib/booking/formatTelegram';
+import { formatBookingTelegram, formatBookingTelegramMessages } from '@/lib/booking/formatTelegram';
 import { visibleModifiers } from '@/lib/booking/modifiers';
 import { logOrderAttempt } from '@/lib/delivery/orderLog';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
@@ -241,20 +241,27 @@ export async function POST(req: NextRequest) {
     const chatId = payload.type === 'booking'
       ? (process.env.TELEGRAM_BOOKING_CHAT_ID || process.env.TELEGRAM_CHAT_ID)
       : process.env.TELEGRAM_CHAT_ID;
-    const text = buildMessage(payload);
-
-    const res = await fetch(TG_API(token), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
-    });
-
-    const data = await res.json();
+    const messages = payload.type === 'booking'
+      ? formatBookingTelegramMessages(payload)
+      : [buildMessage(payload)];
+    let data: { ok: boolean; description?: string; result?: { message_id: number } } = { ok: false };
+    let firstMessageId: number | undefined;
+    for (const text of messages) {
+      const res = await fetch(TG_API(token), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          ...(firstMessageId ? { reply_parameters: { message_id: firstMessageId } } : {}),
+        }),
+      });
+      data = await res.json();
+      if (!data.ok) break;
+      firstMessageId ??= data.result?.message_id;
+    }
     // Доставка попадает сюда только TG-фолбэком (iiko недоступна/отклонила) —
     // фиксируем попытку в журнале site_order_log вместе с исходом отправки.
     if (payload.type === 'delivery') {
