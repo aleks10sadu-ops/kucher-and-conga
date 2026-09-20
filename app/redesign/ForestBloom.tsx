@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
-import { Menu, X, AlertTriangle } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
 // Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
@@ -305,7 +305,7 @@ export default function RedesignClient() {
                 </section>
 
                 {/* Официальное уведомление: у ресторана один адрес, филиалов нет */}
-                <SingleLocationNotice />
+                <ChristmasBookingNotice />
 
                 {/* БЕНТО над фото зала — на весь экран */}
                 <section id="bento" style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
@@ -543,29 +543,20 @@ export default function RedesignClient() {
     );
 }
 
-// Официальное уведомление: у ресторана единственный адрес, филиалов и других залов нет.
-// Без упоминания названий, адресов и фото сторонних заведений — по юридическим причинам.
-function SingleLocationNotice() {
+// Сезонный анонс с переходом к датам и условиям бронирования.
+function ChristmasBookingNotice() {
     return (
-        <section aria-label="Официальное уведомление" style={{ position: 'relative', zIndex: 3, overflow: 'hidden', borderTop: '3px solid #AC4823', borderBottom: '1px solid rgba(0,0,0,0.4)' }}>
-            {/* Фото зала на фоне — размыто и приглушено, работает как атмосфера, не как шум.
-                Blur убирает высокочастотные блики (лампы), чтобы под текстом был ровный контраст. */}
-            <img src="/hero-image.webp" alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(4px) brightness(0.72)', transform: 'scale(1.08)' }} />
-            {/* Плотная тёмная подложка гарантирует ровный контраст под любым участком фото */}
-            <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(9,14,11,0.86) 0%, rgba(9,14,11,0.8) 100%)' }} />
-            <div className="rf-wrap rf-notice" style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto', paddingTop: 44, paddingBottom: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
-                <AlertTriangle style={{ width: 40, height: 40, color: '#E9B949', strokeWidth: 2 }} aria-hidden />
-                <h2 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 24, color: '#F5F1E8', lineHeight: 1.2, letterSpacing: '0.005em' }}>
-                    Уважаемые гости!
-                </h2>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.75, color: '#ECE6DA', maxWidth: 600 }}>
-                    Если вы услышали об&nbsp;открытии нового заведения в&nbsp;Дмитрове, и&nbsp;оно позиционирует себя частью
-                    Ресторанного комплекса «Кучер&nbsp;&amp;&nbsp;Conga», не&nbsp;дайте ввести себя в&nbsp;заблуждение.
-                    «Кучер»&nbsp;- он такой один! Другие рестораны, которые могут пытаться использовать репутацию нашего
-                    заведения в&nbsp;качестве своей рекламы, не&nbsp;имеют к&nbsp;«Кучер&nbsp;&amp;&nbsp;Conga» никакого
-                    отношения. Мы&nbsp;дорожим своим именем и&nbsp;всегда рады видеть вас в&nbsp;городе Дмитров, только
-                    по&nbsp;адресу Промышленная&nbsp;20Б.
-                </p>
+        <section aria-labelledby="christmas-booking-title" style={{ position: 'relative', zIndex: 3, background: '#061e18', borderTop: '1px solid #e9c77f55', borderBottom: '1px solid #e9c77f33' }}>
+            <div className="rf-wrap" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', alignItems: 'center', gap: 'clamp(24px, 4vw, 48px)', paddingTop: 32, paddingBottom: 32 }}>
+                <Link href="/events/novogodnie-korporativy-2027" aria-label="Новогодние корпоративы — посмотреть афишу" style={{ display: 'block', borderRadius: 16, overflow: 'hidden', border: '1px solid #e9c77f44' }}>
+                    <img src="/christmas-2027/hosts-cover.webp" alt="Ираклий и Елена «Золотая стрекоза» в новогодних украшениях" width={1200} height={630} loading="lazy" style={{ display: 'block', width: '100%', height: 'auto' }} />
+                </Link>
+                <div>
+                    <p style={{ margin: '0 0 10px', color: '#e9c77f', fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase' }}>Декабрь 2026 · Встречаем 2027</p>
+                    <h2 id="christmas-booking-title" className="rf-serif" style={{ margin: 0, color: '#fff0ce', fontSize: 'clamp(28px, 3vw, 40px)', lineHeight: 1.15 }}>Открыты брони на новогодние корпоративы</h2>
+                    <p style={{ margin: '16px 0 22px', color: '#e0e4d8', fontSize: 16, lineHeight: 1.65 }}>Собирайте коллег на праздник в Кучер &amp; CONGA: ведущие, живая музыка, конкурсы, призы и дискотека. Даты по залам и условия бронирования — на афише.</p>
+                    <Link href="/events/novogodnie-korporativy-2027" className="rf-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 14, minHeight: 48, padding: '12px 28px', borderRadius: 8, background: '#e9c77f', color: '#13271e', fontSize: 16, fontWeight: 600 }}>Подробнее <span aria-hidden>→</span></Link>
+                </div>
             </div>
         </section>
     );

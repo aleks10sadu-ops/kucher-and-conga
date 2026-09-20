@@ -43,11 +43,16 @@ next-env.d.ts
 
 # Generated review and transfer artifacts
 /output/
+/outputs/
 /design-qa*.png
 /design-qa.md
 /KONGOTEST_TRANSFER_README_RU.txt
 /site-dev.*.log
 /free-delivery-zone-yandex.geojson
+
+# Local Codex working files
+/.codex-tmp/
+/.codex-remote-attachments/
 
 # Accidental package-manager artifacts (the project uses npm/package-lock.json)
 /pnpm-lock.yaml

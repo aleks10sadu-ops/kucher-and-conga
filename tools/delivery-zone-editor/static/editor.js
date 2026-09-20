@@ -8,6 +8,7 @@
 
   const elements = {};
   const layerById = new Map();
+  const coverageLayerById = new Map();
   const hiddenZoneIds = new Set();
   let map;
   let zones = [];
@@ -19,6 +20,11 @@
   let savedAt = null;
   let syncingLayer = false;
   let pendingImport = null;
+  let coverageResult = null;
+  let coverageRevision = 0;
+  let coverageTimer = null;
+  let coverageReady = false;
+  let checkedPoint = null;
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -35,7 +41,8 @@
       "focus-all-button", "map-hint", "toast-region", "legend-collapse",
       "import-dialog", "import-dialog-close", "import-file-name", "import-file-details",
       "import-selected-count", "import-select-all", "import-clear-all", "import-zone-list",
-      "import-cancel-button", "import-confirm-button"
+      "import-cancel-button", "import-confirm-button", "coverage-title", "coverage-summary",
+      "coverage-details", "zone-cutout-info", "raise-zone-button"
     ].forEach((id) => {
       elements[toCamel(id)] = document.getElementById(id);
     });
@@ -104,6 +111,7 @@
       dirty = false;
       renderAll({ fit: true });
       setStatus("saved");
+      await refreshCoverage();
     } catch (error) {
       setStatus("error", error.message);
       toast(error.message, true);
@@ -123,7 +131,7 @@
     elements.zoneList.replaceChildren();
     elements.zoneCount.textContent = String(zones.length);
 
-    zones.forEach((zone) => {
+    zonesByPriority().forEach((zone) => {
       const fragment = template.content.cloneNode(true);
       const item = fragment.querySelector(".zone-item");
       const selectButton = fragment.querySelector(".zone-select");
@@ -137,6 +145,9 @@
         ? `Бесплатно · заказ от ${money.format(zone.minOrder)} ₽`
         : `${money.format(zone.price)} ₽ · заказ от ${money.format(zone.minOrder)} ₽`;
       selectButton.addEventListener("click", () => selectZone(zone.id));
+      const coverage = coverageResult?.zones.find((item) => item.id === zone.id);
+      if (coverage?.parts > 1) fragment.querySelector(".zone-copy small").textContent += ` · участков: ${coverage.parts}`;
+      if (coverage?.parts === 0) fragment.querySelector(".zone-copy small").textContent += " · вытеснена";
       visibilityButton.addEventListener("click", (event) => {
         event.stopPropagation();
         toggleZoneVisibility(zone.id);
@@ -168,18 +179,20 @@
     });
     layerById.clear();
 
-    [...zones].reverse().forEach((zone) => {
+    zonesByPriority().reverse().forEach((zone) => {
       const layer = createZoneLayer(zone);
       layerById.set(zone.id, layer);
-      if (!hiddenZoneIds.has(zone.id)) layer.addTo(map);
     });
 
+    renderCoverageLayers();
     enableSelectedLayer();
   }
 
   function createZoneLayer(zone) {
-    const layer = L.polygon(openRing(zone), layerStyle(zone, zone.id === selectedId));
+    const layer = L.polygon(zone.coordinates, sourceLayerStyle(zone));
     layer.on("click", (event) => {
+      // Drawing and address checks listen on the map, including over existing polygons.
+      if (activeTool !== "select") return;
       L.DomEvent.stopPropagation(event);
       selectZone(zone.id);
     });
@@ -203,14 +216,133 @@
     };
   }
 
+  function sourceLayerStyle(zone) {
+    return { color: zone.color, weight: 2, opacity: 0.9, fill: false, dashArray: "6 5" };
+  }
+
+  function renderCoverageLayers() {
+    coverageLayerById.forEach((layer) => map.removeLayer(layer));
+    coverageLayerById.clear();
+    for (const record of coverageResult?.zones || []) {
+      const zone = zoneById(record.id);
+      if (!zone || !record.features.length) continue;
+      const layer = L.geoJSON({ type: "FeatureCollection", features: record.features }, {
+        style: () => layerStyle(zone, zone.id === selectedId),
+        onEachFeature: (_, polygon) => {
+          polygon.on("click", (event) => {
+            if (activeTool !== "select") return;
+            L.DomEvent.stopPropagation(event);
+            selectZone(zone.id);
+          });
+        },
+      });
+      coverageLayerById.set(zone.id, layer);
+      if (!hiddenZoneIds.has(zone.id)) layer.addTo(map);
+    }
+    updateLayerOrder();
+  }
+
+  function coveragePending() {
+    coverageReady = false;
+    if (elements.coverageTitle) elements.coverageTitle.textContent = "Пересчитываем вырезы…";
+    if (elements.zoneCutoutInfo) elements.zoneCutoutInfo.textContent = "Пересчитываем влияние зоны…";
+    if (elements.exportButton) elements.exportButton.disabled = true;
+  }
+
+  function scheduleCoverage() {
+    if (typeof window.setTimeout !== "function") return;
+    coverageRevision += 1;
+    window.clearTimeout(coverageTimer);
+    coveragePending();
+    coverageTimer = window.setTimeout(() => refreshCoverage(), 180);
+  }
+
+  async function refreshCoverage() {
+    window.clearTimeout?.(coverageTimer);
+    const revision = ++coverageRevision;
+    const snapshot = clone(zonesByPriority());
+    coveragePending();
+    try {
+      const response = await fetch("/api/coverage", {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ zones: snapshot, focusId: selectedId }),
+      });
+      if (response.status === 404) throw new Error("Перезапустите локальный сервер редактора: он ещё работает со старой версией.");
+      const result = await response.json();
+      if (revision !== coverageRevision) return null;
+      if (!response.ok) throw new Error(result.error || "Не удалось рассчитать вырезы");
+      coverageResult = result;
+      coverageReady = true;
+      renderCoverageLayers();
+      renderZoneList();
+      renderCoverageDetails();
+      renderCheckedPoint();
+      elements.exportButton.disabled = !zones.length;
+      return result;
+    } catch (error) {
+      if (revision !== coverageRevision) return null;
+      coverageResult = null;
+      renderCoverageLayers();
+      if (elements.coverageTitle) elements.coverageTitle.textContent = "Нужно исправить контур";
+      if (elements.coverageSummary) elements.coverageSummary.textContent = error.message;
+      if (elements.coverageDetails) elements.coverageDetails.textContent = "Экспорт приостановлен: старые вырезы не будут скачаны.";
+      if (elements.zoneCutoutInfo) elements.zoneCutoutInfo.textContent = error.message;
+      return null;
+    }
+  }
+
+  function renderCoverageDetails() {
+    if (!elements.coverageTitle) return;
+    if (!coverageReady) {
+      if (elements.zoneCutoutInfo) elements.zoneCutoutInfo.textContent = "Пересчитываем влияние зоны…";
+      return;
+    }
+    if (!coverageResult) return;
+    const { summary, warnings, impacts } = coverageResult;
+    elements.coverageTitle.textContent = "Вырезы готовы";
+    elements.coverageSummary.textContent = `Зон: ${summary.zoneCount} · контуров: ${summary.polygonCount} · вырезов: ${summary.holeCount}`;
+    const notes = ["Границы вне пересечений сохранены. Исходные контуры можно редактировать и восстанавливать."];
+    if (summary.splitZoneCount) notes.push(`Разделённых зон: ${summary.splitZoneCount}. Их участки попадут в один файл с одинаковыми условиями.`);
+    if (summary.coveredZoneCount) notes.push(`Полностью вытесненных зон: ${summary.coveredZoneCount}. Они сохранены в черновике, но не добавляют пустые контуры в экспорт.`);
+    if (summary.removedArtifactCount) notes.push(`Удалено микрофрагментов самопересечения: ${summary.removedArtifactCount}.`);
+    notes.push(...warnings);
+    elements.coverageDetails.textContent = notes.join(" ");
+    const zone = selectedZone();
+    if (!zone) return;
+    const record = coverageResult.zones.find((item) => item.id === zone.id);
+    const rank = zonesByPriority().findIndex((item) => item.id === zone.id) + 1;
+    let text = `Приоритет: ${rank} из ${zones.length}. `;
+    if (record?.parts === 0) text += "Зона полностью вытеснена. ";
+    else if (record) text += `Участков: ${record.parts}, внутренних вырезов: ${record.holes}, точек в экспорте: ${featurePointCount(record)}. `;
+    text += impacts.length ? `Вытесняет: ${impacts.map((item) => item.name).join(", ")}.` : "Другие тарифные области не изменяет.";
+    elements.zoneCutoutInfo.textContent = text;
+    elements.raiseZoneButton.disabled = rank === 1;
+  }
+
+  function featurePointCount(record) {
+    return (record?.features || []).reduce((featureTotal, feature) => featureTotal
+      + (feature.geometry?.coordinates || []).reduce((ringTotal, ring) => ringTotal + Math.max(0, ring.length - 1), 0), 0);
+  }
+
+  function raiseSelectedZone() {
+    const zone = selectedZone();
+    if (!zone) return;
+    zone.priority = Math.max(0, ...zones.map((item) => Number(item.priority) || 0)) + 1;
+    markDirty();
+    renderAll();
+    toast("Зона получила приоритет. Пересечения будут вырезаны из остальных зон.");
+  }
+
   function enableSelectedLayer() {
     layerById.forEach((layer, id) => {
-      layer.setStyle(layerStyle(zoneById(id), id === selectedId));
+      layer.setStyle(sourceLayerStyle(zoneById(id)));
       if (layer.pm?.enabled()) layer.pm.disable();
+      if (map.hasLayer(layer)) map.removeLayer(layer);
     });
+    updateLayerOrder();
     const activeLayer = layerById.get(selectedId);
-    if (!activeLayer || hiddenZoneIds.has(selectedId)) return;
-    activeLayer.bringToFront();
+    if (activeTool !== "select" || !activeLayer || hiddenZoneIds.has(selectedId)) return;
+    activeLayer.addTo(map);
     if (activeLayer.pm) {
       activeLayer.pm.enable({
         allowSelfIntersection: false,
@@ -221,10 +353,23 @@
     }
   }
 
+  function updateLayerOrder() {
+    // Selection must not cover or intercept clicks on a smaller nested zone.
+    zonesByPriority().reverse().forEach((zone) => {
+      const layer = coverageLayerById.get(zone.id);
+      if (layer && map.hasLayer(layer)) layer.bringToFront();
+    });
+    const selectedLayer = layerById.get(selectedId);
+    if (selectedLayer && map.hasLayer(selectedLayer)) selectedLayer.bringToFront();
+  }
+
   function selectZone(id, { pan = false } = {}) {
     if (!zoneById(id)) return;
     selectedId = id;
-    if (hiddenZoneIds.has(id)) hiddenZoneIds.delete(id);
+    if (hiddenZoneIds.has(id)) {
+      hiddenZoneIds.delete(id);
+      layerById.get(id)?.addTo(map);
+    }
     renderZoneList();
     renderLegend();
     renderInspector();
@@ -235,6 +380,7 @@
       const layer = layerById.get(id);
       if (layer) map.fitBounds(layer.getBounds(), { padding: [60, 60], maxZoom: 15 });
     }
+    scheduleCoverage();
   }
 
   function clearSelection() {
@@ -243,8 +389,9 @@
     selectedId = null;
     renderZoneList();
     renderInspector();
-    layerById.forEach((layer, id) => layer.setStyle(layerStyle(zoneById(id), false)));
+    if (activeLayer && map.hasLayer(activeLayer)) map.removeLayer(activeLayer);
     elements.inspector.classList.remove("has-selection");
+    scheduleCoverage();
   }
 
   function renderInspector() {
@@ -264,6 +411,7 @@
     elements.zoneOpacityValue.textContent = `${Math.round(zone.opacity * 100)}%`;
     renderColorSwatches();
     renderVertices();
+    renderCoverageDetails();
   }
 
   function renderColorSwatches() {
@@ -320,9 +468,14 @@
     const zone = zoneById(id);
     if (!layer || !zone) return;
     const latLngGroups = layer.getLatLngs();
-    const latLngs = Array.isArray(latLngGroups[0]) ? latLngGroups[0] : latLngGroups;
-    if (latLngs.length < 3) return;
-    setOpenRing(zone, latLngs.map((point) => [roundCoordinate(point.lat), roundCoordinate(point.lng)]));
+    const rings = Array.isArray(latLngGroups[0]) ? latLngGroups : [latLngGroups];
+    if (rings.some((ring) => ring.length < 3)) return;
+    zone.coordinates = rings.map((ring) => {
+      const points = ring.map((point) => [Number(point.lat), Number(point.lng)]);
+      if (!samePoint(points[0], points[points.length - 1])) points.push([...points[0]]);
+      return points;
+    });
+    updateLayerOrder();
     markDirty();
     if (id === selectedId) renderVertices();
   }
@@ -333,9 +486,10 @@
     const wasEditing = layer.pm?.enabled();
     if (wasEditing) layer.pm.disable();
     syncingLayer = true;
-    layer.setLatLngs(openRing(zone));
-    layer.setStyle(layerStyle(zone, zone.id === selectedId));
+    layer.setLatLngs(zone.coordinates);
+    layer.setStyle(sourceLayerStyle(zone));
     syncingLayer = false;
+    updateLayerOrder();
     if (wasEditing && keepEditing && layer.pm) {
       layer.pm.enable({ allowSelfIntersection: false, preventMarkerRemoval: true, hideMiddleMarkers: false });
     }
@@ -348,17 +502,13 @@
   }
 
   function setOpenRing(zone, points) {
-    const clean = points.map((point) => [roundCoordinate(point[0]), roundCoordinate(point[1])]);
-    zone.coordinates = [[...clean, [...clean[0]]]];
+    const clean = points.map((point) => [Number(point[0]), Number(point[1])]);
+    zone.coordinates = [[...clean, [...clean[0]]], ...(zone.coordinates?.slice(1) || [])];
   }
 
   function samePoint(first, second) {
     return Math.abs(Number(first[0]) - Number(second[0])) < 1e-10
       && Math.abs(Number(first[1]) - Number(second[1])) < 1e-10;
-  }
-
-  function roundCoordinate(value) {
-    return Number(Number(value).toFixed(6));
   }
 
   function zoneById(id) {
@@ -369,8 +519,29 @@
     return zoneById(selectedId);
   }
 
+  function zonesByPriority() {
+    // Explicit priority stays stable when a new contour is resized. Legacy
+    // files retain their smaller-first behaviour until a zone is promoted.
+    return zones.map((zone) => ({ zone, area: polygonArea(zone.coordinates[0]) }))
+      .sort((first, second) => (Number(second.zone.priority) || 0) - (Number(first.zone.priority) || 0) || first.area - second.area)
+      .map(({ zone }) => zone);
+  }
+
+  function polygonArea(ring) {
+    if (ring.length < 3) return 0;
+    const [originLat, originLng] = ring[0];
+    let twiceArea = 0;
+    for (let index = 0; index < ring.length; index++) {
+      const current = ring[index];
+      const next = ring[(index + 1) % ring.length];
+      twiceArea += (current[0] - originLat) * (next[1] - originLng)
+        - (next[0] - originLat) * (current[1] - originLng);
+    }
+    return Math.abs(twiceArea) / 2;
+  }
+
   function toggleZoneVisibility(id) {
-    const layer = layerById.get(id);
+    const layer = coverageLayerById.get(id);
     if (hiddenZoneIds.has(id)) {
       hiddenZoneIds.delete(id);
       if (layer && !map.hasLayer(layer)) layer.addTo(map);
@@ -379,8 +550,10 @@
       if (layer && map.hasLayer(layer)) map.removeLayer(layer);
     }
     if (selectedId === id && hiddenZoneIds.has(id)) clearSelection();
+    updateLayerOrder();
     renderZoneList();
     renderLegend();
+    enableSelectedLayer();
   }
 
   function updateVertex(index, latitude, longitude) {
@@ -396,7 +569,7 @@
       return;
     }
     const points = openRing(zone);
-    points[index] = [roundCoordinate(latitude), roundCoordinate(longitude)];
+    points[index] = [latitude, longitude];
     setOpenRing(zone, points);
     updateLayerFromZone(zone);
     markDirty();
@@ -437,8 +610,8 @@
     const first = points[longestIndex];
     const second = points[(longestIndex + 1) % points.length];
     points.splice(longestIndex + 1, 0, [
-      roundCoordinate((first[0] + second[0]) / 2),
-      roundCoordinate((first[1] + second[1]) / 2),
+      (first[0] + second[0]) / 2,
+      (first[1] + second[1]) / 2,
     ]);
     setOpenRing(zone, points);
     updateLayerFromZone(zone);
@@ -464,20 +637,21 @@
       coordinates: [[]],
       color: PALETTE[(nextId - 1) % PALETTE.length],
       opacity: 0.2,
+      priority: Math.max(0, ...zones.map((item) => Number(item.priority) || 0)) + 1,
     };
     setOpenRing(zone, latLngs.map((point) => [point.lat, point.lng]));
-    zones.push(zone);
+    zones.unshift(zone);
     selectedId = zone.id;
     markDirty();
     renderAll();
     setTool("select");
-    toast("Новая зона добавлена. Задайте название и тариф.");
+    toast("Новая зона вытесняет пересечения. Задайте название и тариф.");
   }
 
   function deleteSelectedZone() {
     const zone = selectedZone();
     if (!zone) return;
-    const confirmed = window.confirm(`Удалить «${zone.name}»? Зона исчезнет с сайта после сохранения.`);
+    const confirmed = window.confirm(`Удалить «${zone.name}»? Вырезы в остальных зонах восстановятся. Это изменит только локальный черновик.`);
     if (!confirmed) return;
     zones = zones.filter((item) => item.id !== zone.id);
     hiddenZoneIds.delete(zone.id);
@@ -558,6 +732,7 @@
     elements.addPointButton.addEventListener("click", addVertex);
     elements.deleteZoneButton.addEventListener("click", deleteSelectedZone);
     elements.closeInspectorButton.addEventListener("click", clearSelection);
+    elements.raiseZoneButton.addEventListener("click", raiseSelectedZone);
     elements.checkAddressButton.addEventListener("click", openAddressSearch);
     elements.closeSearchButton.addEventListener("click", closeAddressSearch);
     elements.focusAllButton.addEventListener("click", fitAllZones);
@@ -602,6 +777,7 @@
   function setTool(tool) {
     if (activeTool === "draw" && map.pm) map.pm.disableDraw();
     activeTool = tool;
+    enableSelectedLayer();
     document.querySelectorAll(".map-tool").forEach((button) => {
       const active = button.dataset.tool === tool;
       button.classList.toggle("is-active", active);
@@ -616,14 +792,12 @@
         return setTool("select");
       }
       map.pm.enableDraw("Polygon", { finishOn: "dblclick", allowSelfIntersection: false });
-      elements.mapHint.textContent = "Ставьте точки по границе зоны. Завершите двойным щелчком.";
+      elements.mapHint.textContent = "Новая зона вытеснит пересечения. Двойной щелчок — завершить.";
       elements.mapHint.hidden = false;
     } else if (tool === "check") {
       openAddressSearch();
       elements.mapHint.textContent = "Введите адрес или нажмите на нужную точку карты.";
       elements.mapHint.hidden = false;
-    } else {
-      enableSelectedLayer();
     }
   }
 
@@ -694,6 +868,7 @@
   }
 
   function checkPoint(latitude, longitude, label) {
+    checkedPoint = { latitude, longitude };
     if (addressMarker) map.removeLayer(addressMarker);
     const icon = L.divIcon({
       className: "",
@@ -705,13 +880,21 @@
     addressMarker.bindTooltip(label, { direction: "top", offset: [0, -23] }).openTooltip();
     map.flyTo([latitude, longitude], Math.max(map.getZoom(), 14), { duration: 0.6 });
 
-    const zone = zones.find((candidate) => pointInPolygon(latitude, longitude, candidate.coordinates[0]));
+    const zone = renderCheckedPoint();
+    toast(zone ? `Адрес входит в «${zone.name}»` : "Адрес находится вне зон доставки", !zone);
+  }
+
+  function renderCheckedPoint() {
+    if (!checkedPoint) return null;
+    const { latitude, longitude } = checkedPoint;
+    const zone = zonesByPriority().find((candidate) => pointInPolygon(latitude, longitude, candidate.coordinates[0])
+      && !candidate.coordinates.slice(1).some((ring) => pointInPolygon(latitude, longitude, ring)));
     const message = zone
       ? `<strong>${escapeHtml(zone.name)}</strong>${zone.price === 0 ? "Доставка бесплатная" : `Доставка ${money.format(zone.price)} ₽`} · заказ от ${money.format(zone.minOrder)} ₽`
       : "<strong>Вне зон доставки</strong>Эта точка не входит ни в один сохранённый полигон.";
     elements.addressResult.innerHTML = message;
     elements.addressResult.hidden = false;
-    toast(zone ? `Адрес входит в «${zone.name}»` : "Адрес находится вне зон доставки", !zone);
+    return zone;
   }
 
   function pointInPolygon(latitude, longitude, ring) {
@@ -743,7 +926,7 @@
       const response = await fetch("/api/zones", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ zones }),
+        body: JSON.stringify({ zones: zonesByPriority() }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Не удалось сохранить зоны");
@@ -753,6 +936,7 @@
       dirty = false;
       renderAll();
       setStatus("saved");
+      scheduleCoverage();
       toast("Локальный черновик GeoJSON сохранён");
     } catch (error) {
       setStatus("error", error.message);
@@ -768,12 +952,16 @@
     dirty = false;
     renderAll();
     setStatus("saved");
+    renderCheckedPoint();
+    scheduleCoverage();
     toast("Несохранённые изменения отменены");
   }
 
   function markDirty() {
     dirty = true;
     setStatus("dirty");
+    renderCheckedPoint();
+    scheduleCoverage();
   }
 
   function setStatus(status, detail = "") {
@@ -813,7 +1001,7 @@
 
   function fitAllZones() {
     const visibleLayers = [...layerById.entries()]
-      .filter(([id, layer]) => !hiddenZoneIds.has(id) && map.hasLayer(layer))
+      .filter(([id]) => !hiddenZoneIds.has(id))
       .map(([, layer]) => layer);
     if (!visibleLayers.length) {
       map.setView(DEFAULT_CENTER, 11);
@@ -824,10 +1012,11 @@
   }
 
   function zonesToGeoJson() {
+    // Editable source backup. Downloads use the resolved /api/coverage GeoJSON.
     return {
       type: "FeatureCollection",
       name: "delivery-zones",
-      features: zones.map((zone) => ({
+      features: zonesByPriority().map((zone) => ({
         type: "Feature",
         id: zone.id,
         properties: {
@@ -837,10 +1026,11 @@
           minOrder: Number(zone.minOrder),
           color: zone.color,
           opacity: Number(zone.opacity),
+          ...(zone.priority != null ? { priority: Number(zone.priority) } : {}),
         },
         geometry: {
           type: "Polygon",
-          coordinates: [zone.coordinates[0].map(([latitude, longitude]) => [longitude, latitude])],
+          coordinates: zone.coordinates.map((ring) => ring.map(([latitude, longitude]) => [longitude, latitude])),
         },
       })),
     };
@@ -853,6 +1043,9 @@
   }
 
   function zonesFromGeoJson(documentValue) {
+    if (documentValue?.deliveryZoneEditor?.version === 1 && documentValue.deliveryZoneEditor.sources) {
+      documentValue = documentValue.deliveryZoneEditor.sources;
+    }
     if (!documentValue || documentValue.type !== "FeatureCollection" || !Array.isArray(documentValue.features)) {
       throw new Error("Нужен GeoJSON-файл типа FeatureCollection");
     }
@@ -866,8 +1059,8 @@
     if (!polygonFeatures.length) throw new Error("В GeoJSON нет полигонов");
 
     const importedZones = polygonFeatures.map(({ feature, index }) => {
-      const geoRing = feature.geometry.coordinates?.[0];
-      if (!Array.isArray(geoRing) || geoRing.length < 4) {
+      const geoRings = feature.geometry.coordinates;
+      if (!Array.isArray(geoRings) || !geoRings.length || geoRings.some((ring) => !Array.isArray(ring) || ring.length < 4)) {
         throw new Error(`Объект ${index + 1}: полигону нужны минимум три точки`);
       }
       const properties = feature.properties || {};
@@ -878,17 +1071,16 @@
         while (usedIds.has(id)) id += 1;
       }
       usedIds.add(id);
-      const points = geoRing.map((point, pointIndex) => {
+      const rings = geoRings.map((geoRing) => geoRing.map((point, pointIndex) => {
         const longitude = Number(point?.[0]);
         const latitude = Number(point?.[1]);
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
           || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
           throw new Error(`Объект ${index + 1}, точка ${pointIndex + 1}: неверные координаты`);
         }
-        return [roundCoordinate(latitude), roundCoordinate(longitude)];
-      });
-      if (points.length > 1 && samePoint(points[0], points[points.length - 1])) points.pop();
-      if (new Set(points.map((point) => point.join(","))).size < 3) {
+        return [latitude, longitude];
+      }));
+      if (rings.some((points) => new Set(points.map((point) => point.join(","))).size < 3)) {
         throw new Error(`Объект ${index + 1}: полигону нужны три разные точки`);
       }
       const rawColor = properties.color || options.fillColor || options.strokeColor;
@@ -903,9 +1095,9 @@
         minOrder: Math.max(0, Number(properties.minOrder ?? properties.min_order) || 0),
         color,
         opacity: Number.isFinite(opacity) ? Math.min(0.55, Math.max(0.05, opacity)) : 0.2,
-        coordinates: [[]],
+        coordinates: rings.map((points) => samePoint(points[0], points[points.length - 1]) ? points : [...points, [...points[0]]]),
+        ...(Number.isInteger(properties.priority) && properties.priority >= 0 ? { priority: properties.priority } : {}),
       };
-      setOpenRing(zone, points);
       return zone;
     });
     return { zones: importedZones, skipped, source: "GeoJSON" };
@@ -918,7 +1110,7 @@
       || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
       throw new Error(`Зона ${zoneIndex + 1}, точка ${pointIndex + 1}: неверные координаты Vendor`);
     }
-    return [roundCoordinate(latitude), roundCoordinate(longitude)];
+    return [latitude, longitude];
   }
 
   function hasVendorCoordinates(value) {
@@ -1075,7 +1267,7 @@
     }
   }
 
-  function exportGeoJson() {
+  async function exportGeoJson() {
     if (!zones.length) {
       toast("Добавьте хотя бы одну зону перед экспортом", true);
       return;
@@ -1086,17 +1278,22 @@
       toast("У каждой зоны должно быть название", true);
       return;
     }
-    const contents = `${JSON.stringify(zonesToGeoJson(), null, 2)}\n`;
+    const result = await refreshCoverage();
+    if (!result) {
+      toast("Не удалось подготовить вырезы. Проверьте контуры и повторите экспорт.", true);
+      return;
+    }
+    const contents = `${JSON.stringify(result.geojson, null, 2)}\n`;
     const blob = new Blob([contents], { type: "application/geo+json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `delivery-zones-${new Date().toISOString().slice(0, 10)}.geojson`;
+    anchor.download = `delivery-zones-cutouts-${new Date().toISOString().slice(0, 10)}.geojson`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast("GeoJSON подготовлен и скачан");
+    toast(`Скачан один GeoJSON с вырезами: зон ${result.summary.zoneCount}, контуров ${result.summary.polygonCount}.`);
   }
 
   function toast(message, isError = false) {

@@ -82,22 +82,22 @@
               <small id="save-state-time">Загрузка данных…</small>
             </span>
           </div>
-          <button class="button button-secondary" id="import-button" type="button">
+          <button class="button button-secondary" id="import-button" type="button" aria-label="Импорт зон">
             <svg><use href="#icon-upload"/></svg>
             <span>Импорт</span>
           </button>
           <input id="import-input" type="file" accept=".geojson,.json,application/geo+json,application/json" hidden>
-          <button class="button button-secondary" id="revert-button" type="button" disabled>
+          <button class="button button-secondary" id="revert-button" type="button" aria-label="Отменить изменения" disabled>
             <svg><use href="#icon-undo"/></svg>
             <span>Отменить</span>
           </button>
-          <button class="button button-secondary" id="save-button" type="button" disabled>
+          <button class="button button-secondary" id="save-button" type="button" aria-label="Сохранить черновик" disabled>
             <svg><use href="#icon-save"/></svg>
             <span>Сохранить черновик</span>
           </button>
-          <button class="button button-primary" id="export-button" type="button">
+          <button class="button button-primary" id="export-button" type="button" aria-label="Экспорт GeoJSON с вырезами" title="Экспорт GeoJSON с вырезами">
             <svg><use href="#icon-download"/></svg>
-            <span>Экспорт GeoJSON</span>
+            <span>Экспорт с вырезами</span>
           </button>
         </div>
       </header>
@@ -107,10 +107,15 @@
           <div class="panel-heading zones-heading">
             <div>
               <h2>Все зоны</h2>
-              <p>От ближней к дальней</p>
+              <p>Новая зона вытесняет прежние</p>
             </div>
             <span class="count" id="zone-count">0</span>
           </div>
+          <details class="coverage-panel">
+            <summary id="coverage-title">Рассчитываем вырезы…</summary>
+            <p id="coverage-summary" aria-live="polite"></p>
+            <p id="coverage-details"></p>
+          </details>
           <div class="zone-list" id="zone-list"></div>
           <div class="zone-panel-footer">
             <button class="button button-outline button-full" id="add-zone-button" type="button">
@@ -138,19 +143,19 @@
           </form>
 
           <div class="map-toolbar" role="toolbar" aria-label="Инструменты карты">
-            <button class="map-tool is-active" type="button" data-tool="select" aria-pressed="true">
+            <button class="map-tool is-active" type="button" data-tool="select" aria-pressed="true" aria-label="Выделить зону">
               <svg><use href="#icon-pointer"/></svg>
               <span>Выделить</span>
             </button>
-            <button class="map-tool" type="button" data-tool="draw" aria-pressed="false">
+            <button class="map-tool" type="button" data-tool="draw" aria-pressed="false" aria-label="Нарисовать зону">
               <svg><use href="#icon-polygon"/></svg>
               <span>Нарисовать</span>
             </button>
-            <button class="map-tool" type="button" data-tool="add-point" aria-pressed="false">
+            <button class="map-tool" type="button" data-tool="add-point" aria-pressed="false" aria-label="Добавить точку">
               <svg><use href="#icon-pin-plus"/></svg>
               <span>Добавить точку</span>
             </button>
-            <button class="map-tool" type="button" data-tool="check" aria-pressed="false">
+            <button class="map-tool" type="button" data-tool="check" aria-pressed="false" aria-label="Проверить точку на карте">
               <svg><use href="#icon-location"/></svg>
               <span>Проверить</span>
             </button>
@@ -207,6 +212,8 @@
                     <span class="number-field"><input id="zone-min-order" type="number" min="0" step="100"><i>₽</i></span>
                   </label>
                 </div>
+                <p id="zone-cutout-info" aria-live="polite">Исходный контур сохранён. Вырезы пересчитываются автоматически.</p>
+                <button class="button button-outline button-full" id="raise-zone-button" type="button">Вытеснить пересечения</button>
               </section>
 
               <section class="form-section">
@@ -231,7 +238,7 @@
               <section class="form-section vertices-section">
                 <div class="section-row vertices-heading">
                   <div>
-                    <h3>Вершины полигона</h3>
+                    <h3>Исходный контур</h3>
                     <p><span id="vertex-count">0</span> точек · широта, долгота</p>
                   </div>
                   <button class="button button-compact button-secondary" id="add-point-button" type="button">

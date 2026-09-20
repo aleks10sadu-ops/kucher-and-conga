@@ -32,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         page('/halls', 0.8, 'monthly'),
         page('/faq', 0.7, 'monthly'),
         page('/events', 0.7, 'weekly'),
+        page('/events/novogodnie-korporativy-2027', 0.8, 'weekly'),
         page('/promotions', 0.7, 'weekly'),
         page('/vacancies', 0.6, 'weekly'),
         page('/privacy', 0.2, 'yearly'),

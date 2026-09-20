@@ -1,0 +1,173 @@
+.page {
+    --gold: #f0cf8c;
+    --cream: #fff1d9;
+    --muted: #f0d8c7;
+    --line: #f0cf8c4a;
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    color: var(--cream);
+    background: #8d252b url('/new-year-night-2027/wrapping-paper.webp') center top / 1000px auto repeat;
+    font-family: var(--font-body), sans-serif;
+    line-height: 1.65;
+}
+.page::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1; background: linear-gradient(180deg, #3b0c0f12, #34090d28 60%, #30080c54); }
+.page h1, .page h2, .page h3, .timeline dt, .price { font-family: var(--font-display), Georgia, serif; font-weight: 600; }
+.page a, .page button { -webkit-tap-highlight-color: transparent; }
+.page a:focus-visible, .page button:focus-visible { outline: 2px solid var(--cream); outline-offset: 6px; }
+.skip { position: absolute; top: -100px; left: 20px; z-index: 20; background: var(--cream); color: #55141b; padding: 12px; }
+.skip:focus { top: 10px; }
+.hero { position: relative; max-width: 1320px; margin: auto; padding: 16px 48px 24px; display: grid; grid-template-columns: 1.08fr 1fr; gap: 28px; align-items: center; }
+.heroCopy { position: relative; z-index: 2; padding: 12px 0; }
+.hero h1 { font-size: clamp(48px, min(5.8vw, 10svh), 80px); line-height: 1.07; letter-spacing: -.035em; margin: 0; }
+.hero h1 em { display: inline-block; color: var(--gold); font-weight: 600; }
+.lead { font-family: var(--font-display), Georgia, serif; font-size: clamp(22px, 2.2vw, 29px); line-height: 1.4; margin: 24px 0 0; }
+.date { color: var(--gold); font-size: 17px; letter-spacing: .015em; margin: 15px 0 0; }
+.intro { font-size: 16px; max-width: 435px; margin: 26px 0 30px; color: var(--muted); line-height: 1.8; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 26px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 56px; padding: 15px 26px; border-radius: 6px; font-size: 15px; font-weight: 600; transition: transform .25s, box-shadow .25s, background .25s; }
+.primary { background: linear-gradient(115deg, #f3d89d, #dab064); border: 1px solid #f8e3b7; box-shadow: 0 5px 26px #3b070c20, inset 0 1px #fff1d0; color: #4a151a; }
+.primary:hover { transform: translateY(-2px); box-shadow: 0 7px 30px #3b070c40; }
+.secondary { border: 1px solid #f0cf8c99; color: var(--cream); background: #45101420; }
+.secondary:hover { background: #f0cf8c14; }
+.textLink { color: var(--cream); border-bottom: 1px solid #f0cf8c75; padding: 7px 0; font-size: 14px; }
+.textLink:hover { color: var(--gold); }
+.portrait { position: relative; z-index: 1; width: 100%; max-width: clamp(280px, calc(80svh - 152px), 420px); margin: 0 auto; }
+.portraitScene { position: relative; isolation: isolate; }
+.portraitVisual { position: relative; z-index: 1; }
+.portraitScene img { width: 100%; height: auto; display: block; mask-image: linear-gradient(to bottom, #000 76%, transparent 100%); }
+/* The beams rotate independently; the portrait and its containers stay still. */
+.spotlights { position: absolute; inset: -16px -17% 0; z-index: 0; pointer-events: none; overflow: hidden; mask-image: linear-gradient(#000 0%, #000 66%, transparent 98%), linear-gradient(90deg, transparent, #000 2.5%, #000 97.5%, transparent); mask-composite: intersect; }
+.spotlight { position: absolute; top: 0; width: 66%; height: 108%; transform-origin: 50% 0; }
+.spotlight > .lightBeam { display: block; width: 100%; height: 100%; overflow: visible; }
+.spotlight > .lightFixture { position: absolute; top: -9px; left: 50%; width: 46px; height: 14px; transform: translateX(-50%); overflow: visible; }
+.spotlightKey { left: -23%; transform: rotate(-18deg); animation: spotlightKey 24s -6s cubic-bezier(.45, 0, .55, 1) infinite; }
+.spotlightFill { left: 57%; transform: rotate(18deg); animation: spotlightFill 24s -12s cubic-bezier(.45, 0, .55, 1) infinite; }
+.spotlightKey > .lightBeam { opacity: .87; }
+.spotlightFill > .lightBeam { opacity: .55; }
+.portrait figcaption { position: relative; text-align: center; margin: 4px 0 0; line-height: 1.4; }
+.portrait figcaption strong { display: block; font: 600 30px/1.3 var(--font-display), Georgia, serif; color: var(--gold); }
+.portrait figcaption span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.program, .booking { position: relative; max-width: 1140px; padding: 26px 36px 0; margin: auto; scroll-margin-top: 88px; }
+.sectionTitle { display: flex; align-items: center; justify-content: center; gap: 25px; }
+.sectionTitle > span { flex: 1; max-width: 120px; height: 1px; background: linear-gradient(90deg, transparent, #f0cf8c88); }
+.sectionTitle > span:last-child { transform: rotate(180deg); }
+.sectionTitle h2 { font-size: clamp(28px, 3vw, 36px); line-height: 1.25; text-align: center; }
+.programNote { text-align: center; color: var(--muted); font-size: 14px; margin-top: 12px; }
+.timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 800px; margin: 30px auto 26px; text-align: center; padding: 18px 0 22px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.timeline > div + div { border-left: 1px solid var(--line); }
+.timeline dt { color: var(--gold); font-size: 38px; line-height: 1.25; }
+.timeline dd { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 5px; }
+.programList { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 64px; max-width: 920px; margin: 0 auto; padding: 0; }
+.programList li { position: relative; padding-left: 20px; font-size: 17px; line-height: 1.6; }
+.programList li::before { content: ''; position: absolute; top: .7em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+.programList li:last-child { grid-column: 1 / -1; justify-self: center; }
+.booking { text-align: center; padding-top: 52px; padding-bottom: 44px; }
+.booking h2 { font-size: clamp(36px, 4.2vw, 50px); line-height: 1.15; letter-spacing: -.025em; }
+.venues { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin: 28px auto 0; padding: 26px 0; max-width: 920px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.venue { min-width: 0; }
+.venue + .venue { border-left: 1px solid var(--line); padding-left: 40px; margin-left: -20px; }
+.venue h3 { font-size: 32px; line-height: 1.3; color: var(--gold); }
+.price { color: var(--cream); font-size: 43px; line-height: 1.2; margin: 13px 0 15px; white-space: nowrap; }
+.price span { font: 400 16px var(--font-body), sans-serif; }
+.venueDescription { font-size: 15px; line-height: 1.7; max-width: 335px; margin: auto; color: var(--muted); }
+.venueTime { font-size: 12px; line-height: 1.7; margin-top: 13px; color: var(--gold); }
+.contactHint { max-width: 570px; margin: 26px auto 0; font-size: 15px; color: var(--muted); }
+.phones { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
+.phones a { font-size: 18px; }
+.address { font-size: 12px; margin-top: 23px; color: var(--muted); }
+.snow { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.snow i { position: absolute; left: var(--x); top: -12px; width: var(--size); height: var(--size); border-radius: 50%; background: #fff2d4; opacity: .38; animation: snowfall var(--duration) var(--delay) linear infinite; }
+.page[data-hero-visible=false] .spotlight,
+.page[data-hero-visible=false] .snow i { animation-play-state: paused; }
+@keyframes spotlightKey { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(-29deg); } }
+@keyframes spotlightFill { 0%, 100% { transform: rotate(29deg); } 50% { transform: rotate(10deg); } }
+@keyframes snowfall { from { transform: translate3d(0, -20px, 0); } to { transform: translate3d(32px, 820px, 0); } }
+@media (max-width: 1100px) {
+    .hero { padding: 16px 28px 24px; gap: 24px; }
+    .hero h1 { font-size: 60px; }
+    .lead { font-size: 25px; }
+    .date { font-size: 15px; }
+    .intro { font-size: 15px; margin: 22px 0 25px; }
+    .actions { gap: 14px 20px; }
+    .portrait figcaption strong { font-size: 28px; }
+    .portrait figcaption span { font-size: 12px; }
+    .programList { gap: 18px 36px; }
+}
+@media (max-width: 850px) and (min-width: 701px) {
+    .hero h1 { font-size: 50px; }
+    .lead { font-size: 22px; }
+    .hero { gap: 10px; }
+    .intro { font-size: 14px; }
+    .portrait figcaption span { font-size: 11px; }
+}
+@media (max-width: 700px) {
+    .page { background-size: 760px auto; }
+    .hero { display: block; padding: 14px 24px 14px; }
+    .heroCopy { padding: 5px 0 0; }
+    .hero h1 { font-size: clamp(49px, 10vw, 68px); line-height: 1.04; }
+    .lead { font-size: 23px; margin-top: 16px; }
+    .date { font-size: 14px; margin-top: 12px; }
+    .intro { font-size: 15px; max-width: 450px; margin: 14px 0 18px; line-height: 1.7; }
+    .actions { gap: 16px 22px; }
+    .hero .primary { min-height: 52px; padding: 12px 20px; font-size: 14px; }
+    .textLink { font-size: 13px; }
+    .portrait { max-width: 300px; width: 80%; margin: 14px auto 0; }
+    .spotlights { inset: 0 -17% 0; }
+    .spotlight > .lightFixture { width: 38px; height: 12px; top: -8px; }
+    .portrait figcaption { margin-top: 0; }
+    .portrait figcaption strong { font-size: 28px; }
+    .portrait figcaption span { font-size: 12px; }
+    .program, .booking { padding-right: 24px; padding-left: 24px; }
+    .program { padding-top: 30px; }
+    .sectionTitle { gap: 13px; }
+    .sectionTitle > span { max-width: 40px; }
+    .sectionTitle h2 { font-size: 28px; }
+    .programNote { font-size: 12px; margin-top: 13px; }
+    .timeline { gap: 10px; margin: 23px auto; padding: 16px 0 19px; }
+    .timeline dt { font-size: 30px; }
+    .timeline dd { font-size: 11px; }
+    .programList { grid-template-columns: 1fr; gap: 16px; }
+    .programList li { font-size: 16px; padding-left: 17px; }
+    .programList li:last-child { grid-column: auto; justify-self: start; }
+    .booking { padding-top: 38px; padding-bottom: 34px; }
+    .booking h2 { font-size: 39px; }
+    .venues { grid-template-columns: 1fr; gap: 25px; margin-top: 24px; padding: 24px 0; }
+    .venue + .venue { margin: 0; padding: 25px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+    .venue h3 { font-size: 31px; }
+    .price { font-size: 42px; margin-top: 12px; }
+    .venueDescription { font-size: 14px; max-width: 300px; }
+    .venueTime { max-width: 270px; margin: 12px auto 0; font-size: 12px; }
+    .contactHint { font-size: 14px; max-width: 320px; }
+    .phones { gap: 12px; }
+    .phones a { width: 100%; max-width: 340px; font-size: 18px; }
+    .address { font-size: 12px; }
+    @keyframes snowfall { from { transform: translate3d(0, -20px, 0); } to { transform: translate3d(24px, 1100px, 0); } }
+}
+@media (max-width: 380px) {
+    .hero, .program, .booking { padding-left: 20px; padding-right: 20px; }
+    .hero h1 { font-size: 45px; }
+    .lead { font-size: 21px; }
+    .date { font-size: 13px; }
+    .hero .primary { padding: 12px 17px; }
+    .actions { gap: 12px 20px; }
+    .textLink { font-size: 12px; }
+    .timeline dt { font-size: 27px; }
+    .timeline dd { font-size: 10px; }
+    .sectionTitle > span { max-width: 20px; }
+    .sectionTitle h2 { font-size: 25px; }
+}
+@media (min-width: 701px) and (max-height: 700px) {
+    .heroCopy { padding: 8px 0; }
+    .hero h1 { font-size: clamp(48px, 8.8svh, 62px); }
+    .lead { margin-top: 18px; font-size: 25px; }
+    .intro { margin: 20px 0 24px; font-size: 15px; line-height: 1.7; }
+}
+@media (max-width: 700px) and (max-height: 850px) {
+    .portrait { max-width: 260px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .snow { display: none; }
+    .spotlight { animation: none; }
+    .page * { scroll-behavior: auto !important; transition: none !important; }
+}

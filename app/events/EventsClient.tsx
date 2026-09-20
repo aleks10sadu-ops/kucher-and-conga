@@ -103,6 +103,14 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
         }
     };
 
+    const visiblePosts: Post[] = [{
+        id: 'christmas-2027', slug: 'novogodnie-korporativy-2027',
+        title: 'Новогодние корпоративы 2027',
+        excerpt: 'Декабрь 2026 в Кучер & CONGA: ведущие, живая музыка, конкурсы, призы и дискотека. Программа с 19:00 до 00:00. Даты и бронирование — на афише.',
+        content: null, image_url: '/christmas-2027/hosts-cover.webp',
+        published_at: null, created_at: '2026-09-12', category: 'events', is_published: true,
+    }, ...posts.filter(post => post.slug !== 'novogodnie-korporativy-2027')];
+
     return (
         <>
             <ForestHeader />
@@ -142,7 +150,7 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
 
                         {loading ? (
                             <div className="py-16 text-center text-cream/50">Загрузка…</div>
-                        ) : posts.length === 0 ? (
+                        ) : visiblePosts.length === 0 ? (
                             <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
                                 <p className="text-cream/70">Пока ближайших событий нет.</p>
                                 <p className="mt-2 text-sm text-cream/50">
@@ -152,7 +160,7 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
-                                {posts.map((post) => {
+                                {visiblePosts.map((post) => {
                                     return (
                                         <Link
                                             key={post.id}

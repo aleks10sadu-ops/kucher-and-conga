@@ -27,11 +27,11 @@ describe('local-search landing pages', () => {
 
     it('renders a canonical business-lunch page that leads to the constructor', async () => {
         const html = renderToStaticMarkup(React.createElement(BusinessLunchPage));
-        const posterPath = path.join(process.cwd(), 'public', 'business-lunch', 'week-2026-08-24.webp');
+        const posterPath = path.join(process.cwd(), 'public', 'business-lunch', 'week-2026-09-21.webp');
 
         expect(businessLunchMetadata.alternates).toMatchObject({ canonical: '/business-lunch' });
         expect(businessLunchMetadata.openGraph).toMatchObject({
-            images: ['/business-lunch/week-2026-08-24.webp'],
+            images: ['/business-lunch/week-2026-09-21.webp'],
         });
         expect(existsSync(posterPath)).toBe(true);
         if (existsSync(posterPath)) {

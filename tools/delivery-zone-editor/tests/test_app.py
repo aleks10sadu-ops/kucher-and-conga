@@ -76,6 +76,25 @@ class DeliveryZoneEditorTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("минимум три", response.get_json()["error"])
 
+    def test_nested_zones_keep_their_conditions_and_priority_after_save(self):
+        outer = json.loads(json.dumps(SAMPLE_ZONES[0]))
+        outer["price"] = 300
+        inner = {
+            **outer,
+            "id": 2,
+            "name": "Вложенная зона 600",
+            "price": 600,
+            "minOrder": 3500,
+            "coordinates": [[[56.46, 37.52], [56.48, 37.52], [56.48, 37.54], [56.46, 37.52]]],
+        }
+        response = self.client.put("/api/zones", json={"zones": [inner, outer]})
+        self.assertEqual(response.status_code, 200)
+        restored = self.client.get("/api/zones").get_json()["zones"]
+        self.assertEqual(restored, [inner, outer])
+        document = json.loads(editor.ZONES_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(document["features"][0]["properties"]["price"], 600)
+        self.assertEqual(document["features"][1]["properties"]["price"], 300)
+
     def test_editor_has_controlled_boot_screen_and_fresh_assets(self):
         response = self.client.get("/")
         html = response.get_data(as_text=True)

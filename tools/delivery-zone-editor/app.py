@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -12,6 +13,9 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from flask import Flask, jsonify, render_template, request
+from shapely.errors import GEOSException
+
+from geometry import resolve_coverage
 
 
 EDITOR_DIR = Path(__file__).resolve().parent
@@ -32,6 +36,8 @@ def _number(value: Any, label: str, minimum: float | None = None) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ZoneValidationError(f"{label}: ожидается число")
     number = float(value)
+    if not math.isfinite(number):
+        raise ZoneValidationError(f"{label}: ожидается конечное число")
     if minimum is not None and number < minimum:
         raise ZoneValidationError(f"{label}: значение не может быть меньше {minimum:g}")
     return number
@@ -77,28 +83,27 @@ def validate_zones(raw_zones: Any) -> list[dict[str, Any]]:
             raise ZoneValidationError(f"{prefix}: цвет должен быть в формате #RRGGBB")
 
         coordinates = raw_zone.get("coordinates")
-        if not isinstance(coordinates, list) or len(coordinates) != 1:
-            raise ZoneValidationError(f"{prefix}: поддерживается один внешний контур полигона")
-        ring = coordinates[0]
-        if not isinstance(ring, list):
-            raise ZoneValidationError(f"{prefix}: неверный контур полигона")
-
-        clean_ring: list[list[float]] = []
-        for point_index, point in enumerate(ring, start=1):
-            if not isinstance(point, list) or len(point) != 2:
-                raise ZoneValidationError(f"{prefix}, точка {point_index}: нужны широта и долгота")
-            latitude = _number(point[0], f"{prefix}, точка {point_index}, широта")
-            longitude = _number(point[1], f"{prefix}, точка {point_index}, долгота")
-            if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
-                raise ZoneValidationError(f"{prefix}, точка {point_index}: координаты вне допустимого диапазона")
-            clean_ring.append([round(latitude, 6), round(longitude, 6)])
-
-        if len(clean_ring) > 1 and _same_point(clean_ring[0], clean_ring[-1]):
-            clean_ring.pop()
-        unique_points = {(point[0], point[1]) for point in clean_ring}
-        if len(unique_points) < 3:
-            raise ZoneValidationError(f"{prefix}: для полигона нужны минимум три разные точки")
-        clean_ring.append(clean_ring[0].copy())
+        if not isinstance(coordinates, list) or not coordinates:
+            raise ZoneValidationError(f"{prefix}: нужен внешний контур полигона")
+        clean_rings = []
+        for ring in coordinates:
+            if not isinstance(ring, list):
+                raise ZoneValidationError(f"{prefix}: неверный контур полигона")
+            clean_ring: list[list[float]] = []
+            for point_index, point in enumerate(ring, start=1):
+                if not isinstance(point, list) or len(point) != 2:
+                    raise ZoneValidationError(f"{prefix}, точка {point_index}: нужны широта и долгота")
+                latitude = _number(point[0], f"{prefix}, точка {point_index}, широта")
+                longitude = _number(point[1], f"{prefix}, точка {point_index}, долгота")
+                if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+                    raise ZoneValidationError(f"{prefix}, точка {point_index}: координаты вне допустимого диапазона")
+                clean_ring.append([latitude, longitude])
+            if len(clean_ring) > 1 and _same_point(clean_ring[0], clean_ring[-1]):
+                clean_ring.pop()
+            if len({tuple(point) for point in clean_ring}) < 3:
+                raise ZoneValidationError(f"{prefix}: для полигона нужны минимум три разные точки")
+            clean_ring.append(clean_ring[0].copy())
+            clean_rings.append(clean_ring)
 
         clean.append(
             {
@@ -106,11 +111,16 @@ def validate_zones(raw_zones: Any) -> list[dict[str, Any]]:
                 "name": name,
                 "price": int(price) if price.is_integer() else price,
                 "minOrder": int(min_order) if min_order.is_integer() else min_order,
-                "coordinates": [clean_ring],
+                "coordinates": clean_rings,
                 "color": color.lower(),
                 "opacity": opacity,
             }
         )
+        if "priority" in raw_zone:
+            priority = _number(raw_zone["priority"], f"{prefix}, приоритет", 0)
+            if not priority.is_integer() or priority > 1_000_000_000:
+                raise ZoneValidationError(f"{prefix}: неверный приоритет")
+            clean[-1]["priority"] = int(priority)
 
     return clean
 
@@ -130,12 +140,14 @@ def zones_to_geojson(zones: list[dict[str, Any]]) -> dict[str, Any]:
                     "minOrder": zone["minOrder"],
                     "color": zone["color"],
                     "opacity": zone["opacity"],
+                    **({"priority": zone["priority"]} if "priority" in zone else {}),
                 },
                 "geometry": {
                     "type": "Polygon",
                     # GeoJSON uses [longitude, latitude]; the editor uses Leaflet's [latitude, longitude].
                     "coordinates": [
-                        [[point[1], point[0]] for point in zone["coordinates"][0]]
+                        [[point[1], point[0]] for point in ring]
+                        for ring in zone["coordinates"]
                     ],
                 },
             }
@@ -145,6 +157,10 @@ def zones_to_geojson(zones: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def geojson_to_zones(document: Any) -> list[dict[str, Any]]:
+    if isinstance(document, dict) and isinstance(document.get("deliveryZoneEditor"), dict):
+        metadata = document["deliveryZoneEditor"]
+        if metadata.get("version") == 1 and "sources" in metadata:
+            document = metadata["sources"]
     if not isinstance(document, dict) or document.get("type") != "FeatureCollection":
         raise ZoneValidationError("GeoJSON должен иметь тип FeatureCollection")
     features = document.get("features")
@@ -171,8 +187,10 @@ def geojson_to_zones(document: Any) -> list[dict[str, Any]]:
                 "minOrder": properties.get("minOrder", properties.get("min_order", 0)),
                 "color": properties.get("color", "#3b82f6"),
                 "opacity": properties.get("opacity", 0.2),
+                **({"priority": properties["priority"]} if "priority" in properties else {}),
                 "coordinates": [
-                    [[point[1], point[0]] for point in coordinates[0]]
+                    [[point[1], point[0]] for point in ring]
+                    for ring in coordinates
                 ],
             }
         )
@@ -259,6 +277,24 @@ def put_zones():
         return jsonify({"error": str(error)}), 400
     except (OSError, json.JSONDecodeError) as error:
         return jsonify({"error": f"Не удалось сохранить зоны: {error}"}), 500
+
+
+@app.post("/api/coverage")
+def coverage():
+    """Preview/export only: never replaces the saved editable source contours."""
+    try:
+        payload = request.get_json(silent=False)
+        if not isinstance(payload, dict):
+            raise ZoneValidationError("Ожидается объект с зонами")
+        raw_zones = payload.get("zones")
+        zones = [] if raw_zones == [] else validate_zones(raw_zones)
+        result = resolve_coverage(zones, payload.get("focusId"))
+        result["geojson"]["deliveryZoneEditor"] = {
+            "version": 1, "sources": zones_to_geojson(zones),
+        }
+        return jsonify(result)
+    except (ZoneValidationError, ValueError, GEOSException) as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.get("/api/geocode")

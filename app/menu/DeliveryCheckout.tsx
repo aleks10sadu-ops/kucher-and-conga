@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { X } from 'lucide-react';
 import type { CartItem } from '@/types/index';
-import { deliveryZones, checkDeliveryZoneForCoords, type DeliveryZone } from '../data/deliveryZones';
+import { checkDeliveryZoneForCoords, findZoneByKeyword, type DeliveryZone } from '../data/deliveryZones';
 import { composeAddressDetails } from '@/lib/booking/addressDetails';
 import { validateMinOrder } from '@/lib/delivery/minOrder';
 import { isDeliveryOpen, todayDeliveryWindowText, validateOrderTime } from '@/lib/delivery/schedule';
@@ -24,18 +24,6 @@ import DeliveryZoneMiniMap from '../components/DeliveryZoneMiniMap';
 
 const inputCls =
     'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
-
-// Определение зоны по ключевым словам улицы (fallback без Яндекс-карт).
-// Точные полигональные зоны подключаются, когда на странице загружен ymaps.
-function zoneByKeyword(address: string) {
-    const a = address.toLowerCase();
-    if (/промышленная|загорская|московская/.test(a)) return deliveryZones[0];
-    if (/внуковская|кропоткинская|туполева/.test(a)) return deliveryZones[1];
-    if (/ключевая|лобненская|ольявидово/.test(a)) return deliveryZones[2];
-    if (/солнечная|юбилейная|габово/.test(a)) return deliveryZones[3];
-    if (/центральная|богослово|жуково/.test(a)) return deliveryZones[4];
-    return null;
-}
 
 export default function DeliveryCheckout({
     items,
@@ -122,7 +110,7 @@ export default function DeliveryCheckout({
     // Fallback по ключевым словам улицы — только пока Яндекс-карты не загрузились.
     const resolveZone = (addrRaw: string, house?: string) => {
         const addr = house?.trim() ? `${addrRaw.trim()}, ${house.trim()}` : addrRaw.trim();
-        const kw = zoneByKeyword(addr);
+        const kw = findZoneByKeyword(addr);
         const ym = (window as any).ymaps;
         if (!addr || !ym?.geocode) {
             setZone(kw);
@@ -376,7 +364,7 @@ export default function DeliveryCheckout({
                                 set({ address: e.target.value });
                                 setCoords(null);
                                 setResolvedAddress(null);
-                                setZone(zoneByKeyword(e.target.value));
+                                setZone(findZoneByKeyword(e.target.value));
                             }}
                             onBlur={() => resolveZone(f.address, f.house)}
                         />
