@@ -4,6 +4,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+import RestaurantLocationMap, { YANDEX_ROUTE_URL } from '../components/RestaurantLocationMap';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
 // Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
@@ -75,8 +76,6 @@ const FERN = Array.from({ length: 9 }, (_, i) => {
     return { y, len };
 });
 const YANDEX_REVIEWS = 'https://yandex.ru/maps-reviews-widget/10214255530?comments';
-// theme=dark — нативная тёмная тема виджета карты (проверено: фон rgb(33,35,38)).
-const YANDEX_MAP = 'https://yandex.ru/map-widget/v1/?um=constructor%3A1c90c41847ab12bb686f7ffc03fcb5b1930c854da9e094965c7ac7ad24f8e4b7&source=constructor&theme=dark';
 const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
 
 // Полная навигация для выдвижного меню.
@@ -485,7 +484,7 @@ export default function RedesignClient() {
                                 <div id="find">
                                     <SectionHead kicker="Дмитров" title="Как нас найти" />
                                     <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                        <LazyFrame src={YANDEX_MAP} title="Ресторан Кучер и Конга на карте Дмитрова" height={360} note="Загружаем карту…" />
+                                        <RestaurantLocationMap height={360} />
                                     </div>
                                     <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
                                         <div><div style={{ fontSize: 12.5, color: C.brass, marginBottom: 6 }}>Адрес</div><div style={{ fontSize: 18, color: '#EDF2EA' }}>Дмитров, Промышленная улица, 20Б</div></div>
@@ -493,7 +492,7 @@ export default function RedesignClient() {
                                             <a href="tel:+79163177887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 317-78-87</a>
                                             <a href="tel:+79162977887" style={{ display: 'block', fontSize: 17, color: '#EDF2EA' }}>+7 (916) 297-78-87</a>
                                         </div>
-                                        <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" className="rf-btn rf-btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', borderRadius: 8, fontWeight: 600, padding: '13px 26px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)' }}>Открыть в Яндекс.Картах</a>
+                                        <a href={YANDEX_ROUTE_URL} target="_blank" rel="noopener noreferrer" className="rf-btn rf-btn-primary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', borderRadius: 8, fontWeight: 600, padding: '13px 26px', background: C.terracotta, color: '#FBF3EA', border: '1px solid rgba(255,255,255,0.14)' }}>Построить маршрут</a>
                                     </div>
                                 </div>
                             </div>

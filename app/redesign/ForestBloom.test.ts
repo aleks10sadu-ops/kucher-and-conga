@@ -27,4 +27,12 @@ describe('ForestBloom sections menu', () => {
 
         expect(html).toMatch(/<h1[^>]*>Ресторан в Дмитрове,[\s\S]*где лес растёт с[^<]*потолка<\/h1>/);
     });
+
+    it('uses the controlled restaurant map instead of an advertising map iframe', () => {
+        const html = renderToStaticMarkup(React.createElement(ForestScene));
+
+        expect(html).toContain('aria-label="Интерактивная карта расположения ресторана Кучер и Конга"');
+        expect(html).toContain('Построить маршрут');
+        expect(html).not.toContain('map-widget/v1');
+    });
 });
