@@ -4,6 +4,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+import GuestReviews from '../components/GuestReviews';
 import RestaurantLocationMap, { YANDEX_ROUTE_URL } from '../components/RestaurantLocationMap';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
@@ -75,7 +76,6 @@ const FERN = Array.from({ length: 9 }, (_, i) => {
     const len = +(11 * (1 - p * 0.72)).toFixed(2);
     return { y, len };
 });
-const YANDEX_REVIEWS = 'https://yandex.ru/maps-reviews-widget/10214255530?comments';
 const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
 
 // Полная навигация для выдвижного меню.
@@ -466,18 +466,13 @@ export default function RedesignClient() {
                     </section>
 
                     {/* ОТЗЫВЫ + КАК НАС НАЙТИ — на одном уровне: отзывы слева, карта справа */}
-                    <section id="reviews" style={{ position: 'relative', zIndex: 2, paddingTop: 10, paddingBottom: 76 }}>
+                    <section id="reviews" style={{ position: 'relative', zIndex: 2, paddingTop: 10, paddingBottom: 76, scrollMarginTop: 76 }}>
                         <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
                             <div className="rf-rf2" style={{ display: 'grid', gap: 28, alignItems: 'start' }}>
                                 {/* Отзывы */}
                                 <div>
                                     <SectionHead kicker="Нам доверяют" title="Отзывы гостей" />
-                                    <div style={{ marginTop: 26, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)', ...glass }}>
-                                        <LazyFrame src={YANDEX_REVIEWS} title="Отзывы о ресторане на Яндекс.Картах" height={560} dark note="Загружаем отзывы…" />
-                                    </div>
-                                    <div style={{ marginTop: 14 }}>
-                                        <a href={YANDEX_ORG} target="_blank" rel="noopener noreferrer" style={{ color: C.brass, fontSize: 14 }}>Читать все отзывы на Яндекс.Картах →</a>
-                                    </div>
+                                    <GuestReviews allReviewsHref={`${YANDEX_ORG}reviews/`} />
                                 </div>
 
                                 {/* Как нас найти */}
@@ -824,44 +819,6 @@ function PopCounterDesktop() {
                 <span style={{ fontSize: 10.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.brass, whiteSpace: 'nowrap' }}>Спор лопнуто</span>
                 <motion.span key={count} className="rf-serif" initial={{ scale: 1.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 15 }} style={{ fontSize: 30, fontWeight: 900, color: '#F6F9F3', lineHeight: 1 }}>{count}</motion.span>
             </div>
-        </div>
-    );
-}
-
-// Ленивый iframe: монтируется, только когда секция подъезжает к вьюпорту, — виджеты
-// Яндекса (12+ секунд загрузки) больше не тормозят первый экран. До готовности —
-// тёмная заглушка. dark — инверсия цветов для виджетов без нативной тёмной темы:
-// invert+hue-rotate возвращает оттенки на место, светлый фон становится тёмным
-// (побочный эффект — фото/аватары в отзывах тоже инвертируются).
-function LazyFrame({ src, title, height, dark = false, note }: { src: string; title: string; height: number; dark?: boolean; note: string }) {
-    const hostRef = useRef<HTMLDivElement>(null);
-    const [show, setShow] = useState(false);
-    const [ready, setReady] = useState(false);
-    useEffect(() => {
-        const el = hostRef.current;
-        if (!el) return;
-        if (!('IntersectionObserver' in window)) { setShow(true); return; }
-        const io = new IntersectionObserver((entries) => {
-            if (entries.some((e) => e.isIntersecting)) { setShow(true); io.disconnect(); }
-        }, { rootMargin: '360px 0px' });
-        io.observe(el);
-        return () => io.disconnect();
-    }, []);
-    return (
-        <div ref={hostRef} style={{ position: 'relative', height, background: '#121A15' }}>
-            {!ready && (
-                <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'rgba(244,247,242,0.55)' }}>{note}</div>
-            )}
-            {show && (
-                <iframe
-                    src={src}
-                    title={title}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    onLoad={() => setReady(true)}
-                    style={{ width: '100%', height: '100%', border: 0, display: 'block', background: '#fff', opacity: ready ? 1 : 0, transition: 'opacity .35s ease', filter: dark ? 'invert(0.92) hue-rotate(180deg)' : undefined }}
-                />
-            )}
         </div>
     );
 }

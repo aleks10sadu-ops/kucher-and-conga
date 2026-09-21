@@ -35,4 +35,13 @@ describe('ForestBloom sections menu', () => {
         expect(html).toContain('Построить маршрут');
         expect(html).not.toContain('map-widget/v1');
     });
+
+    it('shows branded five-star guest reviews instead of the Yandex iframe', () => {
+        const html = renderToStaticMarkup(React.createElement(ForestScene));
+
+        expect(html).toContain('aria-label="Пятизвёздочные отзывы гостей"');
+        expect(html).toContain('Рейтинг гостей на Яндекс Картах');
+        expect(html.match(/aria-label="5 из 5"/g)).toHaveLength(4);
+        expect(html).not.toContain('maps-reviews-widget');
+    });
 });
