@@ -34,7 +34,7 @@ const COLORS = {
 
 function Stars({ rating }: { rating: number }) {
     return (
-        <span aria-label={`${rating} из 5`} style={{ display: 'inline-flex', gap: 3, color: COLORS.brass, fontSize: 15, letterSpacing: '0.04em' }}>
+        <span role="img" aria-label={`${rating} из 5`} style={{ display: 'inline-flex', gap: 3, color: COLORS.brass, fontSize: 15, letterSpacing: '0.04em' }}>
             <span aria-hidden>{'★'.repeat(rating)}</span>
         </span>
     );
@@ -43,6 +43,7 @@ function Stars({ rating }: { rating: number }) {
 export default function GuestReviews({ allReviewsHref }: { allReviewsHref: string }) {
     return (
         <div
+            role="region"
             aria-label="Пятизвёздочные отзывы гостей"
             style={{
                 marginTop: 26,

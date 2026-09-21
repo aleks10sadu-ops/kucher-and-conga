@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type Props = { images: string[]; alt: string };
@@ -9,16 +10,6 @@ type Props = { images: string[]; alt: string };
 export default function MenuImageGallery({ images, alt }: Props) {
     const [index, setIndex] = useState(0);
     const [zoomed, setZoomed] = useState(false);
-
-    // Страницы уже оптимизированы в WebP. Загружаем их напрямую и заранее,
-    // чтобы стрелки переключали готовые изображения без ожидания Next Image.
-    useEffect(() => {
-        for (const src of images) {
-            const image = new window.Image();
-            image.decoding = 'async';
-            image.src = src;
-        }
-    }, [images]);
 
     const go = (next: number) => setIndex((next + images.length) % images.length);
 
@@ -31,13 +22,14 @@ export default function MenuImageGallery({ images, alt }: Props) {
                     className="block w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl cursor-zoom-in"
                     aria-label="Увеличить страницу меню"
                 >
-                    <img
+                    <Image
                         src={images[index]}
                         alt={`${alt} — страница ${index + 1}`}
                         width={1099}
                         height={2070}
-                        loading="eager"
-                        decoding="async"
+                        priority={index === 0}
+                        sizes="(max-width: 767px) calc(100vw - 24px), 672px"
+                        quality={75}
                         className="block h-auto w-full"
                     />
                 </button>
@@ -82,12 +74,13 @@ export default function MenuImageGallery({ images, alt }: Props) {
                     >
                         <X className="w-6 h-6" />
                     </button>
-                    <img
+                    <Image
                         src={images[index]}
                         alt={`${alt} — страница ${index + 1} (увеличено)`}
                         width={1099}
                         height={2070}
-                        decoding="sync"
+                        sizes="100vw"
+                        quality={80}
                         className="h-auto w-auto max-h-[calc(100dvh-1rem)] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[calc(100dvh-2rem)] sm:max-w-[calc(100vw-2rem)]"
                         onClick={(event) => event.stopPropagation()}
                     />

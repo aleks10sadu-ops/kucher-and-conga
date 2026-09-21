@@ -36,6 +36,9 @@ export default function ForestHeader({ variant = 'solid' }: { variant?: 'solid' 
                     <img
                         src="/redesign/kongo_logo_main.svg"
                         alt="Кучер и Conga"
+                        width={2823}
+                        height={768}
+                        decoding="async"
                         className="block h-[26px] w-auto"
                         style={{ filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }}
                     />

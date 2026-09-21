@@ -21,5 +21,6 @@ describe('Yandex Metrika CSP', () => {
         expect(policy).toContain("frame-src 'self' blob: https://yandex.ru");
         expect(policy).toContain('https://mc.webvisor.com');
         expect(policy).toContain('wss://mc.yandex.ru');
+        if (process.env.NODE_ENV === 'production') expect(policy).not.toContain("'unsafe-eval'");
     });
 });

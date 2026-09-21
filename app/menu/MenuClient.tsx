@@ -1,19 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, Minus, Search, X } from 'lucide-react';
-import BanquetMenuModal from '../components/BanquetMenuModal';
-import BusinessLunchConstructor from '../components/BusinessLunchConstructor';
-import FoodDetailModal from '../components/FoodDetailModal';
-import CartDrawer from '../components/CartDrawer';
-import DeliveryCheckout from './DeliveryCheckout';
 import { useCart } from '@/lib/hooks/useCart';
 import { isDeliveryOpen, todayDeliveryWindowText } from '@/lib/delivery/schedule';
 import useAdminCheck from '@/lib/hooks/useAdminCheck';
-import ContentManager from '../components/ContentManager';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
 import MenuImageGallery from '../components/MenuImageGallery';
@@ -33,6 +28,14 @@ import {
     type BanquetPackageId,
     type BanquetSaladId,
 } from '@/lib/booking/banquetPackages';
+
+// Тяжёлые формы и модальные окна не нужны для первой отрисовки меню.
+const BanquetMenuModal = dynamic(() => import('../components/BanquetMenuModal'), { ssr: false });
+const BusinessLunchConstructor = dynamic(() => import('../components/BusinessLunchConstructor'), { ssr: false });
+const FoodDetailModal = dynamic(() => import('../components/FoodDetailModal'), { ssr: false });
+const CartDrawer = dynamic(() => import('../components/CartDrawer'), { ssr: false });
+const DeliveryCheckout = dynamic(() => import('./DeliveryCheckout'), { ssr: false });
+const ContentManager = dynamic(() => import('../components/ContentManager'), { ssr: false });
 
 type MenuByType = Record<string, { categories: any[] }>;
 
@@ -56,14 +59,14 @@ function DishThumb({ src, alt }: { src: string; alt: string }) {
                 src={src}
                 alt={alt}
                 fill
-                unoptimized={src.startsWith('/media/supabase/')}
-                sizes="(max-width: 640px) 50vw, (max-width: 1279px) 33vw, 25vw"
+                sizes="(max-width: 639px) 46vw, (max-width: 1279px) 30vw, 285px"
+                quality={60}
                 className="object-cover"
                 onError={() => setBroken(true)}
             />
         );
     }
-    return <img src={src} alt={alt} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setBroken(true)} />;
+    return <img src={src} alt={alt} width={600} height={600} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setBroken(true)} />;
 }
 
 type DishCardProps = {
@@ -316,7 +319,16 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
             <main className="min-h-screen bg-forest-ink pb-24 font-body text-cream">
                 {/* Компактный заголовок */}
                 <section className="relative overflow-hidden border-b border-white/5 px-5 pb-5 pt-7 md:px-8 md:pb-5 md:pt-8 xl:py-5">
-                    <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                        src="/hero-image.webp"
+                        alt=""
+                        aria-hidden
+                        fill
+                        loading="eager"
+                        fetchPriority="high"
+                        sizes="100vw"
+                        className="object-cover"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px]">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass xl:text-xs">Кухня, бар, доставка и самовывоз</span>
@@ -470,7 +482,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                                     </div>
                                     {weeklyLunch?.image ? (
                                         <a href={weeklyLunch.image} target="_blank" rel="noopener noreferrer" title="Открыть в полном размере" className="group relative block h-44 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] sm:h-56">
-                                            <img src={weeklyLunch.image} alt={weeklyLunch.title || 'Бизнес-ланч на неделю'} loading="lazy" className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.015]" />
+                                            <img src={weeklyLunch.image} alt={weeklyLunch.title || 'Бизнес-ланч на неделю'} width={1200} height={630} loading="lazy" decoding="async" className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.015]" />
                                             <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-3 pt-10 text-sm font-semibold text-cream sm:px-5 sm:pb-4">
                                                 <span>Открыть полное меню недели</span>
                                                 <span className="shrink-0 text-xs font-medium text-cream/70">В полном размере ↗</span>
@@ -560,26 +572,30 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     </button>
                 )}
 
-                <FoodDetailModal
-                    item={selectedItem}
-                    isOpen={!!selectedItem}
-                    onClose={() => setSelectedItem(null)}
-                    onAddToCart={cart.add}
-                    cartItems={cart.items}
-                    stopSet={stopSet}
-                />
-                <CartDrawer
-                    isOpen={cartOpen}
-                    onClose={() => setCartOpen(false)}
-                    items={cart.items}
-                    onAdd={cart.add}
-                    onDecrement={cart.dec}
-                    onRemove={cart.remove}
-                    count={cart.count}
-                    total={cart.total}
-                    onDeliveryClick={() => { setCartOpen(false); setDeliveryOpen(true); }}
-                    isMounted={mounted}
-                />
+                {selectedItem && (
+                    <FoodDetailModal
+                        item={selectedItem}
+                        isOpen
+                        onClose={() => setSelectedItem(null)}
+                        onAddToCart={cart.add}
+                        cartItems={cart.items}
+                        stopSet={stopSet}
+                    />
+                )}
+                {mounted && cartOpen && (
+                    <CartDrawer
+                        isOpen
+                        onClose={() => setCartOpen(false)}
+                        items={cart.items}
+                        onAdd={cart.add}
+                        onDecrement={cart.dec}
+                        onRemove={cart.remove}
+                        count={cart.count}
+                        total={cart.total}
+                        onDeliveryClick={() => { setCartOpen(false); setDeliveryOpen(true); }}
+                        isMounted
+                    />
+                )}
                 {deliveryOpen && (
                     <DeliveryCheckout
                         items={cart.items}
@@ -590,22 +606,24 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     />
                 )}
 
-                <BanquetMenuModal
-                    isOpen={isBanquetOpen}
-                    onClose={() => setIsBanquetOpen(false)}
-                    selectable
-                    hallFilter="all"
-                    confirmLabel={BANQUET_MENU_BOOKING_CTA}
-                    onSelectPackage={(packageId: BanquetPackageId, saladIds: BanquetSaladId[]) => {
-                        router.push(buildBookingHref({
-                            source: 'banquet-menu',
-                            bookingType: 'banquet',
-                            banquetPackageId: packageId,
-                            saladIds,
-                        }));
-                    }}
-                />
-                {isAdmin && (
+                {isBanquetOpen && (
+                    <BanquetMenuModal
+                        isOpen
+                        onClose={() => setIsBanquetOpen(false)}
+                        selectable
+                        hallFilter="all"
+                        confirmLabel={BANQUET_MENU_BOOKING_CTA}
+                        onSelectPackage={(packageId: BanquetPackageId, saladIds: BanquetSaladId[]) => {
+                            router.push(buildBookingHref({
+                                source: 'banquet-menu',
+                                bookingType: 'banquet',
+                                banquetPackageId: packageId,
+                                saladIds,
+                            }));
+                        }}
+                    />
+                )}
+                {isAdmin && weekManagerOpen && (
                     <ContentManager category="business_lunch_week" isOpen={weekManagerOpen} onClose={() => setWeekManagerOpen(false)} />
                 )}
             </main>

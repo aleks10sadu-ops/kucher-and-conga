@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { Suspense } from 'react';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
@@ -35,7 +36,7 @@ export default async function BookingPage() {
             <main className="min-h-screen bg-forest-ink font-body text-cream">
                 {/* Герой */}
                 <section className="relative overflow-hidden">
-                    <img src="/redesign/bron-real.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/redesign/bron-real.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1080px] px-5 pb-12 pt-20 md:px-8 md:pb-16 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Бронь · {SITE.city}</span>
@@ -51,7 +52,7 @@ export default async function BookingPage() {
 
                 {/* Форма + инфо */}
                 <section className="relative overflow-hidden border-t border-white/5 py-14 md:py-20">
-                    <img src="/atmosphere_5.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/atmosphere_5.webp" alt="" aria-hidden fill sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <SporeField count={16} fern={false} />
                     <div className="relative z-10 mx-auto grid max-w-[1080px] grid-cols-1 gap-8 px-5 md:px-8 lg:grid-cols-[1.6fr_1fr]">

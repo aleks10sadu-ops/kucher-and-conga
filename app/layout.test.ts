@@ -8,7 +8,7 @@ vi.mock('next/font/google', () => ({
     Golos_Text: () => ({ variable: '--font-body' }),
 }));
 
-import RootLayout, { metadata } from './layout';
+import RootLayout, { metadata, YANDEX_METRIKA_SCRIPT } from './layout';
 
 function findJsonLd(node: React.ReactNode): string[] {
     if (!React.isValidElement(node)) return [];
@@ -24,21 +24,6 @@ function findJsonLd(node: React.ReactNode): string[] {
             : [];
 
     return own.concat(React.Children.toArray(element.props.children).flatMap(findJsonLd));
-}
-
-function findInlineScript(node: React.ReactNode, needle: string): string | undefined {
-    if (!React.isValidElement(node)) return undefined;
-
-    const element = node as React.ReactElement<{
-        children?: React.ReactNode;
-        dangerouslySetInnerHTML?: { __html: string };
-    }>;
-    const own = element.type === 'script' ? element.props.dangerouslySetInnerHTML?.__html : undefined;
-    if (own?.includes(needle)) return own;
-
-    return React.Children.toArray(element.props.children)
-        .map((child) => findInlineScript(child, needle))
-        .find(Boolean);
 }
 
 describe('root SEO metadata', () => {
@@ -86,17 +71,13 @@ describe('Yandex Metrika', () => {
     it('renders counter 111802696 and its no-JavaScript tracking pixel on every page', () => {
         const tree = RootLayout({ children: React.createElement('main') });
         const html = renderToStaticMarkup(tree);
-        const counterScript = findInlineScript(tree, 'mc.yandex.ru/metrika/tag.js?id=111802696');
 
-        expect(counterScript).toContain("ym(111802696, 'init'");
+        expect(YANDEX_METRIKA_SCRIPT).toContain('mc.yandex.ru/metrika/tag.js?id=111802696');
+        expect(YANDEX_METRIKA_SCRIPT).toContain("ym(111802696, 'init'");
         expect(html).toContain('https://mc.yandex.ru/watch/111802696');
     });
 
     it('sends a virtual page view when Next.js changes the browser URL', () => {
-        const tree = RootLayout({ children: React.createElement('main') });
-        const counterScript = findInlineScript(tree, 'mc.yandex.ru/metrika/tag.js?id=111802696');
-        if (!counterScript) throw new Error('Yandex Metrika script is missing from the root layout');
-
         const insertedScripts: Array<{ async?: number; src?: string }> = [];
         const listeners = new Map<string, () => void>();
         const location = { href: 'https://kucherandconga.ru/' };
@@ -139,7 +120,7 @@ describe('Yandex Metrika', () => {
         Object.defineProperty(browserContext, 'ym', {
             get: () => windowObject.ym,
         });
-        vm.runInNewContext(counterScript, browserContext);
+        vm.runInNewContext(YANDEX_METRIKA_SCRIPT, browserContext);
 
         documentObject.title = 'Меню и доставка';
         history.pushState(null, '', '/menu');

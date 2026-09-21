@@ -110,7 +110,7 @@ export default function HallsClient({ initialPosts }: { initialPosts: PublicHall
             <main className="min-h-screen bg-forest-ink font-body text-cream">
                 {/* Герой */}
                 <section className="relative overflow-hidden">
-                    <img src="/konga_bron.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/konga_bron.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Банкеты · {SITE.city}</span>
@@ -126,7 +126,7 @@ export default function HallsClient({ initialPosts }: { initialPosts: PublicHall
 
                 {/* Список */}
                 <section className="relative overflow-hidden border-t border-white/5 py-14 md:py-20">
-                    <img src="/atmosphere_4.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/atmosphere_4.webp" alt="" aria-hidden fill sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <SporeField count={16} fern={false} />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 md:px-8">
@@ -166,7 +166,6 @@ export default function HallsClient({ initialPosts }: { initialPosts: PublicHall
                                                             src={post.image_url}
                                                             alt={post.title}
                                                             fill
-                                                            unoptimized={post.image_url.startsWith('/')}
                                                             sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 426px"
                                                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                                                         />

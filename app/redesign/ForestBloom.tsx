@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useReducer, useRef, useState } from 'react';
+import Image, { getImageProps } from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
@@ -14,6 +15,22 @@ import RestaurantLocationMap, { YANDEX_ROUTE_URL } from '../components/Restauran
 // инлайн-стили и собственные классы rf-*. Tailwind-утилиты здесь НЕ использовать.
 
 const A = '/redesign';
+
+const { props: HERO_MOBILE_POSTER } = getImageProps({
+    src: `${A}/hero-mobile-poster.jpg`,
+    alt: '',
+    width: 720,
+    height: 1280,
+    sizes: '100vw',
+});
+const { props: HERO_DESKTOP_POSTER } = getImageProps({
+    src: `${A}/hero-desktop-poster.jpg`,
+    alt: '',
+    width: 1920,
+    height: 1080,
+    sizes: '100vw',
+});
+const HERO_POSTER_PRIORITY = { fetchpriority: 'high' } as const;
 
 const C = {
     onForest: '#F4F7F2',
@@ -36,6 +53,16 @@ const LINKS = {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const glass: React.CSSProperties = { backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', background: 'rgba(255,255,255,0.10)' };
+
+function CoverImage({ src, alt, sizes = '100vw', className, style }: {
+    src: string;
+    alt: string;
+    sizes?: string;
+    className?: string;
+    style?: React.CSSProperties;
+}) {
+    return <Image src={src} alt={alt} fill sizes={sizes} className={className} style={{ objectFit: 'cover', ...style }} />;
+}
 
 // 8 фото на ПК (симметричная сетка 4×2), 6 на телефоне (последние два скрыты).
 const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `/atmosphere_${n}.webp`);
@@ -68,14 +95,6 @@ const FILAMENTS = Array.from({ length: 12 }, (_, i) => {
     const a = (i / 12) * Math.PI * 2;
     return { x: +(12 + Math.cos(a) * 10).toFixed(2), y: +(12 + Math.sin(a) * 10).toFixed(2) };
 });
-// Перья папоротника вдоль стебля (снизу вверх): пара листочков на каждом узле,
-// короче к верхушке. Используется в курсорном следе.
-const FERN = Array.from({ length: 9 }, (_, i) => {
-    const p = i / 9;                       // 0 у основания … 1 у верхушки
-    const y = +(42 - p * 38).toFixed(2);   // высота узла на стебле
-    const len = +(11 * (1 - p * 0.72)).toFixed(2);
-    return { y, len };
-});
 const YANDEX_ORG = 'https://yandex.ru/maps/org/kucher_conga/10214255530/';
 
 // Полная навигация для выдвижного меню.
@@ -94,13 +113,11 @@ const NAV = [
 ];
 
 function useHeroVideo() {
-    const [src, setSrc] = useState<{ mp4: string; poster: string } | null>(null);
+    const [src, setSrc] = useState<string | null>(null);
     useEffect(() => {
         const mq = window.matchMedia('(min-width: 768px)');
         const pick = () =>
-            setSrc(mq.matches
-                ? { mp4: `${A}/hero-desktop.mp4`, poster: `${A}/hero-desktop-poster.jpg` }
-                : { mp4: `${A}/hero-mobile.mp4`, poster: `${A}/hero-mobile-poster.jpg` });
+            setSrc(mq.matches ? `${A}/hero-desktop.mp4` : `${A}/hero-mobile.mp4`);
         // Видео — прогрессивное улучшение поверх постера: стартуем после window.load,
         // чтобы тяжёлый mp4 не отбирал канал у критических ресурсов первого экрана.
         const start = () => { pick(); mq.addEventListener('change', pick); };
@@ -233,8 +250,8 @@ export default function RedesignClient() {
             {/* Фикс-хедер: тёмный скрим сверху для читаемости поверх видео */}
             <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'linear-gradient(180deg, rgba(11,16,12,0.72) 0%, rgba(11,16,12,0.28) 60%, transparent 100%)', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
                 <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                    <Link href={A} aria-label="Кучер и Conga — на главную" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                        <img src={`${A}/kongo_logo_main.svg`} alt="Кучер и Conga" style={{ height: 26, width: 'auto', display: 'block', filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }} />
+                    <Link href="/" aria-label="Кучер и Conga — на главную" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <img src={`${A}/kongo_logo_main.svg`} alt="Кучер и Conga" width={2823} height={768} loading="eager" {...HERO_POSTER_PRIORITY} decoding="async" style={{ height: 26, width: 'auto', display: 'block', filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }} />
                     </Link>
                     <nav className="rf-nav" style={{ alignItems: 'center', gap: 6, fontSize: 15, color: '#FFFFFF', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
                         <Link href={LINKS.menu}>Меню</Link>
@@ -261,12 +278,12 @@ export default function RedesignClient() {
                 <section style={{ position: 'relative', overflow: 'hidden', height: '100svh', minHeight: 560, background: '#16211B' }}>
                     {/* Постер в SSR-разметке: первый экран виден мгновенно, ещё до загрузки JS */}
                     <picture>
-                        <source media="(min-width: 768px)" srcSet={`${A}/hero-desktop-poster.jpg`} />
-                        <img src={`${A}/hero-mobile-poster.jpg`} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <source media="(min-width: 768px)" srcSet={HERO_DESKTOP_POSTER.srcSet} sizes={HERO_DESKTOP_POSTER.sizes} />
+                        <img {...HERO_MOBILE_POSTER} {...HERO_POSTER_PRIORITY} alt="" aria-hidden loading="eager" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     </picture>
                     {video && (
-                        <video key={video.mp4} autoPlay loop muted playsInline poster={video.poster} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
-                            <source src={video.mp4} type="video/mp4" />
+                        <video key={video} autoPlay loop muted playsInline aria-hidden preload="metadata" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
+                            <source src={video} type="video/mp4" />
                         </video>
                     )}
                     {/* Равномерное затемнение — прячет дефекты видео */}
@@ -308,10 +325,10 @@ export default function RedesignClient() {
 
                 {/* БЕНТО над фото зала — на весь экран */}
                 <section id="bento" style={{ position: 'relative', minHeight: '100svh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                    <img src="/hero-image.webp" alt="Зал с подвешенным лесом" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <CoverImage src="/hero-image.webp" alt="Зал с подвешенным лесом" />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(12,19,14,0.72) 0%,rgba(12,19,14,0.58) 45%,rgba(12,19,14,0.85) 100%)' }} />
 
-                    {/* Споры + курсорный след-папоротник и в разделе бенто */}
+                    {/* Споры и в разделе бенто */}
                     <AtmosphereFX />
 
                     <div className="rf-wrap rf-bentopad" style={{ position: 'relative', zIndex: 2, maxWidth: 1280, margin: '0 auto', width: '100%' }}>
@@ -320,7 +337,7 @@ export default function RedesignClient() {
                             {/* A. Основное бумажное меню */}
                             <Link href={LINKS.menu} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', gridColumn: 1, gridRow: '1 / 3', ...glass, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
                                 <div style={{ position: 'absolute', left: 20, right: 20, top: 20, bottom: 132, borderRadius: '180px 180px 20px 20px', overflow: 'hidden' }}>
-                                    <img className="rf-photo" src="/atmosphere_1.webp" alt="Авторское блюдо и вино" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 60%', display: 'block' }} />
+                                    <CoverImage className="rf-photo" src="/atmosphere_1.webp" alt="Авторское блюдо и вино" sizes="(max-width: 767px) 90vw, 50vw" style={{ objectPosition: 'center 60%' }} />
                                     <div style={{ position: 'absolute', left: '36%', top: '16%', width: 52, height: 96, background: 'radial-gradient(closest-side,rgba(255,255,255,0.55),transparent)', filter: 'blur(9px)', animation: 'rfSteam 6s ease-in-out 1s infinite' }} />
                                 </div>
                                 <Parallax style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '24px 30px 26px', display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -333,7 +350,7 @@ export default function RedesignClient() {
 
                             {/* B. Забронировать стол */}
                             <Link href={LINKS.booking} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', gridColumn: '2 / 4', gridRow: 1, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                <img className="rf-photo" src={`${A}/bron-real.webp`} alt="Столы в зале ресторана" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 80%' }} />
+                                <CoverImage className="rf-photo" src={`${A}/bron-real.webp`} alt="Столы в зале ресторана" sizes="(max-width: 767px) 90vw, 50vw" style={{ objectPosition: 'center 80%' }} />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.12),rgba(14,22,17,0.42))' }} />
                                 <div style={{ position: 'absolute', right: '16%', top: '26%', width: 130, height: 130, background: 'radial-gradient(closest-side,rgba(255,201,122,0.5),transparent)', filter: 'blur(14px)', animation: 'rfFlicker 5.2s ease-in-out 1.4s infinite alternate' }} />
                                 <Parallax style={{ ...bandBase, padding: '20px 26px 22px', gap: 6 }}>
@@ -346,7 +363,7 @@ export default function RedesignClient() {
 
                             {/* C. Акции */}
                             <Link href={LINKS.promotions} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', gridColumn: 2, gridRow: 2, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                <img className="rf-photo" src={`${A}/konga_bron.webp`} alt="Зал Conga" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <CoverImage className="rf-photo" src={`${A}/konga_bron.webp`} alt="Зал Conga" sizes="(max-width: 767px) 55vw, 27vw" />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.12),rgba(14,22,17,0.52))' }} />
                                 <Parallax style={{ ...bandBase, padding: '18px 26px 22px', gap: 6 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 23, color: C.onForest }}>Акции</h3>
@@ -359,7 +376,7 @@ export default function RedesignClient() {
                             {/* D + E */}
                             <div style={{ gridColumn: 3, gridRow: 2, display: 'grid', gridTemplateRows: '58% 42%' }}>
                                 <Link href={LINKS.events} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <img className="rf-photo" src="/atmosphere_3.webp" alt="Вечер в зале Conga" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 54%' }} />
+                                    <CoverImage className="rf-photo" src="/atmosphere_3.webp" alt="Вечер в зале Conga" sizes="(max-width: 767px) 45vw, 23vw" style={{ objectPosition: 'center 54%' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.24),rgba(14,22,17,0.6))' }} />
                                     <span style={{ position: 'absolute', left: 26, top: 20, width: 5, height: 5, borderRadius: '50%', background: '#FFD9A0', boxShadow: '0 0 9px 2px rgba(255,217,160,0.75)', animation: 'rfTwinkle 3s ease-in-out 0.6s infinite alternate' }} />
                                     <Parallax style={{ ...bandBase, padding: '16px 26px 18px', gap: 5 }}>
@@ -370,7 +387,7 @@ export default function RedesignClient() {
                                     <Sweep w="50%" />
                                 </Link>
                                 <Link href={LINKS.vacancies} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 26px' }}>
-                                    <img className="rf-photo" src="/atmosphere_2.webp" alt="Команда ресторана" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 46%' }} />
+                                    <CoverImage className="rf-photo" src="/atmosphere_2.webp" alt="Команда ресторана" sizes="(max-width: 767px) 90vw, 23vw" style={{ objectPosition: 'center 46%' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,rgba(14,22,17,0.82) 32%,rgba(14,22,17,0.4))' }} />
                                     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 3 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>Вакансии</h3>
@@ -386,7 +403,7 @@ export default function RedesignClient() {
                         <div className="rf-mob" style={{ gridTemplateRows: '300px 216px 168px 132px' }}>
                             <Link href={LINKS.menu} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', ...glass, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
                                 <div style={{ position: 'absolute', left: 14, right: 14, top: 14, bottom: 96, borderRadius: '120px 120px 14px 14px', overflow: 'hidden' }}>
-                                    <img src="/atmosphere_1.webp" alt="Авторское блюдо и вино" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 60%' }} />
+                                    <CoverImage src="/atmosphere_1.webp" alt="Авторское блюдо и вино" sizes="90vw" style={{ objectPosition: 'center 60%' }} />
                                 </div>
                                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 23, color: C.onForest }}>Основное меню</h3>
@@ -396,7 +413,7 @@ export default function RedesignClient() {
                             </Link>
 
                             <Link href={LINKS.booking} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                <img src={`${A}/bron-real.webp`} alt="Столы в зале ресторана" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 80%' }} />
+                                <CoverImage src={`${A}/bron-real.webp`} alt="Столы в зале ресторана" sizes="90vw" style={{ objectPosition: 'center 80%' }} />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.12),rgba(14,22,17,0.42))' }} />
                                 <div style={{ ...bandBase, padding: '14px 18px 16px', gap: 4 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 19, color: C.onForest }}>Забронировать стол</h3>
@@ -407,7 +424,7 @@ export default function RedesignClient() {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '55% 45%' }}>
                                 <Link href={LINKS.promotions} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <img src={`${A}/konga_bron.webp`} alt="Зал Conga" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <CoverImage src={`${A}/konga_bron.webp`} alt="Зал Conga" sizes="55vw" />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.14),rgba(14,22,17,0.55))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>Акции</h3>
@@ -416,7 +433,7 @@ export default function RedesignClient() {
                                     <Arrow r={14} t={12} size={15} />
                                 </Link>
                                 <Link href={LINKS.events} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <img src="/atmosphere_3.webp" alt="Вечер в зале Conga" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 54%' }} />
+                                    <CoverImage src="/atmosphere_3.webp" alt="Вечер в зале Conga" sizes="45vw" style={{ objectPosition: 'center 54%' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.24),rgba(14,22,17,0.6))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>События</h3>
@@ -427,7 +444,7 @@ export default function RedesignClient() {
                             </div>
 
                             <Link href={LINKS.vacancies} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px' }}>
-                                <img src="/atmosphere_2.webp" alt="Команда ресторана" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 46%' }} />
+                                <CoverImage src="/atmosphere_2.webp" alt="Команда ресторана" sizes="90vw" style={{ objectPosition: 'center 46%' }} />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,rgba(14,22,17,0.82) 34%,rgba(14,22,17,0.42))' }} />
                                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 15, color: C.onForest }}>Вакансии</h3>
@@ -443,11 +460,11 @@ export default function RedesignClient() {
                 <div style={{ position: 'relative', overflow: 'hidden' }}>
                     {/* Фон — интерьер зала, затемнён, чтобы текст читался, а споры светились */}
                     <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-                        <img src="/hero-image.webp" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        <CoverImage src="/hero-image.webp" alt="" />
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(10,16,12,0.86) 0%,rgba(10,16,12,0.9) 50%,rgba(10,16,12,0.94) 100%)' }} />
                     </div>
 
-                    {/* Споры (за контентом, только в пустых местах) + курсорный след-папоротник (поверх) */}
+                    {/* Споры за контентом, только в пустых местах */}
                     <AtmosphereFX />
 
                     {/* АТМОСФЕРА — галерея */}
@@ -457,7 +474,7 @@ export default function RedesignClient() {
                             <div className="rf-gallery" style={{ marginTop: 36, display: 'grid', gap: 12 }}>
                                 {GALLERY.map((src, i) => (
                                     <button key={src} type="button" onClick={() => setLightbox(i)} className={`rf-bb${i >= 6 ? ' rf-g-desk' : ''}`} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', aspectRatio: '4 / 3', padding: 0, background: 'none' }}>
-                                        <img className="rf-photo" src={src} alt={`Атмосфера ресторана, фото ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                                        <CoverImage className="rf-photo" src={src} alt={`Атмосфера ресторана, фото ${i + 1}`} sizes="(max-width: 767px) 46vw, 25vw" />
                                         <Sweep w="55%" />
                                     </button>
                                 ))}
@@ -543,7 +560,7 @@ function ChristmasBookingNotice() {
         <section aria-labelledby="christmas-booking-title" style={{ position: 'relative', zIndex: 3, background: '#061e18', borderTop: '1px solid #e9c77f55', borderBottom: '1px solid #e9c77f33' }}>
             <div className="rf-wrap" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', alignItems: 'center', gap: 'clamp(24px, 4vw, 48px)', paddingTop: 32, paddingBottom: 32 }}>
                 <Link href="/events/novogodnie-korporativy-2027" aria-label="Новогодние корпоративы — посмотреть афишу" style={{ display: 'block', borderRadius: 16, overflow: 'hidden', border: '1px solid #e9c77f44' }}>
-                    <img src="/christmas-2027/hosts-cover.webp" alt="Ираклий и Елена «Золотая стрекоза» в новогодних украшениях" width={1200} height={630} loading="lazy" style={{ display: 'block', width: '100%', height: 'auto' }} />
+                    <Image src="/christmas-2027/hosts-cover.webp" alt="Ираклий и Елена «Золотая стрекоза» в новогодних украшениях" width={1200} height={630} sizes="(max-width: 767px) calc(100vw - 40px), 50vw" style={{ display: 'block', width: '100%', height: 'auto' }} />
                 </Link>
                 <div>
                     <p style={{ margin: '0 0 10px', color: '#e9c77f', fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase' }}>Декабрь 2026 · Встречаем 2027</p>
@@ -596,39 +613,8 @@ function Burst({ left, top, size }: { left: number; top: number; size: number })
     );
 }
 
-// Побег папоротника в курсорном следе.
-function FernGlyph() {
-    return (
-        <svg viewBox="0 0 30 46" width="30" height="46" style={{ display: 'block', overflow: 'visible' }}>
-            <g stroke="rgba(246,249,243,0.85)" strokeWidth={1.4} strokeLinecap="round" fill="none">
-                <path d="M15 46 C 15 34, 13 20, 15 4" />
-                {FERN.map((n, i) => (
-                    <g key={i} strokeWidth={1.1}>
-                        <path d={`M15 ${n.y} C ${15 - n.len * 0.5} ${n.y - 1}, ${15 - n.len} ${n.y - n.len * 0.5}, ${15 - n.len} ${n.y - n.len}`} />
-                        <path d={`M15 ${n.y} C ${15 + n.len * 0.5} ${n.y - 1}, ${15 + n.len} ${n.y - n.len * 0.5}, ${15 + n.len} ${n.y - n.len}`} />
-                    </g>
-                ))}
-            </g>
-        </svg>
-    );
-}
-
-// Прорастает снизу вверх от точки курсора, держится миг и сжимается-исчезает.
-function Fern({ x, y, rot, scale }: { x: number; y: number; rot: number; scale: number }) {
-    return (
-        <motion.span
-            initial={{ opacity: 0, scale: 0.15 }}
-            animate={{ opacity: [0, 1, 1, 0], scale: [0.15, scale, scale, scale * 0.55] }}
-            transition={{ duration: 1, ease: 'easeOut', times: [0, 0.32, 0.66, 1] }}
-            style={{ position: 'absolute', left: x, top: y, width: 30, height: 46, marginLeft: -15, marginTop: -46, transformOrigin: '50% 100%', rotate: rot, filter: 'drop-shadow(0 0 6px rgba(244,247,242,0.5)) drop-shadow(0 0 2px rgba(122,190,122,0.55))' }}
-        >
-            <FernGlyph />
-        </motion.span>
-    );
-}
-
-// Атмосферные эффекты — только на десктопе с мышью: споры и папоротник завязаны
-// на курсор, а на телефонах их рендер и rAF-физика только жгут CPU и батарею.
+// Атмосферные эффекты — только на десктопе с мышью: споры реагируют на курсор,
+// а на телефонах их рендер и rAF-физика только жгут CPU и батарею.
 function useDesktopFX() {
     const [ok, setOk] = useState(false);
     useEffect(() => {
@@ -647,19 +633,17 @@ function AtmosphereFX() {
 }
 
 // Атмосфера нижнего блока: споры за контентом (только в пустых местах) реагируют
-// на ветер курсора и сдуваются при резком рывке; поверх — прорастающий след-папоротник.
+// на ветер курсора и сдуваются при резком рывке.
 function AtmosphereFXDesktop() {
     const reduce = useReducedMotion();
     const rootRef = useRef<HTMLDivElement>(null);
     const [spores, setSpores] = useState<Spore[]>(INITIAL_SPORES);
-    const [ferns, setFerns] = useState<{ id: number; x: number; y: number; rot: number; scale: number }[]>([]);
     const [bursts, setBursts] = useState<{ id: number; left: number; top: number; size: number }[]>([]);
     const sporesRef = useRef(spores);
     const spanRefs = useRef(new Map<number, HTMLElement>());
     const runtime = useRef(new Map<number, { x: number; y: number; vx: number; vy: number; ph: number }>());
     const popping = useRef(new Set<number>());
     const mouse = useRef({ x: -9999, y: -9999, in: false, spd: 0 });
-    const lastFern = useRef({ x: 0, y: 0, t: 0 });
     const idRef = useRef(10000);
 
     useEffect(() => { sporesRef.current = spores; }, [spores]);
@@ -683,15 +667,7 @@ function AtmosphereFXDesktop() {
         setSpores((prev) => prev.filter((z) => z.id !== id).concat(repl));
     };
 
-    const spawnFern = (x: number, y: number) => {
-        const id = idRef.current++;
-        const rot = Math.random() * 44 - 22;
-        const scale = 0.72 + Math.random() * 0.6;
-        setFerns((f) => (f.length > 20 ? f.slice(1) : f).concat({ id, x, y, rot, scale }));
-        setTimeout(() => setFerns((f) => f.filter((z) => z.id !== id)), 1050);
-    };
-
-    // Курсор: координаты внутри слоя, скорость, посев папоротника вдоль пути.
+    // Курсор: координаты внутри слоя и скорость для взаимодействия со спорами.
     useEffect(() => {
         if (reduce) return;
         const onMove = (e: PointerEvent) => {
@@ -702,14 +678,6 @@ function AtmosphereFXDesktop() {
             const inb = x >= 0 && y >= 0 && x <= r.width && y <= r.height;
             m.spd = Math.min(70, Math.hypot(x - m.x, y - m.y));
             m.x = x; m.y = y; m.in = inb;
-            if (inb) {
-                const lf = lastFern.current;
-                const now = performance.now();
-                if (Math.hypot(x - lf.x, y - lf.y) > 44 && now - lf.t > 55) {
-                    lf.x = x; lf.y = y; lf.t = now;
-                    spawnFern(x, y);
-                }
-            }
         };
         window.addEventListener('pointermove', onMove, { passive: true });
         return () => window.removeEventListener('pointermove', onMove);
@@ -774,9 +742,8 @@ function AtmosphereFXDesktop() {
                     </span>
                 ))}
             </div>
-            {/* Курсорный след-папоротник + разлёт спор — поверх контента (zIndex 3) */}
+            {/* Разлёт спор — поверх контента (zIndex 3) */}
             <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 3 }}>
-                {ferns.map((f) => <Fern key={f.id} x={f.x} y={f.y} rot={f.rot} scale={f.scale} />)}
                 {bursts.map((b) => <Burst key={b.id} left={b.left} top={b.top} size={b.size} />)}
             </div>
         </>

@@ -42,6 +42,7 @@ describe('ForestBloom sections menu', () => {
         expect(html).toContain('aria-label="Пятизвёздочные отзывы гостей"');
         expect(html).toContain('Рейтинг гостей на Яндекс Картах');
         expect(html.match(/aria-label="5 из 5"/g)).toHaveLength(4);
+        expect(html.match(/role="img" aria-label="5 из 5"/g)).toHaveLength(4);
         expect(html).not.toContain('maps-reviews-widget');
     });
 });

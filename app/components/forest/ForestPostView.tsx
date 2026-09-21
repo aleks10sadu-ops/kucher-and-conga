@@ -72,7 +72,6 @@ export default function ForestPostView({
                             fill
                             className="object-cover"
                             priority
-                            unoptimized={post.image_url!.startsWith('/')}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-forest-ink via-forest-ink/70 to-forest-ink/25" />
                         <div className="absolute inset-0">

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import ForestHeader from '../components/forest/ForestHeader';
 import SporeField from '../components/forest/SporeField';
@@ -54,7 +55,7 @@ export default function PromotionsPage() {
             <main className="min-h-screen bg-forest-ink font-body text-cream">
                 {/* Герой с фото зала под тёмным слоем */}
                 <section className="relative overflow-hidden">
-                    <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/hero-image.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">{SITE.city}</span>
@@ -70,7 +71,7 @@ export default function PromotionsPage() {
 
                 {/* Постоянные предложения */}
                 <section className="relative overflow-hidden border-t border-white/5 py-16 md:py-20">
-                    <img src="/atmosphere_7.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/atmosphere_7.webp" alt="" aria-hidden fill sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <SporeField count={16} fern={false} />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 md:px-8">

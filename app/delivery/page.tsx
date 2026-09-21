@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import ForestFooter from '../components/forest/ForestFooter';
 import ForestHeader from '../components/forest/ForestHeader';
@@ -27,7 +28,7 @@ export default function DeliveryPage() {
             <ForestHeader />
             <main className="min-h-screen bg-forest-ink font-body text-cream">
                 <section className="relative overflow-hidden">
-                    <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+                    <Image src="/hero-image.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <div className="relative mx-auto max-w-[1120px] px-5 pb-16 pt-20 md:px-8 md:pb-24 md:pt-28">
                         <p className="text-[13px] uppercase tracking-[0.18em] text-brass">Ресторан Кучер &amp; Conga</p>

@@ -20,12 +20,12 @@ const nextConfig = {
       },
     ],
     formats: ['image/webp', 'image/avif'],
-    qualities: [70, 75, 80, 85, 90],
+    qualities: [60, 70, 75, 80, 85, 90],
     // Увеличенное время кеширования изображений (1 неделя)
     minimumCacheTTL: 604800,
     // Настройки для оптимизации
     deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
   },
   // Оптимизация производительности
   compress: true,
@@ -125,7 +125,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://yandex.ru https://api-maps.yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://*.yastatic.net https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://yandex.ru https://api-maps.yandex.ru https://*.yandex.ru https://*.yandex.net https://yastatic.net https://*.yastatic.net https://vercel.live https://*.vercel.live https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.yandex.ru https://yastatic.net https://*.yastatic.net",
               "img-src 'self' data: blob: https: http:",
               "font-src 'self' https://fonts.gstatic.com data:",

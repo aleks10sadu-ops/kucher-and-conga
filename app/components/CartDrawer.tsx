@@ -40,25 +40,24 @@ export default function CartDrawer({
         return lockBodyScroll();
     }, [isOpen]);
 
+    // Закрытая корзина не должна оставлять кнопки в accessibility-дереве.
+    if (!isMounted || !isOpen) return null;
+
     return (
         <>
             {/* Backdrop */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/50"
-                    onClick={onClose}
-                    aria-hidden
-                />
-            )}
+            <div
+                className="fixed inset-0 z-50 bg-black/50"
+                onClick={onClose}
+                aria-hidden
+            />
 
             {/* Drawer */}
             <aside
                 aria-label="Корзина"
-                aria-hidden={isMounted ? (isOpen ? "false" : "true") : "true"}
                 role="dialog"
-                className={`fixed right-0 top-0 z-50 h-full w-full sm:w-[420px] bg-forest text-cream font-body border-l border-white/10 transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-                suppressHydrationWarning
+                aria-modal="true"
+                className="fixed right-0 top-0 z-50 h-full w-full transform border-l border-white/10 bg-forest font-body text-cream sm:w-[420px]"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/10">

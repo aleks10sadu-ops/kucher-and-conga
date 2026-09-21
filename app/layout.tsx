@@ -1,6 +1,7 @@
 import './globals.css';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Vollkorn, Golos_Text } from 'next/font/google';
 import React from 'react';
 import { SITE, SITE_URL } from './components/forest/site';
@@ -24,7 +25,7 @@ const golos = Golos_Text({
     display: 'swap',
 });
 
-const YANDEX_METRIKA_SCRIPT = `
+export const YANDEX_METRIKA_SCRIPT = `
     (function(m,e,t,r,i,k,a){
         m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
         m[i].l=1*new Date();
@@ -106,12 +107,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
     return (
         <html lang="ru" className={`${vollkorn.variable} ${golos.variable}`}>
             <head>
-                <link rel="preconnect" href="https://mc.yandex.ru" />
-                <link rel="dns-prefetch" href="https://mc.yandex.ru" />
-                <script type="text/javascript" dangerouslySetInnerHTML={{ __html: YANDEX_METRIKA_SCRIPT }} />
-                {/* Preconnect для Supabase (основной источник изображений) */}
-                <link rel="preconnect" href="https://mmyfglktqvojwpycreko.supabase.co" crossOrigin="anonymous" />
-                <link rel="dns-prefetch" href="https://mmyfglktqvojwpycreko.supabase.co" />
                 {/* Обработка ошибок загрузки чанков */}
                 <script
                     dangerouslySetInnerHTML={{
@@ -248,11 +243,18 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 />
             </head>
             <body className="antialiased bg-slate-50">
+                <Script
+                    id="yandex-metrika"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{ __html: YANDEX_METRIKA_SCRIPT }}
+                />
                 <noscript>
                     <div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={`https://mc.yandex.ru/watch/${YANDEX_METRIKA_COUNTER_ID}`}
+                            width="1"
+                            height="1"
                             style={{ position: 'absolute', left: '-9999px' }}
                             alt=""
                         />
