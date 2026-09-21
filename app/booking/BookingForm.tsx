@@ -28,8 +28,6 @@ import BanquetMenuModal from '../components/BanquetMenuModal';
 import PreorderMenuModal from '../components/PreorderMenuModal';
 import DateTimePicker from '../components/DateTimePicker';
 import { SITE } from '../components/forest/site';
-import HappyHoursNotice from '../components/HappyHoursNotice';
-import { isHappyHoursBookingEligible, moscowHappyHoursMoment } from '@/lib/promotions/happyHours';
 
 const inputCls =
     'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
@@ -70,7 +68,6 @@ export default function BookingForm({
     const [consent, setConsent] = useState(false);
     const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
-    const [promotionClock, setPromotionClock] = useState<Date | null>(null);
 
     const [preorderOpen, setPreorderOpen] = useState(false);
     const [banquetModalOpen, setBanquetModalOpen] = useState(false);
@@ -89,13 +86,6 @@ export default function BookingForm({
     const bookingTimeWindow = bookingTimeWindowForDate(date);
     const timeInvalid = Boolean(date && time.length === 5 && !isBookingTimeAllowed(date, time));
     const effectiveBookingType: BookingType = mode === 'admin' ? 'onsite' : bookingType;
-    const promotionMoment = promotionClock ? moscowHappyHoursMoment(promotionClock) : null;
-    const happyHoursAvailable = Boolean(promotionMoment && isHappyHoursBookingEligible(
-        promotionMoment.date,
-        promotionMoment.time,
-        adults,
-        effectiveBookingType,
-    ));
     const validation = evaluateBooking({
         adults,
         children,
@@ -109,13 +99,6 @@ export default function BookingForm({
         banquetMenuPrice: selectedBanquetMenu?.pricePerPerson ?? null,
     });
     const allowedSignature = validation.availableTypes.map((t) => (t.allowed ? '1' : '0')).join('');
-
-    useEffect(() => {
-        const updateClock = () => setPromotionClock(new Date());
-        updateClock();
-        const id = setInterval(updateClock, 30_000);
-        return () => clearInterval(id);
-    }, []);
 
     // Авто-переключение типа брони, если выбранный стал недоступен (число гостей/срок изменились).
     useEffect(() => {
@@ -412,12 +395,6 @@ export default function BookingForm({
                     </div>
                 </div>
             </div>
-
-            {happyHoursAvailable && (
-                <div className="mt-4">
-                    <HappyHoursNotice context="booking" />
-                </div>
-            )}
 
             {/* Гости */}
             <div className="mt-4 grid grid-cols-2 gap-4">
