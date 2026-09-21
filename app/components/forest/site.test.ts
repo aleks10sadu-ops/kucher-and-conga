@@ -7,7 +7,7 @@ describe('public navigation', () => {
     });
 
     it('gives delivery and business lunch their own crawlable destinations', () => {
-        expect(NAV).toContainEqual({ href: '/delivery', label: 'Доставка еды' });
+        expect(NAV).toContainEqual({ href: '/delivery', label: 'Доставка и самовывоз' });
         expect(NAV).toContainEqual({ href: '/business-lunch', label: 'Бизнес-ланч' });
         expect(NAV).toContainEqual({ href: '/menu#main', label: 'Меню' });
         expect(NAV_TOP).toContainEqual({ href: '/menu#main', label: 'Меню' });

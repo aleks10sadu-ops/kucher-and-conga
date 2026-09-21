@@ -65,6 +65,21 @@ describe('DeliveryCheckout fulfillment selector accessibility', () => {
     expect(pickup?.props?.['aria-pressed']).toBe(false);
   });
 
+  it('can open with pickup selected from an SEO deep link', () => {
+    const checkout = DeliveryCheckout({
+      items: [],
+      subtotal: 0,
+      initialFulfillmentType: 'pickup',
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    });
+    const delivery = findElement(checkout, (element) => element.props?.children === 'Доставка');
+    const pickup = findElement(checkout, (element) => element.props?.children === 'Самовывоз');
+
+    expect(delivery?.props?.['aria-pressed']).toBe(false);
+    expect(pickup?.props?.['aria-pressed']).toBe(true);
+  });
+
   it('renders separate booking-style date and time fields with today selected', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-24T10:00:00.000Z'));

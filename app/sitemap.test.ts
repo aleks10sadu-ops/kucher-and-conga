@@ -40,6 +40,7 @@ describe('sitemap', () => {
 
         expect(paths).toEqual(expect.arrayContaining([
             '/delivery',
+            '/pickup',
             '/business-lunch',
         ]));
         expect(paths).not.toContain('/delivery/shashlyk');

@@ -102,7 +102,7 @@ export default function CartDrawer({
                         <span className="text-xl font-bold">{total.toLocaleString('ru-RU')} ₽</span>
                     </div>
 
-                    {/* Предупреждение о минимальном заказе на доставку */}
+                    {/* Предупреждение о минимальном заказе */}
                     {items.length > 0 && !minOrder.isValid && (
                         <div className="p-3 bg-brass/10 border border-brass/25 rounded-lg flex items-start gap-2">
                             <AlertCircle className="w-5 h-5 text-brass flex-shrink-0 mt-0.5" />
@@ -127,7 +127,7 @@ export default function CartDrawer({
                             onClick={onDeliveryClick}
                             className="w-full px-6 py-3 rounded-full bg-terracotta text-[#FBF3EA] font-semibold hover:bg-terracotta-dark hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
                         >
-                            Доставка
+                            Доставка и самовывоз
                         </button>
                     </div>
                     <p className="text-[12px] text-cream/55">

@@ -20,13 +20,13 @@ export const SITE = {
         { d: 'Пт, Сб', t: '12:00 — 01:00', note: 'вход до 23:00' },
         { d: 'Вс', t: '13:00 — 23:00', note: 'вход до 22:00' },
     ],
-    hoursNote: 'Брони и доставка — с 12:00 до 22:00',
+    hoursNote: 'Брони, доставка и самовывоз — с 12:00 до 22:00',
 } as const;
 
 // Разделы для выдвижного меню шапки.
 export const NAV = [
     { href: '/menu#main', label: 'Меню' },
-    { href: '/delivery', label: 'Доставка еды' },
+    { href: '/delivery', label: 'Доставка и самовывоз' },
     { href: '/business-lunch', label: 'Бизнес-ланч' },
     { href: '/booking', label: 'Забронировать стол' },
     { href: '/promotions', label: 'Акции' },

@@ -17,7 +17,13 @@ import ContentManager from '../components/ContentManager';
 import ForestHeader from '../components/forest/ForestHeader';
 import ForestFooter from '../components/forest/ForestFooter';
 import MenuImageGallery from '../components/MenuImageGallery';
-import { readMenuSearch, resolveMenuCategoryDeepLink, resolveMenuDeepLink } from '@/lib/menu/deepLink';
+import {
+    readFulfillmentPreference,
+    readMenuSearch,
+    resolveMenuCategoryDeepLink,
+    resolveMenuDeepLink,
+} from '@/lib/menu/deepLink';
+import type { FulfillmentType } from '@/lib/delivery/types';
 import { BAR_MENU_PAGES, MAIN_MENU_PAGES, WINE_MENU_PAGES } from '@/lib/menu/paperMenu';
 import { MENU_TYPE_DEFS } from '@/lib/menu/menuSections';
 import { startBusinessLunchRefresh, type BusinessLunchMenu } from '@/lib/menu/liveBusinessLunch';
@@ -196,6 +202,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
     const [activeCategory, setActiveCategory] = useState<string>(menuByType[firstKey]?.categories?.[0]?.id || '');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [preferredFulfillmentType, setPreferredFulfillmentType] = useState<FulfillmentType>('delivery');
 
     useEffect(() => {
         let frameId: number | null = null;
@@ -215,6 +222,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
             setActiveType(requestedType);
             setActiveCategory(requestedCategory || requestedCategories[0]?.id || '');
             setQuery(readMenuSearch(window.location.search, requestedType));
+            setPreferredFulfillmentType(readFulfillmentPreference(window.location.search));
 
             if (requestedCategory) {
                 frameId = window.requestAnimationFrame(() => {
@@ -311,7 +319,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     <img src="/hero-image.webp" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px]">
-                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass xl:text-xs">Кухня, бар, доставка</span>
+                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass xl:text-xs">Кухня, бар, доставка и самовывоз</span>
                         <h1 className="mt-1.5 font-display text-[clamp(2.2rem,5vw,3.6rem)] font-black leading-[1.05] text-cream xl:text-4xl">Меню</h1>
                     </div>
                 </section>
@@ -573,7 +581,13 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     isMounted={mounted}
                 />
                 {deliveryOpen && (
-                    <DeliveryCheckout items={cart.items} subtotal={cart.total} onClose={() => setDeliveryOpen(false)} onSuccess={() => cart.clear()} />
+                    <DeliveryCheckout
+                        items={cart.items}
+                        subtotal={cart.total}
+                        initialFulfillmentType={preferredFulfillmentType}
+                        onClose={() => setDeliveryOpen(false)}
+                        onSuccess={() => cart.clear()}
+                    />
                 )}
 
                 <BanquetMenuModal

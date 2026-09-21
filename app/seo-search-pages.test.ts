@@ -6,7 +6,9 @@ import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
 import DeliveryPage, { metadata as deliveryMetadata } from './delivery/page';
+import PickupPage, { metadata as pickupMetadata } from './pickup/page';
 import BusinessLunchPage, { metadata as businessLunchMetadata } from './business-lunch/page';
+import PromotionsPage, { metadata as promotionsMetadata } from './promotions/page';
 
 describe('local-search landing pages', () => {
     it('renders a canonical delivery page with factual order conditions', () => {
@@ -41,6 +43,35 @@ describe('local-search landing pages', () => {
         expect(html).toMatch(/<h1[^>]*>Бизнес-ланч в Дмитрове<\/h1>/);
         expect(html).toContain('по будням с 12:00 до 16:00');
         expect(html).toContain('href="/menu#business"');
+    });
+
+    it('renders a canonical pickup page that preserves pickup as the checkout preference', () => {
+        const html = renderToStaticMarkup(React.createElement(PickupPage));
+
+        expect(pickupMetadata.alternates).toMatchObject({ canonical: '/pickup' });
+        expect(html).toMatch(/<h1[^>]*>Самовывоз еды в Дмитрове<\/h1>/);
+        expect(html).toContain('href="/menu?fulfillment=pickup#delivery"');
+        expect(html).toContain('Промышленная улица, 20Б');
+        expect(html).toContain('application/ld+json');
+    });
+
+    it('explains happy hours and the birthday offer with direct next actions', () => {
+        const html = renderToStaticMarkup(React.createElement(PromotionsPage));
+
+        expect(promotionsMetadata.description).toContain('Счастливые часы');
+        expect(html).toContain('Счастливые часы');
+        expect(html).toContain('Скидка 20%');
+        expect(html).toContain('с 12:00 до 16:00');
+        expect(html).toContain('На доставку скидка не распространяется');
+        expect(html).toContain('В праздничные дни предложение не действует');
+        expect(html).toContain('Скидки не суммируются');
+        expect(html).toContain('применяется наибольшая');
+        expect(html).toContain('до 8 взрослых включительно');
+        expect(html).toContain('На банкетные меню скидки не распространяются');
+        expect(html).toContain('href="/menu?fulfillment=pickup#delivery"');
+        expect(html).toContain('Скидка 10% в день рождения');
+        expect(html).toContain('подтверждающий документ');
+        expect(html).toMatch(/href="\/booking\?source=promotion&amp;ref=(happy-hours|birthday)"/);
     });
 
 });

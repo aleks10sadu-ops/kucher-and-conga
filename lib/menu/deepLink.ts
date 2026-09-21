@@ -1,3 +1,5 @@
+import type { FulfillmentType } from '@/lib/delivery/types';
+
 type MenuByType = Record<string, { categories?: unknown[] } | undefined>;
 type MenuCategory = { id: string | number; name?: string | null };
 
@@ -27,6 +29,10 @@ export function resolveMenuDeepLink(hash: string, menuByType: MenuByType, fallba
 export function readMenuSearch(search: string, section: string): string {
     if (section !== 'delivery') return '';
     return new URLSearchParams(search).get('search')?.trim() || '';
+}
+
+export function readFulfillmentPreference(search: string): FulfillmentType {
+    return new URLSearchParams(search).get('fulfillment') === 'pickup' ? 'pickup' : 'delivery';
 }
 
 function normalizeCategoryName(value: string): string {

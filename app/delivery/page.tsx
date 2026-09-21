@@ -33,7 +33,10 @@ export default function DeliveryPage() {
                         <p className="text-[13px] uppercase tracking-[0.18em] text-brass">Ресторан Кучер &amp; Conga</p>
                         <h1 className="mt-2 font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04]">Доставка еды в Дмитрове</h1>
                         <p className="mt-5 max-w-[62ch] text-base leading-relaxed text-cream/85 md:text-lg">Выберите блюда из актуального меню доставки, соберите корзину и оформите заказ прямо на сайте.</p>
-                        <Link href="/menu#delivery" className="mt-7 inline-flex rounded-lg bg-terracotta px-7 py-3.5 font-semibold text-[#FBF3EA] hover:bg-terracotta-dark">Заказать доставку</Link>
+                        <div className="mt-7 flex flex-wrap gap-3">
+                            <Link href="/menu#delivery" className="inline-flex rounded-lg bg-terracotta px-7 py-3.5 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark">Заказать доставку</Link>
+                            <Link href="/pickup" className="inline-flex rounded-lg border border-white/15 bg-white/[0.05] px-7 py-3.5 font-semibold text-cream transition-colors hover:border-brass/60 hover:bg-white/[0.09]">Перейти к самовывозу</Link>
+                        </div>
                     </div>
                 </section>
                 <section className="mx-auto grid max-w-[1120px] gap-5 px-5 py-14 md:grid-cols-2 md:px-8 md:py-20">
@@ -62,6 +65,16 @@ export default function DeliveryPage() {
                             <h3 className="font-display text-2xl font-bold">Шашлык в Дмитрове</h3>
                             <p className="mt-3 text-cream/70">Блюда с мангала и сеты из актуального меню доставки.</p>
                         </Link>
+                    </div>
+                </section>
+                <section className="mx-auto max-w-[1120px] px-5 pb-14 md:px-8 md:pb-20">
+                    <div className="flex flex-col items-start gap-5 rounded-2xl border border-brass/25 bg-brass/10 p-7 md:flex-row md:items-center md:justify-between md:p-9">
+                        <div>
+                            <p className="text-[12px] uppercase tracking-[0.16em] text-brass">Без ожидания курьера</p>
+                            <h2 className="mt-2 font-display text-2xl font-bold">Заказ можно забрать самостоятельно</h2>
+                            <p className="mt-3 max-w-[62ch] leading-relaxed text-cream/75">Соберите корзину заранее, выберите самовывоз при оформлении и заберите заказ в ресторане на Промышленной улице, 20Б.</p>
+                        </div>
+                        <Link href="/pickup" className="inline-flex shrink-0 rounded-lg bg-terracotta px-6 py-3 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark">Условия самовывоза</Link>
                     </div>
                 </section>
             </main>

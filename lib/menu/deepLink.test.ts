@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readMenuSearch, resolveMenuCategoryDeepLink, resolveMenuDeepLink } from './deepLink';
+import {
+    readFulfillmentPreference,
+    readMenuSearch,
+    resolveMenuCategoryDeepLink,
+    resolveMenuDeepLink,
+} from './deepLink';
 
 const menu = {
     main: { categories: [{ id: 'soups' }] },
@@ -44,5 +49,12 @@ describe('menu deep links', () => {
 
         expect(resolveMenuCategoryDeepLink(search, 'delivery', categories)).toBe(expectedId);
         expect(resolveMenuCategoryDeepLink(search, 'main', categories)).toBe('');
+    });
+
+    it('opens checkout in pickup mode only for an explicit pickup deep link', () => {
+        expect(readFulfillmentPreference('?fulfillment=pickup')).toBe('pickup');
+        expect(readFulfillmentPreference('?fulfillment=delivery')).toBe('delivery');
+        expect(readFulfillmentPreference('?fulfillment=unknown')).toBe('delivery');
+        expect(readFulfillmentPreference('')).toBe('delivery');
     });
 });

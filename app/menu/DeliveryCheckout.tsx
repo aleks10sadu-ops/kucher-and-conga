@@ -21,6 +21,8 @@ import { lockBodyScroll } from '@/lib/ui/bodyScrollLock';
 import { SITE } from '../components/forest/site';
 import DateTimePicker, { moscowDateString } from '../components/DateTimePicker';
 import DeliveryZoneMiniMap from '../components/DeliveryZoneMiniMap';
+import HappyHoursNotice from '../components/HappyHoursNotice';
+import { isHappyHoursPickupEligible, moscowHappyHoursMoment } from '@/lib/promotions/happyHours';
 
 const inputCls =
     'w-full rounded-lg border border-white/10 bg-forest-ink/60 px-4 py-3 text-sm text-cream placeholder-cream/40 outline-none transition focus:border-brass/60';
@@ -28,11 +30,13 @@ const inputCls =
 export default function DeliveryCheckout({
     items,
     subtotal,
+    initialFulfillmentType = 'delivery',
     onClose,
     onSuccess,
 }: {
     items: CartItem[];
     subtotal: number;
+    initialFulfillmentType?: FulfillmentType;
     onClose: () => void;
     onSuccess: () => void;
 }) {
@@ -58,7 +62,7 @@ export default function DeliveryCheckout({
     const [consent, setConsent] = useState(false);
     const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
-    const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('delivery');
+    const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(initialFulfillmentType);
 
     useEffect(() => lockBodyScroll(), []);
 
@@ -83,9 +87,14 @@ export default function DeliveryCheckout({
     // График приёма доставок (МСК). Пока открыто — гость ничего не видит;
     // вне графика показываем расписание на сегодня и блокируем отправку.
     // Пересчёт раз в полминуты, чтобы окно закрывалось/открывалось без перезагрузки.
+    const [currentTime, setCurrentTime] = useState(() => new Date());
     const [scheduleOpen, setScheduleOpen] = useState(() => isDeliveryOpen());
     useEffect(() => {
-        const id = setInterval(() => setScheduleOpen(isDeliveryOpen()), 30_000);
+        const id = setInterval(() => {
+            const nextTime = new Date();
+            setCurrentTime(nextTime);
+            setScheduleOpen(isDeliveryOpen(nextTime));
+        }, 30_000);
         return () => clearInterval(id);
     }, []);
 
@@ -143,6 +152,9 @@ export default function DeliveryCheckout({
     // платные — от 2000/3000 ₽. Пока зона не определена, действует базовое правило.
     const minOrder = validateMinOrder(items, subtotal, effectiveZone, fulfillmentType);
     const asapUnavailable = f.deliveryTime === 'asap' && !scheduleOpen;
+    const immediateMoment = moscowHappyHoursMoment(currentTime);
+    const happyHoursAvailable = isPickup
+        && isHappyHoursPickupEligible(immediateMoment.date, immediateMoment.time);
 
     const chooseFulfillmentType = (nextType: FulfillmentType) => {
         setFulfillmentType(nextType);
@@ -461,6 +473,8 @@ export default function DeliveryCheckout({
                         </div>
                     )}
                 </div>
+
+                {happyHoursAvailable && <HappyHoursNotice context="pickup" />}
 
                 {/* Оплата */}
                 <div>
