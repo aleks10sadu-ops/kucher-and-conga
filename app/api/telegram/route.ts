@@ -1,6 +1,7 @@
 // app/api/telegram/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { formatBookingTelegram, formatBookingTelegramMessages } from '@/lib/booking/formatTelegram';
+import { bookingHallClosureMessage } from '@/lib/booking/rules';
 import { visibleModifiers } from '@/lib/booking/modifiers';
 import { logOrderAttempt } from '@/lib/delivery/orderLog';
 import { getStopListProductIds } from '@/lib/iiko/stopList';
@@ -215,6 +216,13 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await req.json() as TelegramPayload;
+
+    if (payload.type === 'booking') {
+      const hallClosureMessage = bookingHallClosureMessage(payload.date, payload.hallName);
+      if (hallClosureMessage) {
+        return NextResponse.json({ ok: false, error: 'hall_closed', message: hallClosureMessage }, { status: 409 });
+      }
+    }
 
     // Стоп-лист для предзаказа к брони: блюда «на стопе» отклоняем до отправки заявки.
     // (Доставки сюда попадают только TG-фолбэком после /api/orders, где проверка уже была.)

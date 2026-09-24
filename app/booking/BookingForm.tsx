@@ -9,6 +9,7 @@ import { reachYandexGoal } from '@/lib/analytics/yandexMetrika';
 import {
     evaluateBooking,
     bookingDateClosureMessage,
+    bookingHallClosureMessage,
     isBookingDateClosed,
     bookingTimeWindowForDate,
     isBookingTimeAllowed,
@@ -82,6 +83,7 @@ export default function BookingForm({
     const selectedHall = bookingHallByKey(bookingHalls, hallKey);
     const crmHallId = selectedHall?.crmHallId ?? null;
     const hallName = selectedHall?.name ?? null;
+    const hallClosureMessage = mode === 'self' ? bookingHallClosureMessage(date, hallName) : null;
     const selectedBanquetMenu = getBanquetPackage(banquetPackageId);
     const bookingTimeWindow = bookingTimeWindowForDate(date);
     const timeInvalid = Boolean(date && time.length === 5 && !isBookingTimeAllowed(date, time));
@@ -130,6 +132,11 @@ export default function BookingForm({
         const bookingClosureMessage = bookingDateClosureMessage(date);
         if (bookingClosureMessage) {
             setErrorMsg(bookingClosureMessage);
+            setStatus('error');
+            return;
+        }
+        if (hallClosureMessage) {
+            setErrorMsg(hallClosureMessage);
             setStatus('error');
             return;
         }
@@ -238,6 +245,7 @@ export default function BookingForm({
                 banquetPackageId: mode === 'self' ? banquetPackageId : null,
                 comment,
                 hallId: mode === 'self' ? crmHallId : null,
+                hallName: mode === 'self' ? hallName : null,
                 composedComment,
             });
             crmOk = !!result.success;
@@ -312,7 +320,8 @@ export default function BookingForm({
 
     const selfSubmitBlocked =
         mode === 'self' &&
-        (!validation.canSubmit ||
+        (Boolean(hallClosureMessage) ||
+            !validation.canSubmit ||
             !selectedHall ||
             (bookingType === 'banquet' && !isBanquetSelectionComplete(banquetPackageId, saladIds)));
 
@@ -340,8 +349,14 @@ export default function BookingForm({
                     <HallSelector
                         halls={bookingHalls}
                         selectedHallKey={hallKey}
+                        bookingDate={date}
                         onSelect={(nextHallKey) => setSelection((current) => changeBookingHall(current, nextHallKey, bookingHalls))}
                     />
+                    {hallClosureMessage && (
+                        <p role="alert" className="mt-3 rounded-lg border border-brass/25 bg-brass/10 px-3 py-2 text-sm text-cream/80">
+                            {hallClosureMessage}
+                        </p>
+                    )}
                     {notice === 'incompatible-menu' && (
                         <p className="mt-3 rounded-lg border border-brass/25 bg-brass/10 px-3 py-2 text-xs text-cream/80">
                             Для зала Conga доступны банкетные меню 6000 и 7500 ₽. Выберите подходящий вариант.

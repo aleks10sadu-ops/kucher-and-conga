@@ -49,6 +49,9 @@ const BANQUET_LEAD_DAYS = 2;
 const BOOKING_CLOSED_DATES = new Set(['2026-09-01']);
 const BOOKING_CLOSED_FROM = '2026-12-18';
 const BOOKING_CLOSED_TO = '2027-01-04';
+const OCTOBER_HALL_CLOSED_FROM = '2026-10-18';
+const OCTOBER_HALL_CLOSED_TO = '2026-10-29';
+const OCTOBER_CLOSED_HALLS = new Set(['Барный зал', 'Веранда (Кучер)', 'Морской зал']);
 // Минимум предзаказа НА КАЖДОГО ВЗРОСЛОГО (₽). Итоговый минимум = значение × число взрослых.
 const PREORDER_MIN: Record<HallGroup, number | null> = { conga: 4000, kucher: 3000, other: null };
 
@@ -72,6 +75,14 @@ export function bookingDateClosureMessage(eventDate: string): string | null {
 
 export function isBookingDateClosed(eventDate: string): boolean {
   return bookingDateClosureMessage(eventDate) !== null;
+}
+
+export function bookingHallClosureMessage(eventDate: string, hallName: string | null | undefined): string | null {
+  if (hallName && OCTOBER_CLOSED_HALLS.has(hallName.trim())
+    && eventDate >= OCTOBER_HALL_CLOSED_FROM && eventDate <= OCTOBER_HALL_CLOSED_TO) {
+    return `${hallName.trim()}: бронирование с 18 по 29 октября недоступно. Выберите другой зал или дату.`;
+  }
+  return null;
 }
 
 export function bookingTimeWindowForDate(eventDate: string): { start: string; end: string } | null {

@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { BookingData } from '@/types/index';
 import { createCrmBrowserClient } from '@/lib/supabase/crm-client';
+import { bookingHallClosureMessage } from '@/lib/booking/rules';
 
 type CreateReservationResponse = {
     success: boolean;
@@ -20,6 +21,9 @@ type CreateReservationData = BookingData & {
  * Создает бронирование напрямую в базе данных CRM Supabase
  */
 export async function createReservation(data: CreateReservationData): Promise<CreateReservationResponse> {
+    const hallClosureMessage = bookingHallClosureMessage(data.date, data.hallName);
+    if (hallClosureMessage) return { success: false, error: hallClosureMessage };
+
     const supabase = createCrmBrowserClient();
 
     if (!supabase) {

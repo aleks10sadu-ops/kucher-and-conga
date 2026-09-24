@@ -17,14 +17,16 @@ import {
     normalizeBookingHalls,
     type BookingHall,
 } from '@/lib/booking/hallCatalog';
+import { bookingHallClosureMessage } from '@/lib/booking/rules';
 
 type HallSelectorProps = {
     halls: BookingHall[];
     selectedHallKey: string | null;
+    bookingDate: string;
     onSelect: (key: string | null) => void;
 };
 
-export default function HallSelector({ halls: initialHalls, selectedHallKey, onSelect }: HallSelectorProps) {
+export default function HallSelector({ halls: initialHalls, selectedHallKey, bookingDate, onSelect }: HallSelectorProps) {
     const [halls, setHalls] = useState<BookingHall[]>(initialHalls);
     const [currentIndex, setCurrentIndex] = useState<number>(0);
     const { isAdmin } = useAdminCheck();
@@ -87,6 +89,7 @@ export default function HallSelector({ halls: initialHalls, selectedHallKey, onS
 
     const currentHall = halls[currentIndex];
     const isSelected = selectedHallKey === currentHall?.key;
+    const hallClosureMessage = bookingHallClosureMessage(bookingDate, currentHall?.name);
     const capacityText = typeof currentHall?.capacity === 'number' ? `до ${currentHall.capacity}` : currentHall?.capacity;
 
     const handleCardClick = () => {
@@ -190,10 +193,13 @@ export default function HallSelector({ halls: initialHalls, selectedHallKey, onS
                 <button
                     type="button"
                     onClick={() => onSelect(isSelected ? null : currentHall.key)}
+                    disabled={Boolean(hallClosureMessage) && !isSelected}
                     className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold transition-all duration-200 ${
                         isSelected
                             ? 'bg-terracotta text-[#FBF3EA] ring-2 ring-brass ring-offset-2 ring-offset-forest-ink'
-                            : 'bg-white/10 text-cream hover:bg-white/20'
+                            : hallClosureMessage
+                                ? 'cursor-not-allowed bg-white/5 text-cream/50'
+                                : 'bg-white/10 text-cream hover:bg-white/20'
                     }`}
                 >
                     {isSelected ? (
@@ -202,7 +208,7 @@ export default function HallSelector({ halls: initialHalls, selectedHallKey, onS
                             Зал выбран
                         </>
                     ) : (
-                        'Выбрать этот зал'
+                        hallClosureMessage ? 'Недоступен с 18 по 29 октября' : 'Выбрать этот зал'
                     )}
                 </button>
             </div>

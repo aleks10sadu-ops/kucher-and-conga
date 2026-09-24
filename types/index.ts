@@ -48,6 +48,7 @@ export type BookingData = {
     banquetPackageId?: string | null;
     comment?: string;
     hallId?: string | number | null;
+    hallName?: string | null;
 };
 
 export type DeliveryForm = {

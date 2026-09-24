@@ -5,6 +5,7 @@ import {
   preorderMinimum,
   banquetPackagesForHall,
   bookingDateClosureMessage,
+  bookingHallClosureMessage,
   isBookingDateClosed,
   bookingTimeWindowForDate,
   isBookingTimeAllowed,
@@ -82,6 +83,23 @@ describe('booking closure dates', () => {
     expect(isBookingDateClosed('2027-01-05')).toBe(false);
     expect(bookingDateClosureMessage('2026-12-18')).toBe('С 18 декабря по 4 января бронирование недоступно.');
     expect(bookingDateClosureMessage('2026-12-17')).toBeNull();
+  });
+});
+
+describe('October hall closure', () => {
+  it.each(['Барный зал', 'Веранда (Кучер)', 'Морской зал'])('closes %s from 18 through 29 October 2026', (hallName) => {
+    expect(bookingHallClosureMessage('2026-10-17', hallName)).toBeNull();
+    expect(bookingHallClosureMessage('2026-10-18', hallName)).toContain('недоступно');
+    expect(bookingHallClosureMessage('2026-10-29', hallName)).toContain('недоступно');
+    expect(bookingHallClosureMessage('2026-10-30', hallName)).toBeNull();
+    expect(bookingHallClosureMessage('2027-10-18', hallName)).toBeNull();
+  });
+
+  it('keeps other halls available during the closure', () => {
+    expect(bookingHallClosureMessage('2026-10-18', 'Conga')).toBeNull();
+    expect(bookingHallClosureMessage('2026-10-29', 'Изумрудный зал')).toBeNull();
+    expect(bookingHallClosureMessage('2026-10-18', null)).toBeNull();
+    expect(isBookingDateClosed('2026-10-18')).toBe(false);
   });
 });
 

@@ -44,6 +44,16 @@ describe('telegram booking delivery', () => {
     expect(sent).not.toHaveProperty('reply_markup');
   });
 
+  it('rejects requests for closed halls before sending to Telegram', async () => {
+    configure();
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    const response = await POST(request({ ...booking, date: '2026-10-18', hallName: 'Морской зал' }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: 'hall_closed' });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('links an oversized copy block to the original request', async () => {
     configure();
     const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ ok: true, result: { message_id: 42 } })));
