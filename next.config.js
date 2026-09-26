@@ -3,6 +3,8 @@ const path = require('path');
 
 const nextConfig = {
   images: {
+    loader: 'custom',
+    loaderFile: './lib/media/imageLoader.js',
     remotePatterns: [
       {
         protocol: 'https',
