@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from 'react';
 import Image from 'next/image';
-import { ArrowRight, CalendarDays, Clock3, Mic2, Music2, Phone } from 'lucide-react';
+import { CalendarDays, Clock3, Mic2, Music2, Phone } from 'lucide-react';
 import { SITE } from '../../components/forest/site';
 import ForestHeader from '../../components/forest/ForestHeader';
 import ForestFooter from '../../components/forest/ForestFooter';
@@ -14,7 +14,7 @@ const primaryPhone = SITE.phones[0];
 
 function BookingLink() {
   return <a className={styles.primary} href={`tel:${primaryPhone.tel}`} aria-label={`${content.event.cta} по телефону ${primaryPhone.label}`}>
-    {content.event.cta}<ArrowRight size={19} aria-hidden="true" />
+    {content.event.cta}
   </a>;
 }
 
