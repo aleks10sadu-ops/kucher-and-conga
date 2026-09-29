@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
-import { ArrowRight, CalendarDays, Clock3, Mic2, Music2, Phone, Snowflake } from 'lucide-react';
+import { ArrowRight, CalendarDays, Clock3, Mic2, Music2, Phone } from 'lucide-react';
 import { SITE } from '../../components/forest/site';
 import ForestHeader from '../../components/forest/ForestHeader';
 import ForestFooter from '../../components/forest/ForestFooter';
@@ -11,7 +11,6 @@ import styles from './night.module.css';
 
 const assetRoot = '/new-year-night-2027/';
 const primaryPhone = SITE.phones[0];
-const motionKey = 'new-year-night-motion';
 
 function BookingLink() {
   return <a className={styles.primary} href={`tel:${primaryPhone.tel}`} aria-label={`${content.event.cta} по телефону ${primaryPhone.label}`}>
@@ -42,38 +41,19 @@ function Cheers() {
 const stageIcons = [Cheers, Mic2, DiscoBall];
 
 export default function NewYearNight() {
-  const [motionEnabled, setMotionEnabled] = useState(false);
-
-  useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const syncPreference = () => {
-      let saved: string | null = null;
-      try { saved = window.localStorage.getItem(motionKey); } catch { /* Storage may be unavailable. */ }
-      setMotionEnabled(!preference.matches && saved !== 'off');
-    };
-    syncPreference();
-    preference.addEventListener('change', syncPreference);
-    return () => preference.removeEventListener('change', syncPreference);
-  }, []);
-
-  const toggleMotion = () => {
-    const next = !motionEnabled;
-    setMotionEnabled(next);
-    try { window.localStorage.setItem(motionKey, next ? 'on' : 'off'); } catch { /* The toggle still works in this tab. */ }
-  };
-
   return <>
     <ForestHeader />
-    <div className={styles.page} data-motion={motionEnabled ? 'on' : 'off'}>
+    <div className={styles.page}>
     <a href="#night-main" className={styles.skip}>Перейти к афише</a>
     <div className={styles.edgeLeft} aria-hidden="true" />
     <div className={styles.edgeRight} aria-hidden="true" />
     <div className={styles.cornerLeft} aria-hidden="true" />
     <div className={styles.cornerRight} aria-hidden="true" />
     <div className={styles.snow} aria-hidden="true">
-      {Array.from({ length: 12 }, (_, i) => <i key={i} style={{
-        '--x': i % 2 ? `${98 + i % 3 * .5}%` : `${i % 3 * .5}%`,
-        '--duration': `${22 + i % 7}s`, '--delay': `${-i * 3.1}s`,
+      {Array.from({ length: 80 }, (_, i) => <i key={i} style={{
+        '--x': `${2 + i * 37 % 95}%`, '--size': `${3 + i * 7 % 4}px`,
+        '--opacity': .4 + i % 4 * .08, '--drift': `${i % 2 ? 24 : -18}px`,
+        '--duration': `${58 + i % 9 * 4}s`, '--delay': `${-(i * 17 % 89)}s`,
       } as CSSProperties} />)}
     </div>
 
@@ -170,11 +150,6 @@ export default function NewYearNight() {
         </div>
         <p className={styles.address}>{SITE.address}</p>
       </section>
-    <div className={styles.motionControls}>
-      <button type="button" className={styles.motionToggle} onClick={toggleMotion} aria-pressed={motionEnabled}>
-        <Snowflake size={16} aria-hidden="true" />{motionEnabled ? 'Выключить снег' : 'Включить снег'}
-      </button>
-    </div>
     </div>
     </div>
     <ForestFooter />

@@ -22,10 +22,10 @@
 .cornerLeft, .cornerRight { position: absolute; z-index: 4; pointer-events: none; top: 0; width: clamp(170px, 20vw, 300px); aspect-ratio: 1.5; background: url('/new-year-night-2027/frosted-fir.webp') top left / contain no-repeat; }
 .cornerLeft { left: -35px; }
 .cornerRight { right: -35px; transform: scaleX(-1); }
-.snow { position: absolute; z-index: 4; inset: 680px 0 500px; pointer-events: none; overflow: hidden; }
-.snow i { position: absolute; top: -10px; left: var(--x); width: 3px; height: 3px; border-radius: 50%; background: #effaff; opacity: 0; }
-.page[data-motion='on'] .snow i { animation: snowfall var(--duration) linear var(--delay) infinite; }
-@keyframes snowfall { 0% { transform: translateY(0); opacity: 0; } 5%, 95% { opacity: .7; } 100% { transform: translateY(3500px); opacity: 0; } }
+.snow { position: absolute; z-index: 4; inset: 0; pointer-events: none; overflow: hidden; }
+.snow i { position: absolute; top: -12px; bottom: 0; left: var(--x); width: var(--size); opacity: 0; animation: snowfall var(--duration) linear var(--delay) infinite; }
+.snow i::before { content: ''; display: block; width: 100%; height: var(--size); border-radius: 50%; background: #effaff; box-shadow: 0 0 3px #effaff70; }
+@keyframes snowfall { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 3%, 97% { opacity: var(--opacity); } 100% { transform: translate3d(var(--drift), 100%, 0); opacity: 0; } }
 .primary { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 54px; padding: 12px 29px; border: 1px solid #ffaca0; border-radius: 999px; color: white; background: linear-gradient(#db302d, #ac0c13 80%); box-shadow: 0 0 19px #e43a2845, inset 0 0 0 2px #ff78603b; font-size: 1rem; font-weight: 500; text-align: center; transition: background .2s, box-shadow .2s; }
 .primary:hover { background: linear-gradient(#e43b35, #bd1720); box-shadow: 0 0 26px #e43a2860, inset 0 0 0 2px #ff78603b; }
 .hero { position: relative; min-height: clamp(510px, 42vw, 630px); display: flex; align-items: center; border-bottom: 1px solid var(--line); }
@@ -93,8 +93,6 @@
 .phones a { display: inline-flex; align-items: center; gap: 7px; color: var(--ivory); font-size: .95rem; }
 .phones a:hover { text-decoration: underline; }
 .booking .address { margin: 14px auto 0; font-size: .83rem; }
-.motionControls { position: relative; z-index: 5; padding: 12px 24px; text-align: center; background: #041b2dbb; font-size: .8rem; }
-.motionToggle { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; border: 0; padding: 0; background: transparent; color: #dceaf2; font: inherit; cursor: pointer; }
 @media (min-width: 1600px) { .heroContent { padding-inline: 40px; } }
 @media (max-width: 1100px) {
   .conga { grid-template-columns: 1.32fr 1fr; gap: 25px; }
@@ -125,6 +123,7 @@
   .winterScene { background-size: auto 100%; }
 }
 @media (max-width: 760px) {
+  .snow i:nth-child(n + 37) { display: none; }
   .cornerLeft, .cornerRight { width: 170px; top: 0; opacity: .8; }
   .cornerLeft { left: -70px; }
   .cornerRight { right: -70px; }
@@ -195,5 +194,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-  .motionToggle { display: none; }
+  .snow { display: none; }
 }
