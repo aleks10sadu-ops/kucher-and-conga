@@ -35,6 +35,16 @@ describe('sitemap', () => {
         ]));
     });
 
+    it('keeps the New Year night unlisted even if its CMS post is published', async () => {
+        fetchPublishedPostsMock.mockImplementation(async (category: string) => category === 'events' ? [
+            { slug: 'novogodnyaya-noch-2027', published_at: null, created_at: '2026-09-29' },
+            { slug: 'live-music', published_at: null, created_at: '2026-09-29' },
+        ] : []);
+        const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
+        expect(paths).not.toContain('/events/novogodnyaya-noch-2027');
+        expect(paths).toContain('/events/live-music');
+    });
+
     it('publishes canonical local-search pages without redirect-only dish URLs', async () => {
         const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
 

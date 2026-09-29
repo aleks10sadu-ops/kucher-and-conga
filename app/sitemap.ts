@@ -52,7 +52,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const dynamicPages = [
         ...vacancies.map((v) => dated(`/vacancies/${v.slug}`, v.published_at || v.created_at, 0.5, 'weekly')),
-        ...events.map((e) => dated(`/events/${e.slug}`, e.published_at || e.created_at, 0.5, 'weekly')),
+        ...events
+            .filter((e) => e.slug !== 'novogodnyaya-noch-2027')
+            .map((e) => dated(`/events/${e.slug}`, e.published_at || e.created_at, 0.5, 'weekly')),
         ...halls
             .filter((hall) => !isLegacyHallSlug(hall.slug) && !isExactPublicHallSlug(hall.slug))
             .map((h) => dated(`/halls/${h.slug}`, h.published_at || h.created_at, 0.6, 'monthly')),

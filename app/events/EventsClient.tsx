@@ -109,7 +109,7 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
         excerpt: 'Декабрь 2026 в Кучер & CONGA: ведущие, живая музыка, конкурсы, призы и дискотека. Программа с 19:00 до 00:00. Даты и бронирование — на афише.',
         content: null, image_url: '/christmas-2027/hosts-cover.webp',
         published_at: null, created_at: '2026-09-12', category: 'events', is_published: true,
-    }, ...posts.filter(post => post.slug !== 'novogodnie-korporativy-2027')];
+    }, ...posts.filter(post => post.slug !== 'novogodnie-korporativy-2027' && post.slug !== 'novogodnyaya-noch-2027')];
 
     return (
         <>

@@ -1,19 +1,28 @@
 import type { Metadata } from 'next';
+import { Vollkorn } from 'next/font/google';
 import NewYearNight from './NewYearNight';
 
-const description = 'Новогодняя ночь 2027 в Кучер & CONGA: Ираклий, живая музыка, дискотека и праздничный стол. CONGA: 15 000 ₽/чел., программа с 22:30 до 04:00. Банкетные залы без программы: 8 000 ₽/чел.';
+const nightDisplay = Vollkorn({
+  subsets: ['cyrillic', 'latin'], weight: '400', style: 'normal',
+  variable: '--font-night-display', display: 'swap',
+});
+
+const description = 'Новогодняя ночь 2027 в ресторане Кучер & CONGA в Дмитрове. 31 декабря 2026: зал CONGA с программой — 15 000 ₽/чел.; отдельные банкетные залы — 8 000 ₽/чел.';
 
 export const metadata: Metadata = {
-    title: 'Новогодняя ночь 2027: Кучер & CONGA, Дмитров',
+  title: 'Новогодняя ночь 2027 — Кучер & CONGA, Дмитров',
+  description,
+  robots: { index: false, follow: false },
+  alternates: { canonical: '/events/novogodnyaya-noch-2027' },
+  openGraph: {
+    title: 'Новогодняя ночь 2027 — Кучер & CONGA',
     description,
-    robots: { index: false, follow: false },
-    alternates: { canonical: '/events/novogodnyaya-noch-2027' },
-    openGraph: {
-        title: 'Новогодняя ночь в CONGA',
-        description,
-        url: '/events/novogodnyaya-noch-2027',
-        images: [{ url: '/new-year-night-2027/irakliy.webp', alt: 'Ираклий: ведущий новогодней ночи в CONGA' }],
-    },
+    url: '/events/novogodnyaya-noch-2027',
+    type: 'website',
+    images: [{ url: '/new-year-night-2027/conga-stage-guests-v3.webp', width: 1672, height: 941, alt: 'Иллюстрация новогодней ночи в зале CONGA' }],
+  },
 };
 
-export default function Page() { return <NewYearNight />; }
+export default function Page() {
+  return <div className={nightDisplay.variable}><NewYearNight /></div>;
+}
