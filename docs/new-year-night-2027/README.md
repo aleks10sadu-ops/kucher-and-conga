@@ -26,7 +26,7 @@
 
 | WebP | Источник | Использование |
 |---|---|---|
-| conga-stage-guests-v4.webp | Локальная правка исходной иллюстрации сцены с гостями | Hero и Open Graph |
+| conga-stage-guests-v5.webp | Локальная правка исходной иллюстрации сцены с гостями | Hero и Open Graph |
 | conga-stage-festive-v2.webp | Локальная правка исходной иллюстрации сцены | Галерея |
 | conga-dining.webp | `assets/illustrations/conga_dining.png`, crop left=80, width=1380, height=941 | CONGA и галерея |
 | private-company.webp | `assets/illustrations/private_company_toast.png` | Банкетный блок и галерея |
@@ -66,3 +66,8 @@ node scripts/prepare-new-year-assets.mjs "C:/Users/Alinka/Downloads/kucher_conga
 ## Главное фото v4
 
 Повторная правка после замечаний: поздравление размещено в центре экрана в две ровные строки, ведущий прорисован заново. Hero отдаётся напрямую в полном размере 1672×941 (WebP quality 94, 393 KB), без ограничения общего загрузчика 1200 px. В браузере на 1920 px подтверждены currentSrc v4 и naturalWidth 1672. TypeScript — без ошибок. Промпты и пути исходников: [hero-v4.md](hero-v4.md).
+
+
+## Главное фото v5
+
+Поздравление заменено на праздничную каллиграфию по референсу «Сцена и живая музыка». Две строки по центру экрана сохранены. Размер 1672×941, WebP quality 94, прямая загрузка изображения сохранена. Исходник и промпт встроенного imagegen: [hero-v5.md](hero-v5.md).

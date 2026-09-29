@@ -80,7 +80,7 @@ export default function NewYearNight() {
     <main id="night-main">
       <section className={styles.hero} aria-labelledby="night-title">
         <div className={styles.heroImage}>
-          <Image src={`${assetRoot}conga-stage-guests-v4.webp`} alt="Иллюстрация новогодней ночи у сцены CONGA: ведущий, гости и две праздничные ёлки" fill priority unoptimized />
+          <Image src={`${assetRoot}conga-stage-guests-v5.webp`} alt="Иллюстрация новогодней ночи у сцены CONGA: ведущий, гости и две праздничные ёлки" fill priority unoptimized />
         </div>
         <div className={styles.heroShade} aria-hidden="true" />
         <div className={styles.heroContent}>
