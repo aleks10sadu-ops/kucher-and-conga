@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     description,
     url: '/events/novogodnyaya-noch-2027',
     type: 'website',
-    images: [{ url: '/new-year-night-2027/conga-stage-guests-v3.webp', width: 1672, height: 941, alt: 'Иллюстрация новогодней ночи в зале CONGA' }],
+    images: [{ url: '/new-year-night-2027/conga-stage-guests-v4.webp', width: 1672, height: 941, alt: 'Иллюстрация новогодней ночи в зале CONGA' }],
   },
 };
 

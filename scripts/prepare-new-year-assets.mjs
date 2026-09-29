@@ -51,8 +51,8 @@ await sharp(path.resolve('source-assets/new-year-night-2027/frosted-edge.png'))
   .resize({ height: 1200 }).webp({ quality: 82, effort: 6 })
   .toFile(path.join(output, 'frosted-edge.webp'));
 
-await sharp(path.resolve('source-assets/new-year-night-2027/conga-stage-guests-v3.png'))
-  .webp({ quality: 90, effort: 6 })
-  .toFile(path.join(output, 'conga-stage-guests-v3.webp'));
+await sharp(path.resolve('source-assets/new-year-night-2027/conga-stage-guests-v4.png'))
+  .webp({ quality: 94, effort: 6 })
+  .toFile(path.join(output, 'conga-stage-guests-v4.webp'));
 
 console.log(`Prepared ${images.length + 8} assets in ${output}`);
