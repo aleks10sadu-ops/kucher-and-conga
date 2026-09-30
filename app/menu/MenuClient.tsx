@@ -29,6 +29,7 @@ import {
     type BanquetSaladId,
 } from '@/lib/booking/banquetPackages';
 
+import { readBanquetDeepLink } from '@/lib/menu/holidayBanquets';
 // Тяжёлые формы и модальные окна не нужны для первой отрисовки меню.
 const BanquetMenuModal = dynamic(() => import('../components/BanquetMenuModal'), { ssr: false });
 const BusinessLunchConstructor = dynamic(() => import('../components/BusinessLunchConstructor'), { ssr: false });
@@ -202,6 +203,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
     const firstKey = 'delivery';
     const [activeType, setActiveType] = useState<string>(firstKey);
     const [isBanquetOpen, setIsBanquetOpen] = useState(false);
+    const [banquetDeepLink, setBanquetDeepLink] = useState(() => readBanquetDeepLink(''));
     const [activeCategory, setActiveCategory] = useState<string>(menuByType[firstKey]?.categories?.[0]?.id || '');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -213,6 +215,7 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
         const activateDeepLink = () => {
             const requestedType = resolveMenuDeepLink(window.location.hash, menuByType, firstKey);
             if (requestedType === 'banquet') {
+                setBanquetDeepLink(readBanquetDeepLink(window.location.search));
                 setIsBanquetOpen(true);
                 return;
             }
@@ -610,6 +613,9 @@ export default function MenuClient({ initialMenu, weeklyLunch = null }: { initia
                     <BanquetMenuModal
                         isOpen
                         onClose={() => setIsBanquetOpen(false)}
+                        includeHolidayMenus
+                        initialCategory={banquetDeepLink.category}
+                        initialVenue={banquetDeepLink.venue}
                         selectable
                         hallFilter="all"
                         confirmLabel={BANQUET_MENU_BOOKING_CTA}

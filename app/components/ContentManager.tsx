@@ -462,9 +462,9 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                                                         const file = e.target.files?.[0];
                                                         if (!file) return;
 
-                                                        // Проверяем размер файла (макс 5MB)
+                                                        // Проверяем размер файла (макс 5 МБ)
                                                         if (file.size > 5 * 1024 * 1024) {
-                                                            alert('Размер файла не должен превышать 5MB');
+                                                            alert('Размер файла не должен превышать 5 МБ');
                                                             return;
                                                         }
 
@@ -523,7 +523,7 @@ export default function ContentManager({ category, isOpen, onClose }: ContentMan
                                                 <div className="p-2 bg-white/5 rounded-lg">
                                                     <img
                                                         src={imagePreview}
-                                                        alt="Preview"
+                                                        alt="Предпросмотр"
                                                         className="w-full h-32 object-cover rounded"
                                                     />
                                                 </div>

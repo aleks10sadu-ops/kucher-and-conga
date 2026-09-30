@@ -118,11 +118,11 @@ export default function DeliveryMap({ onZoneChange, onAddressChange }: DeliveryM
                     const restaurantPlacemark = new window.ymaps.Placemark(
                         restaurantCoords,
                         {
-                            hintContent: 'Kucher&Conga - наш ресторан',
+                            hintContent: 'Кучер и Конга - наш ресторан',
                             balloonContent: `
                 <div style="font-family: Arial, sans-serif; padding: 10px; text-align: center;">
                   <div style="font-size: 24px; margin-bottom: 8px;">🍽️</div>
-                  <h4 style="margin: 0 0 8px 0; color: #333;">Kucher&Conga</h4>
+                  <h4 style="margin: 0 0 8px 0; color: #333;">Кучер и Конга</h4>
                   <p style="margin: 0; color: #666; font-size: 14px;">
                     Наш ресторан<br>
                     Адрес: Промышленная улица, 20Б

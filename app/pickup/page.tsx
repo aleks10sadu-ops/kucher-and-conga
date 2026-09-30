@@ -8,12 +8,12 @@ import { SITE, SITE_URL } from '../components/forest/site';
 const PICKUP_HREF = '/menu?fulfillment=pickup#delivery';
 
 export const metadata: Metadata = {
-    title: 'Самовывоз еды в Дмитрове — Кучер & Conga',
+    title: 'Самовывоз еды в Дмитрове — Кучер и Конга',
     description:
-        'Самовывоз блюд из ресторана «Кучер & Conga» в Дмитрове. Соберите заказ на сайте и заберите его по адресу: Промышленная улица, 20Б.',
+        'Самовывоз блюд из ресторана «Кучер и Конга» в Дмитрове. Соберите заказ на сайте и заберите его по адресу: Промышленная улица, 20Б.',
     alternates: { canonical: '/pickup' },
     openGraph: {
-        title: 'Самовывоз еды в Дмитрове — Кучер & Conga',
+        title: 'Самовывоз еды в Дмитрове — Кучер и Конга',
         description: 'Закажите блюда заранее и заберите их в ресторане на Промышленной улице, 20Б.',
         url: '/pickup',
         type: 'website',

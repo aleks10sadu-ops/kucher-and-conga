@@ -3,8 +3,8 @@ import LegalLayout from '../components/forest/LegalLayout';
 import { SITE, LEGAL } from '../components/forest/site';
 
 export const metadata: Metadata = {
-    title: 'Правила пользования сайтом — Кучер & Conga',
-    description: 'Правила пользования сайтом ресторана «Кучер & Conga»: назначение сайта, статус информации о меню и ценах, порядок оформления заявок, ограничения и ответственность.',
+    title: 'Правила пользования сайтом — Кучер и Конга',
+    description: 'Правила пользования сайтом ресторана «Кучер и Конга»: назначение сайта, статус информации о меню и ценах, порядок оформления заявок, ограничения и ответственность.',
     alternates: { canonical: '/rules' },
     robots: { index: true, follow: true },
 };

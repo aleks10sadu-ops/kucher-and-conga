@@ -25,7 +25,7 @@ describe('hall detail SEO', () => {
 
         expect(metadata).toEqual(
             expect.objectContaining({
-                title: 'Рубиновый зал — банкетный зал · Кучер & Conga',
+                title: 'Рубиновый зал — банкетный зал · Кучер и Конга',
                 description: 'Отдельный зал для камерных банкетов.',
                 alternates: { canonical: '/halls/rubin' },
                 openGraph: expect.objectContaining({
@@ -46,7 +46,7 @@ describe('hall detail SEO', () => {
 
         const metadata = hallPage.createHallMetadata(post!, slug);
         expect(metadata).toEqual(expect.objectContaining({
-            title: `${title} — банкетный зал · Кучер & Conga`,
+            title: `${title} — банкетный зал · Кучер и Конга`,
             alternates: { canonical: `/halls/${slug}` },
         }));
         expect(hallPage.hallBookingHref(post!.title, slug)).toBe(

@@ -123,8 +123,8 @@ export default function RestaurantLocationMap({ height = 360 }: { height?: numbe
                 const placemark = new ym.Placemark(
                     RESTAURANT_COORDS,
                     {
-                        hintContent: 'Кучер & Conga',
-                        balloonContentHeader: 'Ресторан «Кучер & Conga»',
+                        hintContent: 'Кучер и Конга',
+                        balloonContentHeader: 'Ресторан «Кучер и Конга»',
                         balloonContentBody: 'Дмитров, Промышленная улица, 20Б',
                     },
                     { preset: 'islands#foodIcon', iconColor: '#AC4823' },
@@ -182,7 +182,7 @@ export default function RestaurantLocationMap({ height = 360 }: { height?: numbe
                 </div>
             ) : (
                 <div aria-hidden style={{ position: 'absolute', left: 14, bottom: 14, maxWidth: 'calc(100% - 28px)', borderRadius: 10, border: '1px solid rgba(255,255,255,.16)', padding: '9px 12px', background: 'rgba(18,26,21,.86)', boxShadow: '0 8px 24px rgba(0,0,0,.28)', color: '#F4F7F2', pointerEvents: 'none', backdropFilter: 'blur(8px)' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800 }}>Кучер & Conga</div>
+                    <div style={{ fontSize: 13, fontWeight: 800 }}>Кучер и Конга</div>
                     <div style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(244,247,242,.72)' }}>Промышленная улица, 20Б</div>
                 </div>
             )}

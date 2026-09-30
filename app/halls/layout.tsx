@@ -3,13 +3,13 @@ import React from 'react';
 import { SITE, SITE_URL } from '../components/forest/site';
 
 export const metadata: Metadata = {
-    title: 'Залы и банкеты — Кучер & Conga, Дмитров',
+    title: 'Залы и банкеты — Кучер и Конга, Дмитров',
     description:
-        'Залы ресторана «Кучер & Conga» в Дмитрове для банкетов: зал Conga под подвешенным лесом, веранда у деревьев, банкетное пространство. Банкетное меню «Кучер» и «Conga» от 5000 ₽ — свадьбы, юбилеи, корпоративы.',
+        'Залы ресторана «Кучер и Конга» в Дмитрове для банкетов: зал Конга под подвешенным лесом, веранда у деревьев, банкетное пространство. Банкетное меню «Кучер» и «Конга» от 5000 ₽ — свадьбы, юбилеи, корпоративы.',
     alternates: { canonical: '/halls' },
     openGraph: {
-        title: 'Залы и банкеты — Кучер & Conga',
-        description: 'Зал Conga, веранда и банкетное пространство. Банкетное меню от 5000 ₽.',
+        title: 'Залы и банкеты — Кучер и Конга',
+        description: 'Зал Конга, веранда и банкетное пространство. Банкетное меню от 5000 ₽.',
         url: '/halls',
         type: 'website',
         images: ['/konga_bron.webp'],
@@ -27,7 +27,7 @@ export default function HallsLayout({ children }: { children: React.ReactNode })
                         '@context': 'https://schema.org',
                         '@type': 'Restaurant',
                         name: SITE.name,
-                        description: 'Банкетные залы и банкетное меню в Дмитрове: зал Conga, веранда, банкетное пространство.',
+                        description: 'Банкетные залы и банкетное меню в Дмитрове: зал Конга, веранда, банкетное пространство.',
                         address: { '@type': 'PostalAddress', streetAddress: 'Промышленная улица, 20Б', addressLocality: 'Дмитров', addressCountry: 'RU' },
                         telephone: SITE.phones[0].label,
                         acceptsReservations: 'True',

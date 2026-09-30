@@ -1,0 +1,42 @@
+.corporate { --holiday-bg: #061e18; --holiday-gold: #e9c77f; --holiday-cream: #fff0ce; --holiday-card: #174638; }
+.night { --holiday-bg: #061d31; --holiday-gold: #edcf98; --holiday-cream: #fff9ee; --holiday-card: #163e59; }
+.corporate .dialogHeader, .night .dialogHeader { background: var(--holiday-bg); }
+.categories { display: flex; flex-shrink: 0; gap: 4px; padding: 8px; background: #292524; }
+.categories button { flex: 1; min-width: 0; padding: 12px 8px; border-radius: 6px; color: #e7e5e4; font-size: 13px; line-height: 1.35; }
+.categories button[aria-pressed=true] { background: #fffbeb; color: #292524; }
+.corporate .categories, .night .categories { background: var(--holiday-bg); border-block: 1px solid #e9c77f40; }
+.corporate .categories button[aria-pressed=true], .night .categories button[aria-pressed=true] { background: var(--holiday-gold); color: var(--holiday-bg); }
+.scrollArea { background: var(--holiday-bg); color: var(--holiday-cream); }
+.content { padding: 24px; background: linear-gradient(var(--holiday-bg), transparent 220px); }
+.corporate .scrollArea { background: linear-gradient(#061e18dc, #061e18 620px), url('/christmas-2027/forest.webp') center top / cover; }
+.night .scrollArea { background: linear-gradient(#061d31b8, #061d31 620px), url('/new-year-night-2027/winter-lanterns.webp') center top / cover; }
+.venues, .menus { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.venues { margin-bottom: 20px; }
+.venues button { min-height: 44px; padding: 10px 24px; border-bottom: 1px solid transparent; color: var(--holiday-cream); }
+.venues button[aria-pressed=true] { color: var(--holiday-gold); border-color: var(--holiday-gold); }
+.menus button { flex: 0 1 180px; min-height: 74px; padding: 12px 16px; border: 1px solid #e9c77f70; border-radius: 8px; color: var(--holiday-gold); background: var(--holiday-bg); }
+.menus button strong, .menus button span { display: block; }
+.menus button strong { font-family: var(--font-display), Georgia, serif; font-size: 24px; }
+.menus button span { margin-top: 4px; font-size: 12px; }
+.menus button[aria-pressed=true] { background: var(--holiday-gold); color: var(--holiday-bg); }
+.menuHeader { text-align: center; margin: 24px 0; padding-bottom: 24px; border-bottom: 1px solid #e9c77f40; }
+.menuHeader > p:first-child { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--holiday-gold); }
+.menuHeader h3 { margin: 12px 0; font-family: var(--font-display), Georgia, serif; font-size: clamp(24px, 3vw, 34px); line-height: 1.25; }
+.halls { font-size: 14px; line-height: 1.5; }
+.menuHeader > span { display: block; margin-top: 10px; font-size: 12px; color: #d0d8d5; }
+.cardHeader { background: var(--holiday-card); border-bottom: 2px solid var(--holiday-gold); gap: 8px; }
+.cardHeader > div:last-child { flex-shrink: 0; }
+.booking { text-align: center; margin: 26px 0; }
+.booking p { margin-bottom: 12px; font-size: 14px; }
+.booking a { display: inline-block; padding: 14px 22px; border-radius: 6px; background: var(--holiday-gold); color: var(--holiday-bg); font-weight: 600; }
+.night .booking a { background: #ba181e; color: #fff; border: 1px solid #ffaca0; border-radius: 99px; }
+.categories button:focus-visible, .content button:focus-visible, .content a:focus-visible { outline: 3px solid #d4a84e; outline-offset: 3px; }
+@media (max-width: 600px) {
+    .content { padding: 16px 12px; }
+    .categories button { padding: 10px 4px; font-size: 11px; }
+    .venues { gap: 6px; margin-bottom: 16px; }
+    .venues button { padding: 10px 16px; }
+    .menus { gap: 8px; }
+    .menus button { flex-basis: calc(50% - 4px); }
+    .menuHeader h3 { font-size: 25px; }
+}

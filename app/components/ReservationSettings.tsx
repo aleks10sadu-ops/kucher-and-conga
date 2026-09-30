@@ -220,7 +220,7 @@ export default function ReservationSettings({ isOpen, onClose }: ReservationSett
                                 </p>
                                 <div className="flex flex-wrap gap-4 items-end">
                                     <div className="flex-1 min-w-[150px]">
-                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 block">C:</label>
+                                        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 block">С:</label>
                                         <DateTimePicker
                                             timeOnly
                                             value={standardSchedule.start}

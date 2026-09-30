@@ -4,7 +4,7 @@
 
 `http://localhost:3000/events/novogodnyaya-noch-2027`
 
-До согласования маршрут открывается по прямой ссылке. Карточка исключена из `/events`, маршрут исключён из sitemap, метаданные — `noindex, nofollow`. Это скрытая от каталога страница, без пароля. Адрес для согласования: https://kucherandconga.ru/events/novogodnyaya-noch-2027. Публикация выполняется через существующую Git-интеграцию Vercel из main.
+Афиша открыта для публикации: карточка добавлена в `/events` и карусель главной страницы, маршрут включён в sitemap, метаданные — `index, follow`. Адрес: https://kucherandconga.ru/events/novogodnyaya-noch-2027. Публикация выполняется через существующую Git-интеграцию Vercel из main.
 
 ## Что исправлено 24 сентября 2026
 

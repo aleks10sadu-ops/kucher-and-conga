@@ -4,12 +4,12 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Image, { getImageProps } from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import GuestReviews from '../components/GuestReviews';
 import RestaurantLocationMap, { YANDEX_ROUTE_URL } from '../components/RestaurantLocationMap';
 
 // Лендинг-хаб «Перевёрнутый лес». Дизайн и моушен — по утверждённому макету и спеке.
-// Палитра снята с зала Conga: лесной зелёный, терракота кресел, латунь ламп, окись штор.
+// Палитра снята с зала Конга: лесной зелёный, терракота кресел, латунь ламп, окись штор.
 //
 // ВАЖНО: Tailwind в этом проекте не сканирует app/redesign/*, поэтому всё оформление —
 // инлайн-стили и собственные классы rf-*. Tailwind-утилиты здесь НЕ использовать.
@@ -250,8 +250,8 @@ export default function RedesignClient() {
             {/* Фикс-хедер: тёмный скрим сверху для читаемости поверх видео */}
             <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, transition: 'background .3s, backdrop-filter .3s', background: scrolled ? 'rgba(15,20,17,0.86)' : 'linear-gradient(180deg, rgba(11,16,12,0.72) 0%, rgba(11,16,12,0.28) 60%, transparent 100%)', backdropFilter: scrolled ? 'blur(10px)' : 'none' }}>
                 <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                    <Link href="/" aria-label="Кучер и Conga — на главную" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                        <img src={`${A}/kongo_logo_main.svg`} alt="Кучер и Conga" width={2823} height={768} loading="eager" {...HERO_POSTER_PRIORITY} decoding="async" style={{ height: 26, width: 'auto', display: 'block', filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }} />
+                    <Link href="/" aria-label="Кучер и Конга — на главную" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <img src={`${A}/kongo_logo_main.svg`} alt="Кучер и Конга" width={2823} height={768} loading="eager" {...HERO_POSTER_PRIORITY} decoding="async" style={{ height: 26, width: 'auto', display: 'block', filter: 'brightness(0) invert(1) drop-shadow(0 1px 10px rgba(0,0,0,0.55))' }} />
                     </Link>
                     <nav className="rf-nav" style={{ alignItems: 'center', gap: 6, fontSize: 15, color: '#FFFFFF', textShadow: '0 1px 10px rgba(0,0,0,0.5)' }}>
                         <Link href={LINKS.menu}>Меню</Link>
@@ -293,7 +293,7 @@ export default function RedesignClient() {
                     {/* Вход hero-текста — чистый CSS: играет сразу с HTML, не ждёт гидрации JS */}
                     <div className="rf-hero-pad" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start', gap: 20, maxWidth: 880 }}>
                         <div className="rf-hero-in" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                            <span className="rf-serif" style={{ fontWeight: 900, fontSize: 'clamp(19px,2vw,27px)', color: '#F8FAF6', textShadow: '0 2px 16px rgba(0,0,0,0.55)' }}>Кучер &amp; Conga</span>
+                            <span className="rf-serif" style={{ fontWeight: 900, fontSize: 'clamp(19px,2vw,27px)', color: '#F8FAF6', textShadow: '0 2px 16px rgba(0,0,0,0.55)' }}>Кучер и Конга</span>
                             <span style={{ width: 34, height: 3, background: '#C0492A' }} />
                             <span style={{ fontSize: 13, color: 'rgba(248,250,246,0.84)', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>ресторан · Дмитров</span>
                         </div>
@@ -355,7 +355,7 @@ export default function RedesignClient() {
                                 <div style={{ position: 'absolute', right: '16%', top: '26%', width: 130, height: 130, background: 'radial-gradient(closest-side,rgba(255,201,122,0.5),transparent)', filter: 'blur(14px)', animation: 'rfFlicker 5.2s ease-in-out 1.4s infinite alternate' }} />
                                 <Parallax style={{ ...bandBase, padding: '20px 26px 22px', gap: 6 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 26, color: C.onForest }}>Забронировать стол</h3>
-                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: C.onForestSoft, maxWidth: 420 }}>Зал Conga, веранда у леса или банкетный зал — выберите место под лампами.</p>
+                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: C.onForestSoft, maxWidth: 420 }}>Зал Конга, веранда у леса или банкетный зал — выберите место под лампами.</p>
                                 </Parallax>
                                 <Arrow r={24} b={22} size={22} />
                                 <Sweep w="38%" />
@@ -363,11 +363,11 @@ export default function RedesignClient() {
 
                             {/* C. Акции */}
                             <Link href={LINKS.promotions} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', gridColumn: 2, gridRow: 2, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                <CoverImage className="rf-photo" src={`${A}/konga_bron.webp`} alt="Зал Conga" sizes="(max-width: 767px) 55vw, 27vw" />
+                                <CoverImage className="rf-photo" src={`${A}/konga_bron.webp`} alt="Зал Конга" sizes="(max-width: 767px) 55vw, 27vw" />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.12),rgba(14,22,17,0.52))' }} />
                                 <Parallax style={{ ...bandBase, padding: '18px 26px 22px', gap: 6 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 23, color: C.onForest }}>Акции</h3>
-                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'rgba(244,247,242,0.85)' }}>Сезонные предложения и особые вечера в Conga.</p>
+                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: 'rgba(244,247,242,0.85)' }}>Сезонные предложения и особые вечера в Конга.</p>
                                 </Parallax>
                                 <Arrow r={24} t={22} size={20} />
                                 <Sweep w="45%" />
@@ -376,7 +376,7 @@ export default function RedesignClient() {
                             {/* D + E */}
                             <div style={{ gridColumn: 3, gridRow: 2, display: 'grid', gridTemplateRows: '58% 42%' }}>
                                 <Link href={LINKS.events} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <CoverImage className="rf-photo" src="/atmosphere_3.webp" alt="Вечер в зале Conga" sizes="(max-width: 767px) 45vw, 23vw" style={{ objectPosition: 'center 54%' }} />
+                                    <CoverImage className="rf-photo" src="/atmosphere_3.webp" alt="Вечер в зале Конга" sizes="(max-width: 767px) 45vw, 23vw" style={{ objectPosition: 'center 54%' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.24),rgba(14,22,17,0.6))' }} />
                                     <span style={{ position: 'absolute', left: 26, top: 20, width: 5, height: 5, borderRadius: '50%', background: '#FFD9A0', boxShadow: '0 0 9px 2px rgba(255,217,160,0.75)', animation: 'rfTwinkle 3s ease-in-out 0.6s infinite alternate' }} />
                                     <Parallax style={{ ...bandBase, padding: '16px 26px 18px', gap: 5 }}>
@@ -417,14 +417,14 @@ export default function RedesignClient() {
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.12),rgba(14,22,17,0.42))' }} />
                                 <div style={{ ...bandBase, padding: '14px 18px 16px', gap: 4 }}>
                                     <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 19, color: C.onForest }}>Забронировать стол</h3>
-                                    <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45, color: C.onForestSoft }}>Зал Conga, веранда или банкетный зал.</p>
+                                    <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45, color: C.onForestSoft }}>Зал Конга, веранда или банкетный зал.</p>
                                 </div>
                                 <Arrow r={16} b={14} size={17} />
                             </Link>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '55% 45%' }}>
                                 <Link href={LINKS.promotions} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <CoverImage src={`${A}/konga_bron.webp`} alt="Зал Conga" sizes="55vw" />
+                                    <CoverImage src={`${A}/konga_bron.webp`} alt="Зал Конга" sizes="55vw" />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.14),rgba(14,22,17,0.55))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>Акции</h3>
@@ -433,7 +433,7 @@ export default function RedesignClient() {
                                     <Arrow r={14} t={12} size={15} />
                                 </Link>
                                 <Link href={LINKS.events} className="rf-bb" style={{ position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)' }}>
-                                    <CoverImage src="/atmosphere_3.webp" alt="Вечер в зале Conga" sizes="45vw" style={{ objectPosition: 'center 54%' }} />
+                                    <CoverImage src="/atmosphere_3.webp" alt="Вечер в зале Конга" sizes="45vw" style={{ objectPosition: 'center 54%' }} />
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(14,22,17,0.24),rgba(14,22,17,0.6))' }} />
                                     <div style={{ ...bandBase, padding: '12px 16px 14px', gap: 4 }}>
                                         <h3 className="rf-serif" style={{ margin: 0, fontWeight: 700, fontSize: 17, color: C.onForest }}>События</h3>
@@ -470,7 +470,7 @@ export default function RedesignClient() {
                     {/* АТМОСФЕРА — галерея */}
                     <section id="atmosphere" style={{ position: 'relative', zIndex: 2, paddingTop: 72, paddingBottom: 34 }}>
                         <div className="rf-wrap" style={{ maxWidth: 1280, margin: '0 auto' }}>
-                            <SectionHead kicker="Зал Conga" title="Атмосфера" />
+                            <SectionHead kicker="Зал Конга" title="Атмосфера" />
                             <div className="rf-gallery" style={{ marginTop: 36, display: 'grid', gap: 12 }}>
                                 {GALLERY.map((src, i) => (
                                     <button key={src} type="button" onClick={() => setLightbox(i)} className={`rf-bb${i >= 6 ? ' rf-g-desk' : ''}`} style={{ position: 'relative', overflow: 'hidden', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', aspectRatio: '4 / 3', padding: 0, background: 'none' }}>
@@ -520,9 +520,9 @@ export default function RedesignClient() {
                             <a href="tel:+79162977887" style={{ fontSize: 16, color: '#EFE9E0' }}>+7 (916) 297-78-87</a>
                             <a href="tel:+79163177887" style={{ fontSize: 16, color: '#EFE9E0' }}>+7 (916) 317-78-87</a>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 12 }}>
-                                <a href="https://t.me/kucherandconga" target="_blank" rel="noopener noreferrer" aria-label="Мы в Telegram" className="rf-social" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 999, border: '1px solid rgba(239,233,224,0.15)', background: 'rgba(239,233,224,0.06)', padding: '8px 16px 8px 10px', fontSize: 14, color: '#EFE9E0' }}>
+                                <a href="https://t.me/kucherandconga" target="_blank" rel="noopener noreferrer" aria-label="Мы в Телеграме" className="rf-social" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 999, border: '1px solid rgba(239,233,224,0.15)', background: 'rgba(239,233,224,0.06)', padding: '8px 16px 8px 10px', fontSize: 14, color: '#EFE9E0' }}>
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden><path d="M9.78 15.6 9.6 20c.53 0 .76-.23 1.03-.5l2.48-2.37 5.14 3.76c.94.52 1.61.25 1.86-.87l3.38-15.83c.3-1.4-.5-1.94-1.42-1.6L1.14 9.9c-1.37.53-1.35 1.29-.23 1.63l5.1 1.6L17.8 6.32c.56-.37 1.06-.16.65.2Z" /></svg>
-                                    Мы в Telegram
+                                    Мы в Телеграме
                                 </a>
                                 <a href="https://vk.com/restoran_kucher" target="_blank" rel="noopener noreferrer" aria-label="Мы ВКонтакте" className="rf-social" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, borderRadius: 999, border: '1px solid rgba(239,233,224,0.15)', background: 'rgba(239,233,224,0.06)', padding: '8px 16px 8px 10px', fontSize: 14, color: '#EFE9E0' }}>
                                     <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden><path d="M13.16 17.36c-5.46 0-8.98-3.84-9.12-10.2h2.79c.1 4.68 2.26 6.68 3.9 7.09V7.16h2.66v3.94c1.6-.17 3.28-2.03 3.85-3.94h2.6c-.43 2.35-2.23 4.2-3.5 4.97 1.27.62 3.32 2.24 4.12 5.23h-2.86c-.62-1.98-2.15-3.5-4.21-3.71v3.71h-.32Z" /></svg>
@@ -542,7 +542,7 @@ export default function RedesignClient() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', fontSize: 13 }}>
                             <a href="/privacy" style={{ color: 'rgba(239,233,224,0.72)' }}>Политика конфиденциальности</a>
                             <a href="/rules" style={{ color: 'rgba(239,233,224,0.72)' }}>Правила пользования</a>
-                            <a href="https://t.me/Kvazar27" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(239,233,224,0.72)' }}>Сайт разработан — @Kvazar27</a>
+                            <a href="https://t.me/Kvazar27" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(239,233,224,0.72)' }}>Разработка сайта</a>
                         </div>
                     </div>
                 </footer>
@@ -556,17 +556,58 @@ export default function RedesignClient() {
 
 // Сезонный анонс с переходом к датам и условиям бронирования.
 function ChristmasBookingNotice() {
+    const slides = [
+        {
+            slug: 'novogodnie-korporativy-2027', title: 'Открыты брони на новогодние корпоративы',
+            label: 'Декабрь 2026 · Встречаем 2027', name: 'Новогодние корпоративы',
+            text: 'Собирайте коллег на праздник в Кучер и Конга: ведущие, живая музыка, конкурсы, призы и дискотека. Даты по залам и условия бронирования — на афише.',
+            image: '/christmas-2027/hosts-cover.webp', alt: 'Ираклий и Елена «Золотая стрекоза» в новогодних украшениях', background: '#061e18',
+        },
+        {
+            slug: 'novogodnyaya-noch-2027', title: 'Новогодняя ночь в Кучер и Конга',
+            label: '31 декабря · Программа до 04:00', name: 'Новогодняя ночь',
+            text: 'Встречаем 2027 год вместе: праздничный ужин, живая музыка, ведущий и танцы до утра. Зал Конга с программой или отдельный банкетный зал для своей компании.',
+            image: '/new-year-night-2027/conga-stage-guests-v5.webp', alt: 'Праздничная сцена, новогодние ёлки и гости в зале Конга', background: '#061d31',
+        },
+    ];
+    const [index, setIndex] = useState(0);
+    const [hovered, setHovered] = useState(false);
+    const [focused, setFocused] = useState(false);
+    const reducedMotion = useReducedMotion();
+    const touchStart = useRef<number | null>(null);
+    useEffect(() => {
+        if (reducedMotion || hovered || focused) return;
+        const timer = window.setTimeout(() => setIndex(current => (current + 1) % 2), 15000);
+        return () => window.clearTimeout(timer);
+    }, [index, reducedMotion, hovered, focused]);
+    const slide = slides[index];
+    const go = (direction: number) => setIndex(current => (current + direction + slides.length) % slides.length);
+    const controlStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 999, border: '1px solid #e9c77f70', background: 'transparent', color: '#e9c77f', cursor: 'pointer' };
+
     return (
-        <section aria-labelledby="christmas-booking-title" style={{ position: 'relative', zIndex: 3, background: '#061e18', borderTop: '1px solid #e9c77f55', borderBottom: '1px solid #e9c77f33' }}>
+        <section aria-label="Афиши событий" aria-roledescription="карусель"
+            onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+            onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false); }}
+            onKeyDown={event => { if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); } if (event.key === 'ArrowRight') { event.preventDefault(); go(1); } }}
+            onTouchStart={event => { touchStart.current = event.touches[0].clientX; }}
+            onTouchEnd={event => { const start = touchStart.current; touchStart.current = null; if (start !== null && Math.abs(event.changedTouches[0].clientX - start) > 50) go(event.changedTouches[0].clientX < start ? 1 : -1); }}
+            style={{ position: 'relative', zIndex: 3, background: slide.background, borderTop: '1px solid #e9c77f55', borderBottom: '1px solid #e9c77f33' }}>
             <div className="rf-wrap" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', alignItems: 'center', gap: 'clamp(24px, 4vw, 48px)', paddingTop: 32, paddingBottom: 32 }}>
-                <Link href="/events/novogodnie-korporativy-2027" aria-label="Новогодние корпоративы — посмотреть афишу" style={{ display: 'block', borderRadius: 16, overflow: 'hidden', border: '1px solid #e9c77f44' }}>
-                    <Image src="/christmas-2027/hosts-cover.webp" alt="Ираклий и Елена «Золотая стрекоза» в новогодних украшениях" width={1200} height={630} sizes="(max-width: 767px) calc(100vw - 40px), 50vw" style={{ display: 'block', width: '100%', height: 'auto' }} />
+                <Link href={`/events/${slide.slug}`} aria-label={`${slide.name} — посмотреть афишу`} style={{ display: 'block', position: 'relative', aspectRatio: '1200 / 630', borderRadius: 16, overflow: 'hidden', border: '1px solid #e9c77f44' }}>
+                    {slides.map((item, imageIndex) => <Image key={item.slug} src={item.image} alt={imageIndex === index ? item.alt : ''} aria-hidden={imageIndex !== index} fill loading="eager" sizes="(max-width: 767px) calc(100vw - 40px), 50vw" style={{ objectFit: 'cover', visibility: imageIndex === index ? 'visible' : 'hidden' }} />)}
                 </Link>
                 <div>
-                    <p style={{ margin: '0 0 10px', color: '#e9c77f', fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase' }}>Декабрь 2026 · Встречаем 2027</p>
-                    <h2 id="christmas-booking-title" className="rf-serif" style={{ margin: 0, color: '#fff0ce', fontSize: 'clamp(28px, 3vw, 40px)', lineHeight: 1.15 }}>Открыты брони на новогодние корпоративы</h2>
-                    <p style={{ margin: '16px 0 22px', color: '#e0e4d8', fontSize: 16, lineHeight: 1.65 }}>Собирайте коллег на праздник в Кучер &amp; CONGA: ведущие, живая музыка, конкурсы, призы и дискотека. Даты по залам и условия бронирования — на афише.</p>
-                    <Link href="/events/novogodnie-korporativy-2027" className="rf-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 14, minHeight: 48, padding: '12px 28px', borderRadius: 8, background: '#e9c77f', color: '#13271e', fontSize: 16, fontWeight: 600 }}>Подробнее <span aria-hidden>→</span></Link>
+                    <div aria-live={reducedMotion || hovered || focused ? 'polite' : 'off'} aria-atomic="true">
+                        <p style={{ margin: '0 0 10px', color: '#e9c77f', fontSize: 13, letterSpacing: '.12em', textTransform: 'uppercase' }}>{slide.label}</p>
+                        <h2 className="rf-serif" style={{ margin: 0, color: '#fff0ce', fontSize: 'clamp(28px, 3vw, 40px)', lineHeight: 1.15 }}>{slide.title}</h2>
+                        <p style={{ margin: '16px 0 22px', color: '#e0e4d8', fontSize: 16, lineHeight: 1.65 }}>{slide.text}</p>
+                    </div>
+                    <Link href={`/events/${slide.slug}`} className="rf-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 14, minHeight: 48, padding: '12px 28px', borderRadius: 8, background: '#e9c77f', color: '#13271e', fontSize: 16, fontWeight: 600 }}>Открыть афишу <span aria-hidden>→</span></Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20 }}>
+                        <button type="button" aria-label="Предыдущая афиша" onClick={() => go(-1)} style={controlStyle}><ChevronLeft size={20} aria-hidden /></button>
+                        <span style={{ color: '#e9c77f', fontSize: 13 }}>{index + 1} / {slides.length}</span>
+                        <button type="button" aria-label="Следующая афиша" onClick={() => go(1)} style={controlStyle}><ChevronRight size={20} aria-hidden /></button>
+                    </div>
                 </div>
             </div>
         </section>

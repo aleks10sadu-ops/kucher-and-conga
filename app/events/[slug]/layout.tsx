@@ -8,10 +8,10 @@ const getPost = cache((slug: string) => fetchPostBySlug('events', slug));
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     const post = await getPost(slug);
-    if (!post) return { title: 'Событие — Кучер & Conga' };
-    const desc = plainDescription(post, 160) || `Событие «${post.title}» в ресторане «Кучер & Conga», Дмитров.`;
+    if (!post) return { title: 'Событие — Кучер и Конга' };
+    const desc = plainDescription(post, 160) || `Событие «${post.title}» в ресторане «Кучер и Конга», Дмитров.`;
     return {
-        title: `${post.title} — событие · Кучер & Conga`,
+        title: `${post.title} — событие · Кучер и Конга`,
         description: desc,
         alternates: { canonical: `/events/${slug}` },
         openGraph: {

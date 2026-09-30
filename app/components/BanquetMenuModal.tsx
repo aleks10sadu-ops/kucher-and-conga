@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BANQUET_CATEGORIES, HOLIDAY_BANQUETS, type BanquetCategory, type BanquetVenue } from '@/lib/menu/holidayBanquets';
+import { SITE } from './forest/site';
+import styles from './HolidayBanquet.module.css';
 import {
     getBanquetPackage,
     isBanquetSelectionComplete,
@@ -21,6 +24,9 @@ type BanquetMenuModalProps = {
     onSelectPackage?: (id: BanquetPackageId, saladIds: BanquetSaladId[]) => void;
     hallFilter?: 'conga' | 'all' | null;
     confirmLabel?: string;
+    includeHolidayMenus?: boolean;
+    initialCategory?: BanquetCategory;
+    initialVenue?: BanquetVenue;
 };
 
 type SaladCtl = { selected: BanquetSaladId[]; onToggle: (id: BanquetSaladId) => void };
@@ -34,10 +40,18 @@ export default function BanquetMenuModal({
     onSelectPackage,
     hallFilter,
     confirmLabel = 'Выбрать это банкетное меню',
+    includeHolidayMenus = !selectable,
+    initialCategory = 'regular',
+    initialVenue = 'conga',
 }: BanquetMenuModalProps) {
     const [activeTab, setActiveTab] = useState<'conga' | 'kucher'>('conga');
     const [activeCongaMenu, setActiveCongaMenu] = useState<'7500' | '6000'>('7500');
     const [saladSel, setSaladSel] = useState<Record<string, BanquetSaladId[]>>({});
+    const [category, setCategory] = useState<BanquetCategory>(initialCategory);
+
+    useEffect(() => {
+        if (isOpen) setCategory(includeHolidayMenus ? initialCategory : 'regular');
+    }, [isOpen, initialCategory, includeHolidayMenus]);
 
     useEffect(() => {
         if (isOpen) document.body.style.overflow = 'hidden';
@@ -93,23 +107,43 @@ export default function BanquetMenuModal({
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-amber-50 shadow-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="banquet-dialog-title"
+                onKeyDown={(event) => {
+                    if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
+                    if (event.key !== 'Tab') return;
+                    const controls = event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]');
+                    const first = controls[0];
+                    const last = controls[controls.length - 1];
+                    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+                }}
+                className={`relative flex max-h-[95dvh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-amber-50 shadow-2xl ${category !== 'regular' ? styles[category] : ''}`}
             >
-                <div className="flex shrink-0 items-center justify-between bg-stone-800 p-4 md:p-5">
-                    <h2 className="text-lg font-bold uppercase tracking-[0.3em] text-amber-100 md:text-xl">Банкетное меню</h2>
-                    <button onClick={onClose} className="rounded-full bg-stone-700 p-2 text-stone-300 transition hover:bg-stone-600 hover:text-white">
+                <div className={`${styles.dialogHeader} flex shrink-0 items-center justify-between bg-stone-800 p-4 md:p-5`}>
+                    <h2 id="banquet-dialog-title" className="text-base font-bold uppercase tracking-[0.15em] text-amber-100 md:text-xl">Банкетные меню</h2>
+                    <button autoFocus onClick={onClose} aria-label="Закрыть банкетные меню" className="rounded-full bg-stone-700 p-2 text-stone-300 transition hover:bg-stone-600 hover:text-white">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                {showTabs && (
+                {includeHolidayMenus && (
+                    <div className={styles.categories} aria-label="Категории банкетных меню">
+                        {BANQUET_CATEGORIES.map((tab) => (
+                            <button key={tab.id} type="button" aria-pressed={category === tab.id} onClick={() => setCategory(tab.id)}>{tab.name}</button>
+                        ))}
+                    </div>
+                )}
+
+                {category === 'regular' && showTabs && (
                     <div className="flex shrink-0 bg-stone-700">
                         {showConga && (
                             <button
                                 onClick={() => setActiveTab('conga')}
                                 className={`flex-1 py-3 text-center text-sm font-bold uppercase tracking-wider transition-all md:py-4 md:text-base ${activeTab === 'conga' ? 'bg-amber-50 text-stone-800' : 'text-stone-300 hover:bg-stone-600 hover:text-white'}`}
                             >
-                                Зал Conga
+                                Зал Конга
                             </button>
                         )}
                         {showKucher && (
@@ -123,7 +157,8 @@ export default function BanquetMenuModal({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto bg-amber-50">
+                <div className={`min-h-0 flex-1 overflow-y-auto ${category === 'regular' ? 'bg-amber-50' : styles.scrollArea}`}>
+                    {category !== 'regular' ? <HolidayBanquetMenu key={`${category}-${initialVenue}`} category={category} initialVenue={initialVenue} /> : (
                     <AnimatePresence mode="wait">
                         {activeTab === 'conga' && showConga ? (
                             <motion.div key="conga" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="p-4 md:p-6">
@@ -146,7 +181,7 @@ export default function BanquetMenuModal({
                                     <AnimatePresence mode="wait">
                                         <motion.div key={activeCongaMenu} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                                             <div className="mb-6 border-b-2 border-stone-300 pb-4 text-center">
-                                                <h3 className="mb-1 font-serif text-2xl font-bold text-stone-800 md:text-3xl">CONGA</h3>
+                                                <h3 className="mb-1 font-serif text-2xl font-bold text-stone-800 md:text-3xl">Конга</h3>
                                                 <p className="mb-3 text-xs tracking-widest text-stone-500 md:text-sm">БАНКЕТНОЕ МЕНЮ</p>
                                                 <div className="inline-block rounded-lg bg-emerald-700 px-6 py-2">
                                                     <span className="text-xl font-bold text-white md:text-2xl">{activeCongaMenu} ₽</span>
@@ -195,8 +230,54 @@ export default function BanquetMenuModal({
                             </motion.div>
                         ) : null}
                     </AnimatePresence>
+                    )}
                 </div>
             </motion.div>
+        </div>
+    );
+}
+
+function HolidayBanquetMenu({ category, initialVenue }: { category: 'corporate' | 'night'; initialVenue: BanquetVenue }) {
+    const [venue, setVenue] = useState(initialVenue);
+    const [price, setPrice] = useState<number | null>(null);
+    const menus = HOLIDAY_BANQUETS.filter((menu) => menu.category === category && menu.venue === venue);
+    const menu = menus.find((item) => item.price === price) ?? menus[0];
+    const formatPrice = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
+    const program = menu.program ? 'С программой' : 'Без программы';
+
+    return (
+        <div className={styles.content}>
+            <div className={styles.venues} aria-label="Зал для праздничного меню">
+                {(['kucher', 'conga'] as const).map((hall) => <button key={hall} type="button" aria-pressed={venue === hall} onClick={() => { setVenue(hall); setPrice(null); }}>
+                    {hall === 'kucher' ? 'Залы Кучера' : 'Зал Конга'}
+                </button>)}
+            </div>
+            <div className={styles.menus} aria-label="Стоимость и программа">
+                {menus.map((item) => <button key={item.price} type="button" aria-pressed={menu.price === item.price} onClick={() => setPrice(item.price)}>
+                    <strong>{formatPrice(item.price)}</strong><span>{item.program ? 'С программой' : 'Без программы'}</span>
+                </button>)}
+            </div>
+            <header className={styles.menuHeader}>
+                <p>{category === 'corporate' ? 'Декабрь 2026 · Встречаем 2027' : '31 декабря 2026 — 1 января 2027'}</p>
+                <h3>{venue === 'kucher' ? 'Кучер' : 'Конга'} · {formatPrice(menu.price)} · {program}</h3>
+                <p className={styles.halls}>{menu.halls}</p>
+                <span>Стоимость на одного гостя · вес блюд на человека</span>
+            </header>
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                {[[0], [2, 1], [3, 4, 5]].map((column, index) => <div key={index} className="space-y-4">
+                    {column.map((sectionIndex) => {
+                        const section = menu.content.sections[sectionIndex];
+                        return <MenuCard key={section.title} title={section.title} subtitle={section.note} weight={`${section.grams} гр.`} color="holiday">
+                            {section.items.map((item) => <Item key={item.name} name={item.name} desc={item.description} w={String(item.grams)} />)}
+                        </MenuCard>;
+                    })}
+                </div>)}
+            </div>
+            <div className={styles.booking}>
+                <p>Бронирование и выбор блюд — с администратором</p>
+                <a href={`tel:${SITE.phones[0].tel}`}>Забронировать · {SITE.phones[0].label}</a>
+            </div>
+            <ConditionsCard />
         </div>
     );
 }
@@ -227,7 +308,7 @@ function SelectPackageButton({ selected, complete, max, accent, confirmLabel, on
     );
 }
 
-// ===== CONGA 7500 =====
+// ===== Конга 7500 =====
 function CongaMenu7500({ saladCtl }: { saladCtl?: SaladCtl }) {
     return (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
@@ -266,7 +347,7 @@ function CongaMenu7500({ saladCtl }: { saladCtl?: SaladCtl }) {
     );
 }
 
-// ===== CONGA 6000 =====
+// ===== Конга 6000 =====
 function CongaMenu6000({ saladCtl }: { saladCtl?: SaladCtl }) {
     return (
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
@@ -412,10 +493,10 @@ function MenuCard({ title, subtitle, weight, color, children }: {
     title: string;
     subtitle?: string;
     weight: string;
-    color: 'emerald' | 'amber';
+    color: 'emerald' | 'amber' | 'holiday';
     children: React.ReactNode;
 }) {
-    const headerBg = color === 'emerald' ? 'bg-emerald-700' : 'bg-amber-600';
+    const headerBg = color === 'holiday' ? styles.cardHeader : color === 'emerald' ? 'bg-emerald-700' : 'bg-amber-600';
     return (
         <div className="overflow-hidden rounded-lg bg-white shadow-md">
             <div className={`${headerBg} flex items-center justify-between px-4 py-2`}>
@@ -465,7 +546,7 @@ function ConditionsCard({ color = 'emerald' }: { color?: 'emerald' | 'amber' }) 
                 ))}
             </ul>
             <div className="mt-4 border-t border-stone-200 pt-3 text-center text-[10px] font-semibold leading-relaxed text-red-600">
-                Обращаем внимание: конкретизация стола в зале «CONGA» при приёме банкета НЕ ПРОИЗВОДИТСЯ. Точная схема расстановки столов определяется в день Мероприятия Администрацией Ресторана исходя из оптимальной рассадки при наполняемости зала.
+                Обращаем внимание: конкретизация стола в зале «Конга» при приёме банкета НЕ ПРОИЗВОДИТСЯ. Точная схема расстановки столов определяется в день Мероприятия Администрацией Ресторана исходя из оптимальной рассадки при наполняемости зала.
             </div>
         </div>
     );

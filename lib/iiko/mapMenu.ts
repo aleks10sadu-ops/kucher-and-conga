@@ -1,5 +1,6 @@
 import type { IikoExternalMenu, IikoItem, IikoItemSize, IikoNutrition } from './types';
 import type { MenuCategory, MenuItem, Nutrition, ModifierGroup, ModifierOption } from '../../types/index';
+import { russianPublicText } from '../content/russianPublicText';
 
 function pickSize(item: IikoItem): IikoItemSize | undefined {
   const sizes = item.itemSizes || [];
@@ -29,7 +30,7 @@ function mapModifierGroups(size: IikoItemSize | undefined): ModifierGroup[] {
   for (const g of groups) {
     const options: ModifierOption[] = (g.items || []).map((mi) => ({
       id: mi.itemId || mi.sku || mi.name,
-      name: mi.name,
+      name: russianPublicText(mi.name),
       price: (mi.prices || []).map((p) => p.price ?? 0).find((p) => p > 0) ?? 0,
     }));
     if (options.length === 0) continue;
@@ -51,7 +52,7 @@ function mapModifierGroups(size: IikoItemSize | undefined): ModifierGroup[] {
       if (rest.length > 0) {
         result.push({
           id: g.itemGroupId || g.sku || g.name,
-          name: g.name,
+          name: russianPublicText(g.name),
           min: g.restrictions?.minQuantity ?? 0,
           max: g.restrictions?.maxQuantity ?? 1,
           options: rest,
@@ -62,7 +63,7 @@ function mapModifierGroups(size: IikoItemSize | undefined): ModifierGroup[] {
 
     result.push({
       id: g.itemGroupId || g.sku || g.name,
-      name: g.name,
+      name: russianPublicText(g.name),
       min: g.restrictions?.minQuantity ?? 0,
       max: g.restrictions?.maxQuantity ?? 1,
       options,
@@ -81,8 +82,8 @@ function mapCategory(cat: { id: string; name: string; items?: IikoItem[] }): Men
       const item: MenuItem = {
         id: it.itemId,
         sku: it.sku ?? null,
-        name: it.name,
-        description: it.description?.trim() || '',
+        name: russianPublicText(it.name),
+        description: russianPublicText(it.description?.trim() || ''),
         price: priceOf(size),
         weight: size?.portionWeightGrams ?? null,
         image: size?.buttonImageUrl ?? null,
@@ -93,7 +94,7 @@ function mapCategory(cat: { id: string; name: string; items?: IikoItem[] }): Men
       return item;
     })
     .filter((it) => (it.price ?? 0) > 0);
-  return { id: cat.id, name: cat.name, items };
+  return { id: cat.id, name: russianPublicText(cat.name), items };
 }
 
 const BUSINESS_LUNCH_NAME = 'БИЗНЕС ЛАНЧ';

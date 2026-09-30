@@ -359,7 +359,7 @@ export default function BookingForm({
                     )}
                     {notice === 'incompatible-menu' && (
                         <p className="mt-3 rounded-lg border border-brass/25 bg-brass/10 px-3 py-2 text-xs text-cream/80">
-                            Для зала Conga доступны банкетные меню 6000 и 7500 ₽. Выберите подходящий вариант.
+                            Для зала Конга доступны банкетные меню 6000 и 7500 ₽. Выберите подходящий вариант.
                         </p>
                     )}
                 </div>

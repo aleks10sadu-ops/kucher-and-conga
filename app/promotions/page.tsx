@@ -10,12 +10,12 @@ import { buildBookingHref } from '@/lib/booking/bookingContext';
 export const promotionBookingHref = (ref = 'promotions'): string => buildBookingHref({ source: 'promotion', ref });
 
 export const metadata: Metadata = {
-    title: 'Акции и особые вечера — Кучер & Conga, Дмитров',
+    title: 'Акции и особые вечера — Кучер и Конга, Дмитров',
     description:
-        'Счастливые часы со скидкой 20% по будням, скидка 10% в день рождения и другие предложения ресторана «Кучер & Conga» в Дмитрове.',
+        'Счастливые часы со скидкой 20% по будням, скидка 10% в день рождения и другие предложения ресторана «Кучер и Конга» в Дмитрове.',
     alternates: { canonical: '/promotions' },
     openGraph: {
-        title: 'Акции и особые вечера — Кучер & Conga',
+        title: 'Акции и особые вечера — Кучер и Конга',
         description: 'Счастливые часы, скидка в день рождения и постоянные предложения ресторана в Дмитрове.',
         url: '/promotions',
         type: 'website',
@@ -35,7 +35,7 @@ const OFFERS = [
     {
         tag: 'Для компаний',
         title: 'Банкетное меню',
-        text: 'Банкетное меню «Кучер» и «Conga» на большой стол — от 5000 ₽. Проведём свадьбу, юбилей или корпоратив под подвешенным лесом.',
+        text: 'Банкетное меню «Кучер» и «Конга» на большой стол — от 5000 ₽. Проведём свадьбу, юбилей или корпоратив под подвешенным лесом.',
         href: '/halls',
         cta: 'Залы и банкетное меню',
     },
@@ -109,7 +109,7 @@ export default function PromotionsPage() {
                             <article id="birthday" className="flex scroll-mt-24 flex-col rounded-2xl border border-white/10 bg-white/[0.05] p-7 lg:col-span-2 md:p-9">
                                 <p className="text-[12px] uppercase tracking-[0.16em] text-brass">День в день</p>
                                 <h3 className="mt-2 font-display text-[clamp(1.8rem,3vw,2.5rem)] font-black leading-tight text-cream">Скидка 10% в день рождения</h3>
-                                <p className="mt-4 leading-relaxed text-cream/80">При заказе в ресторане вас ждут скидка и поздравление от команды «Кучер &amp; Conga».</p>
+                                <p className="mt-4 leading-relaxed text-cream/80">При заказе в ресторане вас ждут скидка и поздравление от команды «Кучер и Конга».</p>
                                 <p className="mt-4 text-sm leading-relaxed text-cream/60">Предложение действует только в дату рождения для столиков до 8 взрослых включительно. Потребуется подтверждающий документ непосредственно в ресторане. На банкетные меню скидки не распространяются. С другими скидками не суммируется — применяется наибольшая.</p>
                                 <Link href={promotionBookingHref('birthday')} className="mt-7 inline-flex w-fit rounded-lg bg-terracotta px-6 py-3 font-semibold text-[#FBF3EA] transition-colors hover:bg-terracotta-dark lg:mt-auto">
                                     Забронировать стол
@@ -143,7 +143,7 @@ export default function PromotionsPage() {
                             <div>
                                 <h2 className="font-display text-[24px] font-bold text-cream">Планируете вечер или праздник?</h2>
                                 <p className="mt-2 max-w-[52ch] text-[15px] leading-relaxed text-cream/80">
-                                    Забронируйте стол в зале Conga или на веранде — под лампами-грибами и подвешенным лесом.
+                                    Забронируйте стол в зале Конга или на веранде — под лампами-грибами и подвешенным лесом.
                                 </p>
                             </div>
                             <Link
@@ -164,7 +164,7 @@ export default function PromotionsPage() {
                     __html: JSON.stringify({
                         '@context': 'https://schema.org',
                         '@type': 'WebPage',
-                        name: 'Акции и особые вечера — Кучер & Conga',
+                        name: 'Акции и особые вечера — Кучер и Конга',
                         description:
                             'Счастливые часы со скидкой 20% по будням, скидка 10% в день рождения и постоянные предложения ресторана.',
                         url: `${SITE_URL}/promotions`,

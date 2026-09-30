@@ -42,7 +42,7 @@ export default function NewDishesCarousel() {
                 <Image
                     key={src}
                     src={src}
-                    alt={`Новые блюда Kucher&Conga — слайд ${i + 1}`}
+                    alt={`Новые блюда Кучер и Конга — слайд ${i + 1}`}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 450px"
                     className={`object-cover transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0'}`}

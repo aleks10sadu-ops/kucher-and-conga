@@ -101,12 +101,12 @@ export default function AccountPage() {
                 <div className="w-full max-w-md rounded-2xl bg-white/5 border border-white/10 p-6 shadow-xl">
                     <h1 className="text-2xl font-bold mb-4 text-center">Личный кабинет</h1>
                     <p className="text-sm text-neutral-400 mb-6 text-center">
-                        Войдите по email и паролю. Для админов будут доступны дополнительные
+                        Войдите по электронной почте и паролю. Для админов будут доступны дополнительные
                         разделы.
                     </p>
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div>
-                            <label className="block text-sm mb-1">Email</label>
+                            <label className="block text-sm mb-1">Электронная почта</label>
                             <input
                                 type="email"
                                 required

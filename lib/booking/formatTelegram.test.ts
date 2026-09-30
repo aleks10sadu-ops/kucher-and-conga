@@ -62,7 +62,7 @@ describe('booking copy block', () => {
       ...booking, bookingType: 'banquet', banquetMenuName: menu.name, banquetSaladNames: salads,
     });
     expect(copyBlock(message)).toBe(
-      `Гость: Иванова Анна; Тел: +79991112233; ВЗР 4 ДЕТ 2 На 17:00 Комм: —; Тип заказа: БМ: ${menu.venue === 'conga' ? 'Conga' : 'Кучер'} ${menu.pricePerPerson} ₽/чел; Салаты: ${salads.join(', ')}`,
+      `Гость: Иванова Анна; Тел: +79991112233; ВЗР 4 ДЕТ 2 На 17:00 Комм: —; Тип заказа: БМ: ${menu.venue === 'conga' ? 'Конга' : 'Кучер'} ${menu.pricePerPerson} ₽/чел; Салаты: ${salads.join(', ')}`,
     );
     expect(message).toContain(`Банкетное меню: ${menu.name}`);
   });

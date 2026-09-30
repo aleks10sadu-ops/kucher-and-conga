@@ -3,12 +3,12 @@ import React from 'react';
 import { SITE, SITE_URL } from '../components/forest/site';
 
 export const metadata: Metadata = {
-    title: 'Основное меню, доставка и самовывоз — Кучер & Conga, Дмитров',
+    title: 'Основное меню, доставка и самовывоз — Кучер и Конга, Дмитров',
     description:
-        'Основное бумажное меню ресторана «Кучер & Conga», доставка и самовывоз в Дмитрове: актуальные блюда, цены, бар и винная карта.',
+        'Основное бумажное меню ресторана «Кучер и Конга», доставка и самовывоз в Дмитрове: актуальные блюда, цены, бар и винная карта.',
     alternates: { canonical: '/menu' },
     openGraph: {
-        title: 'Основное меню, доставка и самовывоз — Кучер & Conga',
+        title: 'Основное меню, доставка и самовывоз — Кучер и Конга',
         description: 'Бумажное меню ресторана и отдельный раздел заказа доставки или самовывоза в Дмитрове.',
         url: '/menu',
         type: 'website',
@@ -26,7 +26,7 @@ export default function MenuLayout({ children }: { children: React.ReactNode }) 
                     __html: JSON.stringify({
                         '@context': 'https://schema.org',
                         '@type': 'Menu',
-                        name: 'Меню ресторана Кучер & Conga',
+                        name: 'Меню ресторана Кучер и Конга',
                         url: `${SITE_URL}/menu`,
                         inLanguage: 'ru',
                         provider: {

@@ -2,6 +2,7 @@ import { getToken } from './auth';
 import { iikoPost, IikoError } from './client';
 import { getIikoConfig } from './config';
 import type { MenuCategory } from '@/types/index';
+import { russianPublicText } from '../content/russianPublicText';
 import { getServerProductNames, hasDirectNamesSource } from './serverNames';
 
 let cached: { names: Map<string, string>; expires: number } | undefined;
@@ -43,11 +44,11 @@ export async function getBusinessLunchNames(): Promise<Map<string, string>> {
 export function applyBusinessLunchNames(categories: MenuCategory[], names: Map<string, string>): MenuCategory[] {
   return categories.map((category) => ({ ...category, items: category.items.map((item) => ({
     ...item,
-    name: names.get(String(item.id)) ?? item.name,
+    name: russianPublicText(names.get(String(item.id)) ?? item.name),
     modifierGroups: item.modifierGroups?.map((group) => ({ ...group,
       // These two labels describe website choices, not product names.
       options: group.name === 'Хлеб' ? group.options : group.options.map((option) => ({
-        ...option, name: names.get(String(option.id)) ?? option.name,
+        ...option, name: russianPublicText(names.get(String(option.id)) ?? option.name),
       })),
     })),
   })) }));

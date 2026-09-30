@@ -40,13 +40,13 @@ export function hallBookingHref(title: string, slug: string): string {
 }
 
 export function createHallMetadata(post: PublicHallPost, slug: string): Metadata {
-    const description = post.excerpt || `Зал «${post.title}» ресторана «Кучер & Conga» в Дмитрове.`;
+    const description = post.excerpt || `Зал «${post.title}» ресторана «Кучер и Конга» в Дмитрове.`;
     return {
-        title: `${post.title} — банкетный зал · Кучер & Conga`,
+        title: `${post.title} — банкетный зал · Кучер и Конга`,
         description,
         alternates: { canonical: `/halls/${slug}` },
         openGraph: {
-            title: `${post.title} — Кучер & Conga`,
+            title: `${post.title} — Кучер и Конга`,
             description,
             url: `/halls/${slug}`,
             type: 'website',
@@ -54,7 +54,7 @@ export function createHallMetadata(post: PublicHallPost, slug: string): Metadata
         },
         twitter: {
             card: 'summary_large_image',
-            title: `${post.title} — Кучер & Conga`,
+            title: `${post.title} — Кучер и Конга`,
             description,
             images: [post.image_url || '/konga_bron.webp'],
         },
@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const post = await getHall(slug);
     return post
         ? createHallMetadata(post, slug)
-        : { title: 'Зал не найден — Кучер & Conga', robots: { index: false, follow: false } };
+        : { title: 'Зал не найден — Кучер и Конга', robots: { index: false, follow: false } };
 }
 
 // ISR: пост рендерится на сервере — браузер посетителя не ходит в Supabase (замедлен в РФ).

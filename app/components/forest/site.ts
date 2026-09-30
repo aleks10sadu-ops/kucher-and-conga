@@ -1,7 +1,7 @@
 // Единые данные ресторана для шапки/подвала и SEO. Один источник правды.
 
 export const SITE = {
-    name: 'Кучер & Conga',
+    name: 'Кучер и Конга',
     city: 'Дмитров',
     address: 'Дмитров, Промышленная улица, 20Б',
     phones: [
@@ -11,7 +11,7 @@ export const SITE = {
     telegram: 'https://t.me/Kvazar27',
     // Соцсети ресторана (кнопки в подвале).
     socials: [
-        { id: 'telegram', label: 'Telegram', cta: 'Мы в Telegram', href: 'https://t.me/kucherandconga' },
+        { id: 'telegram', label: 'Телеграм', cta: 'Мы в Телеграме', href: 'https://t.me/kucherandconga' },
         { id: 'vk', label: 'ВКонтакте', cta: 'Мы ВКонтакте', href: 'https://vk.com/restoran_kucher' },
     ],
     yandexOrg: 'https://yandex.ru/maps/org/kucher_conga/10214255530/',

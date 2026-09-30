@@ -2,6 +2,8 @@
 
 import type { CSSProperties } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { holidayBanquetHref } from '@/lib/menu/holidayBanquets';
 import { CalendarDays, Clock3, Mic2, Music2, Phone } from 'lucide-react';
 import { SITE } from '../../components/forest/site';
 import ForestHeader from '../../components/forest/ForestHeader';
@@ -60,12 +62,12 @@ export default function NewYearNight() {
     <main id="night-main">
       <section className={styles.hero} aria-labelledby="night-title">
         <div className={styles.heroImage}>
-          <Image src={`${assetRoot}conga-stage-guests-v5.webp`} alt="Иллюстрация новогодней ночи у сцены CONGA: ведущий, гости и две праздничные ёлки" fill priority unoptimized />
+          <Image src={`${assetRoot}conga-stage-guests-v5.webp`} alt="Иллюстрация новогодней ночи у сцены Конга: ведущий, гости и две праздничные ёлки" fill priority unoptimized />
         </div>
         <div className={styles.heroShade} aria-hidden="true" />
         <div className={styles.heroContent}>
           <h1 id="night-title">Новогодняя<br />ночь 2027</h1>
-          <p className={styles.heroBrand}>в Кучер &amp; Conga</p>
+          <p className={styles.heroBrand}>в Кучер и Конга</p>
           <div className={styles.heroFacts}>
             <p><CalendarDays aria-hidden="true" />{content.event.dateText}</p>
             <p><Clock3 aria-hidden="true" />Сбор гостей с {content.event.gatheringTime}</p>
@@ -78,7 +80,7 @@ export default function NewYearNight() {
       <div className={styles.inner}>
         <section id="night-conga" className={styles.conga} aria-labelledby="conga-title">
           <div className={styles.congaImage}>
-            <Image src={`${assetRoot}conga-dining.webp`} alt="Иллюстрация зала CONGA: панорамные окна, подвешенная зелень, узнаваемые светильники и гости за столами" fill sizes="(max-width: 760px) 100vw, 55vw" />
+            <Image src={`${assetRoot}conga-dining.webp`} alt="Иллюстрация зала Конга: панорамные окна, подвешенная зелень, узнаваемые светильники и гости за столами" fill sizes="(max-width: 760px) 100vw, 55vw" />
           </div>
           <div className={styles.congaCopy}>
             <h2 id="conga-title">{content.conga.title}</h2>
@@ -90,6 +92,7 @@ export default function NewYearNight() {
               <span><Cheers />Праздничный<br />стол</span>
               <span><DiscoBall />Танцы<br />до утра</span>
             </div>
+            <Link className={styles.menuLink} href={holidayBanquetHref('night', 'conga')}>Ознакомиться с меню <span aria-hidden="true">↗</span></Link>
           </div>
         </section>
 
@@ -120,6 +123,7 @@ export default function NewYearNight() {
             <p className={styles.price}>{content.privateHalls.priceLabel}</p>
             <p>{content.privateHalls.description}</p>
             <p className={styles.privateTime}><Clock3 size={23} aria-hidden="true" />{content.privateHalls.time}</p>
+            <Link className={styles.menuLink} href={holidayBanquetHref('night', 'kucher')}>Ознакомиться с меню <span aria-hidden="true">↗</span></Link>
           </div>
           <div className={styles.privateImage}>
             <Image src={`${assetRoot}private-company.webp`} alt="Иллюстрация отдельного банкетного зала: гости за деревянным столом без скатерти" fill sizes="(max-width: 760px) 100vw, 58vw" />

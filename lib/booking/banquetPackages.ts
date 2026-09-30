@@ -84,12 +84,12 @@ const conga6000Salads = [
 ];
 const kucherSalads = conga6000Salads.filter((salad) => salad.id !== 'duck-fruit-chutney');
 
-// Соответствует содержимому BanquetMenuModal (Conga 7500/6000 ~1460 г, Кучер 5000 ~1480 г).
+// Соответствует содержимому BanquetMenuModal (Конга 7500/6000 ~1460 г, Кучер 5000 ~1480 г).
 export const BANQUET_PACKAGES: BanquetPackage[] = [
   {
     id: 'conga-7500',
     venue: 'conga',
-    name: 'Conga — банкетное меню 7500 ₽/чел',
+    name: 'Конга — банкетное меню 7500 ₽/чел',
     pricePerPerson: 7500,
     weightGrams: 1460,
     requiredSalads: 4,
@@ -98,7 +98,7 @@ export const BANQUET_PACKAGES: BanquetPackage[] = [
   {
     id: 'conga-6000',
     venue: 'conga',
-    name: 'Conga — банкетное меню 6000 ₽/чел',
+    name: 'Конга — банкетное меню 6000 ₽/чел',
     pricePerPerson: 6000,
     weightGrams: 1460,
     requiredSalads: 3,

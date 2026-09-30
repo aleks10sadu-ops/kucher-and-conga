@@ -113,7 +113,7 @@ export default function VacanciesClient({ initialPosts }: { initialPosts: Post[]
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
                         <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Команда · {SITE.city}</span>
                         <h1 className="mt-2 max-w-[18ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04] text-cream">
-                            Работа в «Кучер&nbsp;&&nbsp;Conga»
+                            Работа в «Кучер и Конга»
                         </h1>
                         <p className="mt-4 max-w-[56ch] text-[clamp(15px,2vw,19px)] leading-relaxed text-cream/85">
                             Мы ищем людей, которым нравится, когда гостю хорошо. Кухня, зал, бар, доставка — расскажите, что

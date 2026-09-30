@@ -7,10 +7,10 @@ import { BUSINESS_LUNCH_WINDOW_TEXT } from '@/lib/menu/businessLunchWindow';
 import { CURRENT_BUSINESS_LUNCH_POSTER } from '@/lib/menu/businessLunchPoster';
 
 export const metadata: Metadata = {
-    title: 'Бизнес-ланч в Дмитрове — Кучер & Conga',
-    description: 'Бизнес-ланч в ресторане «Кучер & Conga» в Дмитрове по будням с 12:00 до 16:00. Выберите блюда в конструкторе и оформите заказ.',
+    title: 'Бизнес-ланч в Дмитрове — Кучер и Конга',
+    description: 'Бизнес-ланч в ресторане «Кучер и Конга» в Дмитрове по будням с 12:00 до 16:00. Выберите блюда в конструкторе и оформите заказ.',
     alternates: { canonical: '/business-lunch' },
-    openGraph: { title: 'Бизнес-ланч в Дмитрове — Кучер & Conga', description: 'Обед по будням с 12:00 до 16:00.', url: '/business-lunch', type: 'website', images: [CURRENT_BUSINESS_LUNCH_POSTER.image] },
+    openGraph: { title: 'Бизнес-ланч в Дмитрове — Кучер и Конга', description: 'Обед по будням с 12:00 до 16:00.', url: '/business-lunch', type: 'website', images: [CURRENT_BUSINESS_LUNCH_POSTER.image] },
 };
 
 export default function BusinessLunchPage() {

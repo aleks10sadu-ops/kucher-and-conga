@@ -6,10 +6,10 @@ import ForestHeader from '../components/forest/ForestHeader';
 import { SITE, SITE_URL } from '../components/forest/site';
 
 export const metadata: Metadata = {
-    title: 'Доставка еды в Дмитрове — Кучер & Conga',
-    description: 'Доставка еды из ресторана «Кучер & Conga» по Дмитрову: горячие блюда, мангал, шашлык и хинкали. Актуальное меню, цены и оформление заказа на сайте.',
+    title: 'Доставка еды в Дмитрове — Кучер и Конга',
+    description: 'Доставка еды из ресторана «Кучер и Конга» по Дмитрову: горячие блюда, мангал, шашлык и хинкали. Актуальное меню, цены и оформление заказа на сайте.',
     alternates: { canonical: '/delivery' },
-    openGraph: { title: 'Доставка еды в Дмитрове — Кучер & Conga', description: 'Актуальное меню доставки ресторана по Дмитрову.', url: '/delivery', type: 'website', images: ['/hero-image.webp'] },
+    openGraph: { title: 'Доставка еды в Дмитрове — Кучер и Конга', description: 'Актуальное меню доставки ресторана по Дмитрову.', url: '/delivery', type: 'website', images: ['/hero-image.webp'] },
 };
 
 const deliveryJsonLd = {
@@ -31,7 +31,7 @@ export default function DeliveryPage() {
                     <Image src="/hero-image.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-forest-ink/90" />
                     <div className="relative mx-auto max-w-[1120px] px-5 pb-16 pt-20 md:px-8 md:pb-24 md:pt-28">
-                        <p className="text-[13px] uppercase tracking-[0.18em] text-brass">Ресторан Кучер &amp; Conga</p>
+                        <p className="text-[13px] uppercase tracking-[0.18em] text-brass">Ресторан Кучер и Конга</p>
                         <h1 className="mt-2 font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04]">Доставка еды в Дмитрове</h1>
                         <p className="mt-5 max-w-[62ch] text-base leading-relaxed text-cream/85 md:text-lg">Выберите блюда из актуального меню доставки, соберите корзину и оформите заказ прямо на сайте.</p>
                         <div className="mt-7 flex flex-wrap gap-3">

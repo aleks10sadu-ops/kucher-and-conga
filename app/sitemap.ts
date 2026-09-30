@@ -34,6 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         page('/faq', 0.7, 'monthly'),
         page('/events', 0.7, 'weekly'),
         page('/events/novogodnie-korporativy-2027', 0.8, 'weekly'),
+        page('/events/novogodnyaya-noch-2027', 0.8, 'weekly'),
         page('/promotions', 0.7, 'weekly'),
         page('/vacancies', 0.6, 'weekly'),
         page('/privacy', 0.2, 'yearly'),
@@ -53,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const dynamicPages = [
         ...vacancies.map((v) => dated(`/vacancies/${v.slug}`, v.published_at || v.created_at, 0.5, 'weekly')),
         ...events
-            .filter((e) => e.slug !== 'novogodnyaya-noch-2027')
+            .filter((e) => !['novogodnie-korporativy-2027', 'novogodnyaya-noch-2027'].includes(e.slug))
             .map((e) => dated(`/events/${e.slug}`, e.published_at || e.created_at, 0.5, 'weekly')),
         ...halls
             .filter((hall) => !isLegacyHallSlug(hall.slug) && !isExactPublicHallSlug(hall.slug))

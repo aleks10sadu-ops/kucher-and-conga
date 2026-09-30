@@ -32,10 +32,10 @@ export default function ForestHeader({ variant = 'solid' }: { variant?: 'solid' 
             }`}
         >
             <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-5 md:px-8">
-                <Link href="/" aria-label="Кучер и Conga — на главную" className="inline-flex items-center">
+                <Link href="/" aria-label="Кучер и Конга — на главную" className="inline-flex items-center">
                     <img
                         src="/redesign/kongo_logo_main.svg"
-                        alt="Кучер и Conga"
+                        alt="Кучер и Конга"
                         width={2823}
                         height={768}
                         decoding="async"

@@ -140,7 +140,7 @@ export default function DeliveryZoneMiniMap({ coords, onPick }: Props) {
 
                 const restaurant = new ym.Placemark(
                     RESTAURANT_COORDS,
-                    { hintContent: 'Kucher&Conga — Промышленная, 20Б' },
+                    { hintContent: 'Кучер и Конга — Промышленная, 20Б' },
                     { preset: 'islands#foodIcon', iconColor: BRAND_TERRACOTTA },
                 );
                 map.geoObjects.add(restaurant);

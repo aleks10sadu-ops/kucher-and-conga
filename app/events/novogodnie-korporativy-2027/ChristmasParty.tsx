@@ -8,10 +8,11 @@ import { SITE } from '../../components/forest/site';
 import styles from './christmas.module.css';
 import ForestHeader from '../../components/forest/ForestHeader';
 import ForestFooter from '../../components/forest/ForestFooter';
+import { holidayBanquetHref } from '@/lib/menu/holidayBanquets';
 
 const venues = [
     { name: 'Кучер', music: 'Музыкант Алекс', rooms: 'Барный зал, Морской зал и Крытая веранда', range: '18, 19, 25–29 декабря' },
-    { name: 'CONGA', music: 'Музыканты Ирина и Илья', rooms: 'Праздник под перевёрнутым лесом', range: '18–29 декабря' },
+    { name: 'Конга', music: 'Музыканты Ирина и Илья', rooms: 'Праздник под перевёрнутым лесом', range: '18–29 декабря' },
 ] as const;
 
 export default function ChristmasParty() {
@@ -42,7 +43,7 @@ export default function ChristmasParty() {
                 <section className={styles.hero} aria-labelledby="party-title">
                     <div className={styles.heroCopy}>
                         <h1 id="party-title">Этот декабрь —<br /><em>ваш праздник</em></h1>
-                        <p className={styles.lead}>Новогодние корпоративы<br />в ресторане Кучер & CONGA</p>
+                        <p className={styles.lead}>Новогодние корпоративы<br />в ресторане Кучер и Конга</p>
                         <p className={styles.time}><Clock size={19} />Программа 19:00–00:00</p>
                         <a href="#booking" className={styles.primary}>Забронировать <ArrowDown size={18} /></a>
                         <div className={styles.year}><span>Встречаем</span>2027</div>
@@ -51,7 +52,7 @@ export default function ChristmasParty() {
                     <div className={styles.ornaments}>
                         <figure className={styles.bauble}>
                             <div className={styles.hanging}><Image src="/christmas-2027/irakliy.webp" width={768} height={1024} alt="Ираклий с микрофоном в золотом ёлочном шаре" priority sizes="(max-width: 600px) 60vw, 34vw" /></div>
-                            <figcaption><strong>Ираклий</strong><span>ведущий в CONGA</span></figcaption>
+                            <figcaption><strong>Ираклий</strong><span>ведущий в Конга</span></figcaption>
                         </figure>
                         <figure className={styles.star}>
                             <div className={styles.hanging}><Image src="/christmas-2027/elena.webp" width={768} height={1024} alt="Елена «Золотая стрекоза» в золотой ёлочной звезде" priority sizes="(max-width: 600px) 54vw, 30vw" /></div>
@@ -69,7 +70,7 @@ export default function ChristmasParty() {
                                 <p className={styles.range}>{venue.range}</p>
                                 <p className={styles.rooms}>{venue.rooms}</p>
                                 <p className={styles.musicians}><Music2 size={17} />{venue.music}</p>
-                                {venue.name === 'CONGA' && <p className={styles.special}>30 декабря — без развлекательной программы.</p>}
+                                {venue.name === 'Конга' && <p className={styles.special}>30 декабря — без развлекательной программы.</p>}
                             </article>
                         ))}
                     </div>
@@ -89,8 +90,16 @@ export default function ChristmasParty() {
                     <div className={styles.banquetMenu}>
                         <p className={styles.banquetLabel}>Банкетное меню на период новогодних корпоративов</p>
                         <dl className={styles.banquetPrices}>
-                            <div><dt>Зал CONGA</dt><dd>от <strong>7 000 ₽</strong></dd></div>
-                            <div><dt>Залы Кучера</dt><dd>от <strong>6 000 ₽</strong></dd></div>
+                            <div>
+                                <dt>Зал Конга · с программой</dt>
+                                <dd>от <strong>7 000 ₽</strong></dd>
+                                <dd><Link className={styles.menuLink} href={holidayBanquetHref('corporate', 'conga')}>Ознакомиться с меню <ArrowUpRight size={14} aria-hidden="true" /></Link></dd>
+                            </div>
+                            <div>
+                                <dt>Залы Кучера</dt>
+                                <dd>от <strong>6 000 ₽</strong></dd>
+                                <dd><Link className={styles.menuLink} href={holidayBanquetHref('corporate', 'kucher')}>Ознакомиться с меню <ArrowUpRight size={14} aria-hidden="true" /></Link></dd>
+                            </div>
                         </dl>
                     </div>
                     <p className={styles.deposit}>Бронь с 18 по 30 декабря подтверждается<br />после предоплаты <strong>10 000 ₽</strong>.</p>
@@ -101,9 +110,9 @@ export default function ChristmasParty() {
                         <summary>Что важно знать перед бронированием</summary>
                         <div>
                             <p><strong>Участие в программе «Кучера».</strong> Беседки, Летняя веранда (кальянная) и отдельные банкетные залы в программе не участвуют; переход в зал с программой для их гостей не предусмотрен.</p>
-                            <p><strong>Рассадка в CONGA.</strong> Конкретный стол при бронировании не закрепляется. Рассадка определяется в день мероприятия с учётом состава компаний.</p>
+                            <p><strong>Рассадка в Конга.</strong> Конкретный стол при бронировании не закрепляется. Рассадка определяется в день мероприятия с учётом состава компаний.</p>
                             <p><strong>Оплата.</strong> После первоначальной предоплаты: 50% остатка до 1 ноября, оставшаяся сумма до 1 декабря. При бронировании после 1 ноября — половина остатка в течение недели, окончательный расчёт до 1 декабря; после 1 декабря — весь остаток в течение недели. Точный график согласуйте с администратором.</p>
-                            <p><strong>Меню и отдельный зал.</strong> Новогоднее меню ожидается в начале октября. Состав меню, стоимость корпоратива и условия закрытия зала уточняйте у администратора.</p>
+                            <p><strong>Меню и отдельный зал.</strong> Для Кучера: 5 000 ₽ без программы; 6 000, 7 000 и 8 000 ₽ с программой. Для Конга: 7 000 и 8 000 ₽ с программой. Условия закрытия зала уточняйте у администратора.</p>
                         </div>
                     </details>
                 </section>

@@ -94,6 +94,6 @@ describe('BanquetMenuModal reopen behavior', () => {
     renderModal({ ...common, isOpen: false, hallFilter: 'all' });
     const congaOnly = renderModal({ ...common, isOpen: true, hallFilter: 'conga' });
 
-    expect(renderToStaticMarkup(React.createElement(React.Fragment, null, congaOnly))).toContain('>CONGA<');
+    expect(renderToStaticMarkup(React.createElement(React.Fragment, null, congaOnly))).toContain('>Конга<');
   });
 });

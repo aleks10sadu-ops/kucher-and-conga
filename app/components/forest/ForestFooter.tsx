@@ -46,7 +46,7 @@ export default function ForestFooter() {
                     <a href="/privacy" className="text-[#EFE9E0]/70 hover:text-[#EFE9E0]">Политика конфиденциальности</a>
                     <a href="/rules" className="text-[#EFE9E0]/70 hover:text-[#EFE9E0]">Правила пользования</a>
                     <a href={SITE.telegram} target="_blank" rel="noopener noreferrer" className="text-[#EFE9E0]/70 hover:text-[#EFE9E0]">
-                        Сайт разработан — @Kvazar27
+                        Разработка сайта
                     </a>
                 </div>
             </div>

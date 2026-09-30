@@ -1,6 +1,7 @@
 import type { BanquetPackageId } from './banquetPackages';
 import type { BookingType, HallGroup } from './rules';
 import type { Hall } from '../halls/halls-data';
+import { russianPublicText } from '../content/russianPublicText';
 
 export type BookingHall = Omit<Hall, 'id'> & {
   key: string;
@@ -27,7 +28,7 @@ const STANDARD_BOOKING_TYPES = ['onsite', 'preorder', 'banquet'] as const satisf
 const BANQUET_BOOKING_TYPES = ['preorder', 'banquet'] as const satisfies readonly BookingType[];
 
 const HALL_KEY_BY_NAME: Record<string, string> = {
-  Conga: 'conga',
+  'Конга': 'conga',
   'Морской зал': 'marine',
   'Барный зал': 'bar',
   'Веранда (Кучер)': 'veranda-kucher',
@@ -41,7 +42,7 @@ const HALL_KEY_BY_NAME: Record<string, string> = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function bookingHallKeyForName(name: string): string | null {
-  return HALL_KEY_BY_NAME[name] ?? null;
+  return HALL_KEY_BY_NAME[russianPublicText(name)] ?? null;
 }
 
 export function isExactBanquetHall(hall: BookingHall | null | undefined): boolean {
@@ -88,6 +89,7 @@ function standardBookingHall(hall: Hall, key: string): BookingHall {
   const { id: sourceHallId, ...hallDetails } = hall;
   return {
     ...hallDetails,
+    name: russianPublicText(hallDetails.name),
     key,
     sourceHallId,
     crmHallId: crmHallIdFor(sourceHallId),

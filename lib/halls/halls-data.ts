@@ -1,5 +1,6 @@
 // Общие данные и логика слияния залов: используется и серверным загрузчиком
 // (booking/page.tsx, ISR), и клиентским HallSelector (обновление после правок админа).
+import { russianPublicPost, russianPublicText } from '../content/russianPublicText';
 
 export type Hall = {
     id: string; // ID для API брони (из CRM или фолбэк)
@@ -15,7 +16,7 @@ export type Hall = {
 export const FALLBACK_HALLS: Hall[] = [
     {
         id: 'fallback-1',
-        name: 'Conga',
+        name: 'Конга',
         capacity: 140,
         description: 'Просторный современный зал с панорамными окнами, подвесным лесом и авторскими светильниками. Выразительный интерьер, собственный бар и гибкая рассадка подходят для свадеб, корпоративов, концертов и больших семейных праздников.',
         image: '/halls/conga.webp',
@@ -68,6 +69,7 @@ export const FALLBACK_HALLS: Hall[] = [
 
 // CRM-залы (реальные ID) + локальный контент (описания/фото) + фолбэк → единый список.
 export function mergeHalls(crmHalls: any[], localContent: any[]): Hall[] {
+    localContent = localContent.map(russianPublicPost);
     if (crmHalls.length > 0) {
         const nameMapping: Record<string, string> = {
             'Барный (Кучер)': 'Барный зал',
@@ -76,7 +78,7 @@ export function mergeHalls(crmHalls: any[], localContent: any[]): Hall[] {
             'Летка': 'Летняя веранда',
         };
         return crmHalls.map((crmHall) => {
-            const normalizedName = nameMapping[crmHall.name] || crmHall.name;
+            const normalizedName = nameMapping[crmHall.name] || russianPublicText(crmHall.name);
             const localEntry =
                 localContent.find((p: any) => p.title.toLowerCase() === normalizedName.toLowerCase()) ||
                 localContent.find((p: any) => p.title.toLowerCase() === crmHall.name.toLowerCase());

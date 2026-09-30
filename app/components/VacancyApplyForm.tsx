@@ -61,7 +61,7 @@ export default function VacancyApplyForm({ vacancyTitle }: Props) {
                 </select>
                 <input name="startDate" maxLength={100} placeholder="Когда готовы выйти на работу" className={inputCls} />
                 <input name="salary" maxLength={100} placeholder="Ожидания по зарплате" className={inputCls} />
-                <input name="resume" maxLength={300} placeholder="Ссылка на резюме или Telegram" className={inputCls} />
+                <input name="resume" maxLength={300} placeholder="Ссылка на резюме или Телеграм" className={inputCls} />
             </div>
 
             <textarea name="experience" maxLength={1000} rows={3} placeholder="Опыт работы: где и сколько работали" className={inputCls} />

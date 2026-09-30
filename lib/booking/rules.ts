@@ -101,7 +101,7 @@ export function isBookingTimeAllowed(eventDate: string, eventTime: string): bool
 export function classifyHall(hallName: string | null | undefined): HallGroup | null {
   if (!hallName) return null;
   const n = hallName.toLowerCase();
-  if (n.includes('conga')) return 'conga';
+  if (n.includes('conga') || n.includes('конга')) return 'conga';
   if (n.includes('банкет') || n.includes('беседк')) return 'other';
   return 'kucher';
 }

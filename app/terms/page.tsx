@@ -3,8 +3,8 @@ import LegalLayout from '../components/forest/LegalLayout';
 import { SITE, LEGAL } from '../components/forest/site';
 
 export const metadata: Metadata = {
-    title: 'Пользовательское соглашение — Кучер & Conga',
-    description: 'Пользовательское соглашение сайта ресторана «Кучер & Conga»: предмет, порядок оформления заявок на бронь и доставку, права и обязанности сторон, ответственность.',
+    title: 'Пользовательское соглашение — Кучер и Конга',
+    description: 'Пользовательское соглашение сайта ресторана «Кучер и Конга»: предмет, порядок оформления заявок на бронь и доставку, права и обязанности сторон, ответственность.',
     alternates: { canonical: '/terms' },
     robots: { index: true, follow: true },
 };
@@ -77,7 +77,7 @@ export default function TermsPage() {
             <h2>9. Реквизиты и контакты</h2>
             <p>
                 {LEGAL.operator}, ИНН {LEGAL.inn}, ОГРНИП {LEGAL.ogrn}, {LEGAL.legalAddress}. Ресторан: {SITE.address}. Телефоны:{' '}
-                {SITE.phones.map((p) => p.label).join(', ')}. E-mail: {LEGAL.email}.
+                {SITE.phones.map((p) => p.label).join(', ')}. Электронная почта: {LEGAL.email}.
             </p>
         </LegalLayout>
     );

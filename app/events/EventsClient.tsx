@@ -106,9 +106,16 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
     const visiblePosts: Post[] = [{
         id: 'christmas-2027', slug: 'novogodnie-korporativy-2027',
         title: 'Новогодние корпоративы 2027',
-        excerpt: 'Декабрь 2026 в Кучер & CONGA: ведущие, живая музыка, конкурсы, призы и дискотека. Программа с 19:00 до 00:00. Даты и бронирование — на афише.',
+        excerpt: 'Декабрь 2026 в Кучер и Конга: ведущие, живая музыка, конкурсы, призы и дискотека. Программа с 19:00 до 00:00. Даты и бронирование — на афише.',
         content: null, image_url: '/christmas-2027/hosts-cover.webp',
         published_at: null, created_at: '2026-09-12', category: 'events', is_published: true,
+    }, {
+        id: 'new-year-night-2027', slug: 'novogodnyaya-noch-2027',
+        title: 'Новогодняя ночь 2027',
+        excerpt: 'Встречаем Новый год в Кучер и Конга: праздничный ужин, живая музыка, ведущий и танцы до утра. Зал Конга — с программой, отдельные банкетные залы — для своей компании.',
+        content: null, image_url: '/new-year-night-2027/conga-stage-guests-v5.webp',
+        published_at: null, created_at: '2026-09-30', category: 'events', is_published: true,
+        event_date: '2026-12-31T22:00:00+03:00',
     }, ...posts.filter(post => post.slug !== 'novogodnie-korporativy-2027' && post.slug !== 'novogodnyaya-noch-2027')];
 
     return (
@@ -120,7 +127,7 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
                     <Image src="/atmosphere_3.webp" alt="" aria-hidden fill loading="eager" fetchPriority="high" sizes="100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-b from-forest-ink/90 via-forest-ink/95 to-forest-ink" />
                     <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-14 pt-20 md:px-8 md:pb-20 md:pt-28">
-                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Зал Conga · {SITE.city}</span>
+                        <span className="text-[13px] uppercase tracking-[0.18em] text-brass">Зал Конга · {SITE.city}</span>
                         <h1 className="mt-2 max-w-[16ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] font-black leading-[1.04] text-cream">
                             События и вечера
                         </h1>

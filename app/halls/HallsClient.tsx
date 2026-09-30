@@ -118,7 +118,7 @@ export default function HallsClient({ initialPosts }: { initialPosts: PublicHall
                             Банкетные залы в Дмитрове
                         </h1>
                         <p className="mt-4 max-w-[56ch] text-[clamp(15px,2vw,19px)] leading-relaxed text-cream/85">
-                            Зал Conga под подвешенным лесом, веранда у деревьев и отдельные банкетные залы — выберите место для
+                            Зал Конга под подвешенным лесом, веранда у деревьев и отдельные банкетные залы — выберите место для
                             свадьбы, юбилея или корпоратива в Дмитрове.
                         </p>
                     </div>
@@ -215,7 +215,7 @@ export default function HallsClient({ initialPosts }: { initialPosts: PublicHall
                             <div>
                                 <h2 className="font-display text-[24px] font-bold text-cream">Планируете банкет?</h2>
                                 <p className="mt-2 max-w-[54ch] text-[15px] leading-relaxed text-cream/80">
-                                    Банкетное меню «Кучер» и «Conga» от 5000 ₽ или индивидуальное меню под ваш повод. Подберём зал и рассадку —
+                                    Банкетное меню «Кучер» и «Конга» от 5000 ₽ или индивидуальное меню под ваш повод. Подберём зал и рассадку —
                                     напишите или позвоните.
                                 </p>
                             </div>

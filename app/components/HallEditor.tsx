@@ -51,7 +51,7 @@ export default function HallEditor({ hall, isOpen, onClose, onSave }: HallEditor
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) {
-            alert('Файл слишком большой (макс 5MB)');
+            alert('Файл слишком большой (макс 5 МБ)');
             return;
         }
 
@@ -84,7 +84,7 @@ export default function HallEditor({ hall, isOpen, onClose, onSave }: HallEditor
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 if (file.size > 5 * 1024 * 1024) {
-                    alert(`Файл ${file.name} слишком большой (макс 5MB)`);
+                    alert(`Файл ${file.name} слишком большой (макс 5 МБ)`);
                     continue;
                 }
                 const url = await uploadImage(file, 'halls');
@@ -201,7 +201,7 @@ export default function HallEditor({ hall, isOpen, onClose, onSave }: HallEditor
                             {(imagePreview || formData.image_url) ? (
                                 <img
                                     src={imagePreview || formData.image_url}
-                                    alt="Preview"
+                                    alt="Предпросмотр"
                                     className="w-full h-full object-cover"
                                 />
                             ) : (

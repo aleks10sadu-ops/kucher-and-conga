@@ -4,6 +4,14 @@ import { describe, expect, it } from 'vitest';
 import ForestScene, { SectionsMenuLinks } from './ForestBloom';
 
 describe('ForestBloom sections menu', () => {
+    it('renders the event carousel with a poster link and manual playback controls', () => {
+        const html = renderToStaticMarkup(React.createElement(ForestScene));
+        expect(html).toContain('aria-label="Афиши событий"');
+        expect(html).toContain('href="/events/novogodnie-korporativy-2027"');
+        expect(html).toContain('Открыть афишу');
+        expect(html).toContain('aria-label="Следующая афиша"');
+        expect(html).not.toContain('aria-label="Остановить автопереключение"');
+    });
     it('renders a link to the FAQ page', () => {
         const html = renderToStaticMarkup(
             React.createElement(SectionsMenuLinks, { onNavigate: () => undefined }),

@@ -35,13 +35,13 @@ describe('sitemap', () => {
         ]));
     });
 
-    it('keeps the New Year night unlisted even if its CMS post is published', async () => {
+    it('lists the New Year night once even if its CMS post is also published', async () => {
         fetchPublishedPostsMock.mockImplementation(async (category: string) => category === 'events' ? [
             { slug: 'novogodnyaya-noch-2027', published_at: null, created_at: '2026-09-29' },
             { slug: 'live-music', published_at: null, created_at: '2026-09-29' },
         ] : []);
         const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname);
-        expect(paths).not.toContain('/events/novogodnyaya-noch-2027');
+        expect(paths.filter(path => path === '/events/novogodnyaya-noch-2027')).toHaveLength(1);
         expect(paths).toContain('/events/live-music');
     });
 

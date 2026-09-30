@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { toSiteImageUrl } from '@/lib/media/siteImageUrl';
+import { russianPublicPost } from './russianPublicText';
 
 export interface ContentPost {
     slug: string;
@@ -33,7 +34,7 @@ export async function fetchPublishedPosts(category: string): Promise<ContentPost
             .order('published_at', { ascending: false });
         if (error) return [];
         return ((data as ContentPost[]) || []).map((post) => ({
-            ...post,
+            ...russianPublicPost(post),
             image_url: toSiteImageUrl(post.image_url),
         }));
     } catch {
@@ -54,7 +55,7 @@ export async function fetchPostBySlug(category: string, slug: string): Promise<C
             .maybeSingle();
         if (error) return null;
         const post = (data as ContentPost) || null;
-        return post ? { ...post, image_url: toSiteImageUrl(post.image_url) } : null;
+        return post ? { ...russianPublicPost(post), image_url: toSiteImageUrl(post.image_url) } : null;
     } catch {
         return null;
     }
