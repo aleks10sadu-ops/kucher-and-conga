@@ -18,6 +18,19 @@ const post = {
   is_published: true,
 };
 
+it('shows event times in Moscow regardless of the server timezone', () => {
+  const previousTimezone = process.env.TZ;
+  try {
+    process.env.TZ = 'UTC';
+    const html = renderToStaticMarkup(React.createElement(EventsClient, { initialPosts: [] }));
+    expect(html).toContain('31 дек., 22:00');
+    expect(html).not.toContain('31 дек., 19:00');
+  } finally {
+    if (previousTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimezone;
+  }
+});
+
 describe.each([
   ['залов', HallsClient],
   ['вакансий', VacanciesClient],

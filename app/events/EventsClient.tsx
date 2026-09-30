@@ -200,11 +200,11 @@ export default function EventsClient({ initialPosts }: { initialPosts: Post[] })
                                                     </span>
                                                     {post.event_date ? (
                                                         <span className="text-xs font-medium text-brass">
-                                                            {new Date(post.event_date).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                            {new Date(post.event_date).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     ) : post.published_at ? (
                                                         <span className="text-xs text-cream/45">
-                                                            {new Date(post.published_at).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' })}
+                                                            {new Date(post.published_at).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', month: 'short', day: 'numeric' })}
                                                         </span>
                                                     ) : null}
                                                 </div>
