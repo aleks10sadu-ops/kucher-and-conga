@@ -153,8 +153,11 @@ export default function DeliveryCheckout({
     const minOrder = validateMinOrder(items, subtotal, effectiveZone, fulfillmentType);
     const asapUnavailable = f.deliveryTime === 'asap' && !scheduleOpen;
     const immediateMoment = moscowHappyHoursMoment(currentTime);
+    const promotionMoment = f.deliveryTime === 'custom'
+        ? { date: f.deliveryDate, time: f.deliveryTimeCustom }
+        : immediateMoment;
     const happyHoursAvailable = isPickup
-        && isHappyHoursPickupEligible(immediateMoment.date, immediateMoment.time);
+        && isHappyHoursPickupEligible(promotionMoment.date, promotionMoment.time);
 
     const chooseFulfillmentType = (nextType: FulfillmentType) => {
         setFulfillmentType(nextType);

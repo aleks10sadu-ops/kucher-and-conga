@@ -9,6 +9,21 @@ const msk = (iso: string) => new Date(`${iso}+03:00`);
 const dish = { id: 'dish', qty: 1, price: 1000 };
 
 describe('evaluateOrderRules', () => {
+  it.each(['delivery', 'pickup'])('rejects %s scheduled before opening +45 minutes', (fulfillmentType) => {
+    for (const [date, tooEarly, firstTime] of [
+      ['2026-07-13', '12:44', '12:45'],
+      ['2026-07-19', '13:44', '13:45'],
+    ]) {
+      const input = {
+        fulfillmentType, address: 'Дмитров, Промышленная, 20Б', items: [dish], zone: null,
+        deliveryTime: 'custom' as const, now: msk('2026-07-12T10:00:00'),
+      };
+      expect(evaluateOrderRules({ ...input, deliveryTimeCustom: `${date}T${tooEarly}:00` }))
+        .toMatchObject({ ok: false, status: 409, error: 'order_time_outside_schedule' });
+      expect(evaluateOrderRules({ ...input, deliveryTimeCustom: `${date}T${firstTime}:00` }))
+        .toMatchObject({ ok: true, completeBefore: `${date} ${firstTime}:00.000` });
+    }
+  });
   it('treats a missing discriminator as delivery and requires its address', () => {
     expect(evaluateOrderRules({
       fulfillmentType: undefined,

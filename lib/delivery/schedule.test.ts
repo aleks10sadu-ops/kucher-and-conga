@@ -57,8 +57,8 @@ describe('deliveryClosedMessage', () => {
 describe('scheduled order slots', () => {
   it('uses 15-minute slots and includes the closing boundary', () => {
     const slots = orderTimeSlots('2026-07-13', msk('2026-07-12T10:00:00'));
-    expect(slots[0]).toBe('12:00');
-    expect(slots[1]).toBe('12:15');
+    expect(slots[0]).toBe('12:45');
+    expect(slots[1]).toBe('13:00');
     expect(slots.at(-1)).toBe('21:45');
   });
 
@@ -67,16 +67,20 @@ describe('scheduled order slots', () => {
   });
 
   it('removes elapsed slots for today without hiding future days', () => {
-    const now = msk('2026-07-13T12:07:00');
-    expect(orderTimeSlots('2026-07-13', now)[0]).toBe('12:15');
-    expect(orderTimeSlots('2026-07-14', now)[0]).toBe('12:00');
+    const now = msk('2026-07-13T13:07:00');
+    expect(orderTimeSlots('2026-07-13', now)[0]).toBe('13:15');
+    expect(orderTimeSlots('2026-07-14', now)[0]).toBe('12:45');
+  });
+
+  it('starts Sunday slots 45 minutes after its later opening', () => {
+    expect(orderTimeSlots('2026-07-19', msk('2026-07-13T14:00:00'))[0]).toBe('13:45');
   });
 });
 
 describe('validateOrderTime', () => {
   it('accepts a future scheduled order while the restaurant is currently closed', () => {
-    const result = validateOrderTime('custom', '2026-07-13T12:30:00', msk('2026-07-13T08:00:00'));
-    expect(result).toMatchObject({ ok: true, completeBefore: '2026-07-13 12:30:00.000' });
+    const result = validateOrderTime('custom', '2026-07-13T12:45:00', msk('2026-07-13T08:00:00'));
+    expect(result).toMatchObject({ ok: true, completeBefore: '2026-07-13 12:45:00.000' });
   });
 
   it('rejects past and outside-schedule timestamps', () => {
@@ -89,8 +93,8 @@ describe('validateOrderTime', () => {
   it('accepts arbitrary future minutes but still rejects non-zero seconds', () => {
     const now = msk('2026-07-13T08:00:00');
 
-    expect(validateOrderTime('custom', '2026-07-13T12:07:00', now))
-      .toMatchObject({ ok: true, completeBefore: '2026-07-13 12:07:00.000' });
+    expect(validateOrderTime('custom', '2026-07-13T12:47:00', now))
+      .toMatchObject({ ok: true, completeBefore: '2026-07-13 12:47:00.000' });
     expect(validateOrderTime('custom', '2026-07-13T12:15:01', now))
       .toMatchObject({ ok: false, code: 'order_time_invalid' });
   });
@@ -109,5 +113,25 @@ describe('validateOrderTime', () => {
       .toMatchObject({ ok: false, code: 'delivery_closed' });
     expect(validateOrderTime('asap', undefined, msk('2026-07-13T12:00:00')))
       .toMatchObject({ ok: true, completeBefore: null });
+  });
+
+  it.each([
+    ['2026-07-13', '12:00', '12:44', '12:45'],
+    ['2026-07-14', '12:00', '12:44', '12:45'],
+    ['2026-07-15', '12:00', '12:44', '12:45'],
+    ['2026-07-16', '12:00', '12:44', '12:45'],
+    ['2026-07-17', '12:00', '12:44', '12:45'],
+    ['2026-07-18', '12:00', '12:44', '12:45'],
+    ['2026-07-19', '13:00', '13:44', '13:45'],
+  ])('enforces opening +45 minutes for %s', (date, opening, tooEarly, firstTime) => {
+    const now = msk('2026-07-12T10:00:00');
+    for (const time of [opening, tooEarly]) {
+      expect(validateOrderTime('custom', `${date}T${time}:00`, now)).toMatchObject({
+        ok: false,
+        code: 'order_time_outside_schedule',
+        message: `Выберите время в интервале ${firstTime}–${date === '2026-07-17' || date === '2026-07-18' ? '23:00' : '21:45'}.`,
+      });
+    }
+    expect(validateOrderTime('custom', `${date}T${firstTime}:00`, now)).toMatchObject({ ok: true });
   });
 });

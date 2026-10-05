@@ -4,7 +4,17 @@ import { isPointInPolygon } from '../../lib/utils/geo';
 import { validateMinOrder } from '../../lib/delivery/minOrder';
 import { checkDeliveryZoneForCoords, deliveryZones, findZoneByKeyword, findZoneByName } from './deliveryZones';
 
-describe('актуальные зоны доставки от 03.09.2026', () => {
+describe('актуальные зоны доставки от 05.10.2026', () => {
+    it('включает Высоковольтную, 57А в бесплатную зону после расширения границы', () => {
+        // Координаты дома по геокодеру OpenStreetMap: [широта, долгота].
+        expect(checkDeliveryZoneForCoords([56.3304908, 37.5341269])).toMatchObject({
+            id: 1, name: 'Бесплатная доставка', price: 0, minOrder: 1000,
+        });
+    });
+
+    it('сохраняет тариф 300 ₽ сразу за новой южной границей бесплатной зоны', () => {
+        expect(checkDeliveryZoneForCoords([56.3301, 37.5342])).toMatchObject({ id: 2, price: 300 });
+    });
     it('применяет тариф СНТ Дружба 6 внутри зоны 300 ₽', () => {
         const point = [56.41, 37.47];
         const surroundingZone = findZoneByName('Зона 300₽')!;

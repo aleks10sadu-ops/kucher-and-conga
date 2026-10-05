@@ -1,4 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const scheduledSelection = vi.hoisted(() => ({
+  deliveryTime: 'custom', deliveryDate: '', deliveryTimeCustom: '',
+}));
 
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react');
@@ -8,7 +12,7 @@ vi.mock('react', async () => {
     useState: vi.fn((initial) => {
       const value = typeof initial === 'function' ? initial() : initial;
       if (value && typeof value === 'object' && 'deliveryTime' in value) {
-        return [{ ...value, deliveryTime: 'custom' }, vi.fn()];
+        return [{ ...value, ...scheduledSelection, deliveryDate: scheduledSelection.deliveryDate || value.deliveryDate }, vi.fn()];
       }
       return [value, vi.fn()];
     }),
@@ -16,8 +20,10 @@ vi.mock('react', async () => {
 });
 
 import DeliveryCheckout from './DeliveryCheckout';
+import HappyHoursNotice from '../components/HappyHoursNotice';
 
 type ElementNode = {
+  type?: unknown;
   props?: {
     'aria-label'?: string;
     'aria-pressed'?: boolean;
@@ -47,6 +53,9 @@ function findElement(node: unknown, predicate: (element: ElementNode) => boolean
 }
 
 describe('DeliveryCheckout fulfillment selector accessibility', () => {
+  beforeEach(() => {
+    Object.assign(scheduledSelection, { deliveryTime: 'custom', deliveryDate: '', deliveryTimeCustom: '' });
+  });
   afterEach(() => vi.useRealTimers());
 
   it('exposes a labelled pressed-button group with delivery selected by default', () => {
@@ -98,5 +107,30 @@ describe('DeliveryCheckout fulfillment selector accessibility', () => {
     expect(date?.props?.value).toBe('2026-08-24');
     expect(time?.props?.type).toBe('text');
     expect(time?.props?.inputMode).toBe('numeric');
+  });
+
+  it.each([
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-10-06', '18:00', false],
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-10-10', '14:00', false],
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-10-11', '14:00', false],
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-11-04', '14:00', false],
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-10-06', '', false],
+    ['2026-10-05T18:00:00+03:00', 'custom', '2026-10-06', '14:00', true],
+    ['2026-10-05T18:00:00+03:00', 'custom', '2026-10-06', '16:00', true],
+    ['2026-10-05T14:00:00+03:00', 'custom', '2026-10-06', '16:01', false],
+    ['2026-10-05T14:00:00+03:00', 'asap', '2026-10-10', '18:00', true],
+    ['2026-10-05T18:00:00+03:00', 'asap', '2026-10-06', '14:00', false],
+  ])('checks pickup offer at %s for %s %s %s', (now, deliveryTime, deliveryDate, deliveryTimeCustom, expected) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(now));
+    Object.assign(scheduledSelection, { deliveryTime, deliveryDate, deliveryTimeCustom });
+    for (const fulfillmentType of ['pickup', 'delivery'] as const) {
+      const checkout = DeliveryCheckout({
+        items: [], subtotal: 0, initialFulfillmentType: fulfillmentType,
+        onClose: vi.fn(), onSuccess: vi.fn(),
+      });
+      expect(Boolean(findElement(checkout, (element) => element.type === HappyHoursNotice)))
+        .toBe(fulfillmentType === 'pickup' && expected);
+    }
   });
 });

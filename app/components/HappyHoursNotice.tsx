@@ -1,7 +1,7 @@
 export default function HappyHoursNotice({ context }: { context: 'pickup' | 'booking' }) {
     return (
         <div role="status" className="rounded-xl border border-brass/35 bg-brass/10 p-4 text-sm text-cream">
-            <p className="font-semibold text-brass">Сейчас действуют Счастливые часы — скидка 20%</p>
+            <p className="font-semibold text-brass">Счастливые часы — скидка 20%</p>
             <p className="mt-1 leading-relaxed text-cream/80">
                 {context === 'pickup'
                     ? 'Скидка доступна на самовывоз.'

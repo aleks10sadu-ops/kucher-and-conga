@@ -18,6 +18,8 @@ const SCHEDULE: Record<string, DayWindow> = {
   Sun: { from: [13, 0], to: [21, 45] },
 };
 
+const SCHEDULED_ORDER_PREPARATION_MINUTES = 45;
+
 function moscowParts(now: Date): { weekday: string; minutes: number } {
   const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Europe/Moscow',
@@ -49,8 +51,15 @@ function windowForDate(date: string): DayWindow | null {
   return SCHEDULE[['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.getUTCDay()]] ?? null;
 }
 
-export function orderTimeSlots(date: string, now: Date = new Date()): string[] {
+function scheduledWindowForDate(date: string): DayWindow | null {
   const window = windowForDate(date);
+  if (!window) return null;
+  const from = window.from[0] * 60 + window.from[1] + SCHEDULED_ORDER_PREPARATION_MINUTES;
+  return { from: [Math.floor(from / 60), from % 60], to: window.to };
+}
+
+export function orderTimeSlots(date: string, now: Date = new Date()): string[] {
+  const window = scheduledWindowForDate(date);
   if (!window) return [];
   const from = window.from[0] * 60 + window.from[1];
   const to = window.to[0] * 60 + window.to[1];
@@ -81,10 +90,10 @@ export function validateOrderTime(
     return { ok: false, code: 'order_time_invalid', message: 'Некорректное время заказа.' };
   }
   const requestedAt = new Date(`${date}T${time}:${match[6] || '00'}+03:00`);
-  if (!windowForDate(date) || Number.isNaN(requestedAt.getTime())) {
+  const window = scheduledWindowForDate(date);
+  if (!window || Number.isNaN(requestedAt.getTime())) {
     return { ok: false, code: 'order_time_invalid', message: 'Некорректная дата заказа.' };
   }
-  const window = windowForDate(date)!;
   const minute = Number(match[4]) * 60 + Number(match[5]);
   const from = window.from[0] * 60 + window.from[1];
   const to = window.to[0] * 60 + window.to[1];
