@@ -31,6 +31,9 @@ const baseOrder: Omit<CreateSiteOrderArgs, 'fulfillmentType' | 'address'> = {
 };
 
 describe('buildIikoOrder', () => {
+  it('uses the durable site request ID for terminal and notification deduplication', () => {
+    expect(buildIikoOrder({ ...baseOrder, fulfillmentType:'pickup', orderId:'10236bd8-014b-4020-97e8-92a0b5b507e9' }, 'legacy')).toHaveProperty('id','10236bd8-014b-4020-97e8-92a0b5b507e9');
+  });
   it('keeps the courier service and delivery point for delivery', () => {
     const order = buildIikoOrder({ ...baseOrder, fulfillmentType: 'delivery', address: base }, 'legacy');
     expect(order).toMatchObject({

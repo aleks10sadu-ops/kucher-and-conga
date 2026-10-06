@@ -35,6 +35,10 @@ export async function submitCheckoutOrder(
         };
     }
     let response: Response;
+    const requestId = typeof payload.requestId === 'string' ? payload.requestId : crypto.randomUUID();
+    payload = { ...payload, requestId };
+    // Re-submit the exact same request through the validated server path.
+    fallbackPayload = { ...payload, type: 'delivery' };
     try {
         response = await fetcher('/api/orders', {
             method: 'POST',

@@ -1,6 +1,6 @@
 // app/api/orders/route.ts — создание заказа доставки в iiko (источник «Сайт»).
-// Уведомление в Telegram-группу присылает вебхук iiko после создания заказа,
-// поэтому здесь в TG ничего не отправляем.
+// Persist the validated notification before contacting the terminal. A worker
+// sends it independently, sharing its claim with the iiko webhook and poller.
 import { NextResponse, NextRequest } from 'next/server';
 import { createSiteOrder, type SiteOrderAddress, type SiteOrderItem } from '@/lib/iiko/orders';
 import { resolveStreetFromAddress, stripHouse } from '@/lib/iiko/streets';
@@ -14,6 +14,8 @@ import type { FulfillmentType } from '@/lib/delivery/types';
 import { SITE } from '@/app/components/forest/site';
 import { getIikoMenu } from '@/lib/iiko';
 import type { MenuItem } from '@/types/index';
+import { randomUUID } from 'node:crypto';
+import { createOrderNotifications, formatSiteOrder, UUID } from '@/lib/delivery/orderNotifications.mjs';
 
 export const maxDuration = 60; // опрос статуса создания занимает до ~25с
 
@@ -36,6 +38,7 @@ type AuthoritativeItem = IncomingItem & {
 };
 
 interface IncomingPayload {
+  requestId?: string;
   fulfillmentType?: 'delivery' | 'pickup';
   name: string;
   phone: string;
@@ -201,8 +204,12 @@ function buildComment(p: IncomingPayload, fulfillmentType: FulfillmentType): str
 export async function POST(req: NextRequest) {
   // Хвост записи журнала — общий для всех исходов этой попытки.
   let logTail: Partial<Parameters<typeof logOrderAttempt>[0]> = {};
+  let acceptedOrderId: string | undefined;
   try {
     const p = (await req.json()) as IncomingPayload;
+    if (p.requestId !== undefined && !UUID.test(p.requestId)) {
+      return NextResponse.json({ ok: false, error: 'invalid_request_id' }, { status: 400 });
+    }
     logTail = { name: p.name, phone: p.phone, address: p.address };
 
     if (!p.phone || !Array.isArray(p.items) || p.items.length === 0) {
@@ -371,6 +378,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const orderId = p.requestId || randomUUID();
+    const notifications = createOrderNotifications(process.env);
+    const saved = await notifications.reserve(orderId, formatSiteOrder({
+      ...normalizedPayload,
+      fulfillmentType: rules.fulfillmentType,
+      address: rules.fulfillmentType === 'pickup' ? SITE.address : p.address,
+    }, orderId));
+    acceptedOrderId = orderId;
+    // A retry (including the browser's network fallback) must not create a
+    // second iiko order. Reject reuse with a different payload in reserve().
+    if (!saved.created) return NextResponse.json({ ok: true, orderId, creationStatus: 'InProgress' });
+
     let courierIikoAddress: SiteOrderAddress | undefined;
     if (rules.fulfillmentType === 'delivery') {
       const [lat, lon] = Array.isArray(p.coordinates) && p.coordinates.length >= 2
@@ -410,7 +429,8 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const { orderId } = await createSiteOrder({
+    const created = await createSiteOrder({
+      orderId,
       fulfillmentType: rules.fulfillmentType,
       phone: normalizePhone(p.phone),
       customerName: p.name || 'Гость сайта',
@@ -420,11 +440,18 @@ export async function POST(req: NextRequest) {
       ...(rules.fulfillmentType === 'delivery' ? { address: courierIikoAddress! } : {}),
     });
 
-    await logOrderAttempt({ outcome: 'iiko_ok', detail: orderId, ...logTail });
-    return NextResponse.json({ ok: true, orderId });
+    await logOrderAttempt({ outcome: created.creationStatus === 'InProgress' ? 'iiko_pending' : 'iiko_ok', detail: orderId, ...logTail });
+    return NextResponse.json({ ok: true, orderId, creationStatus: created.creationStatus });
   } catch (e: any) {
     console.error('site order -> iiko failed:', e?.message || e);
     await logOrderAttempt({ outcome: 'iiko_error', detail: String(e?.message || e), ...logTail });
+    if (acceptedOrderId) {
+      // The full validated card is durably queued even if this best-effort
+      // status update fails. The worker checks the same iiko ID afterwards.
+      try { await createOrderNotifications(process.env).db(`?id=eq.${acceptedOrderId}&last_status=eq.CreationPending`, 'PATCH', { last_status: 'CreationError' }); }
+      catch { console.error('Could not mark terminal creation error:', acceptedOrderId); }
+      return NextResponse.json({ ok: true, orderId: acceptedOrderId, creationStatus: 'InProgress' });
+    }
     return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 502 });
   }
 }

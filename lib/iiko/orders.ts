@@ -17,6 +17,8 @@ export interface SiteOrderItem {
 }
 
 export interface CreateSiteOrderArgs {
+  /** Same durable ID on the website, notification card and iiko. */
+  orderId?: string;
   fulfillmentType: FulfillmentType;
   phone: string;
   customerName: string;
@@ -110,6 +112,7 @@ export function buildIikoOrder(args: CreateSiteOrderArgs, addressFormat: Address
   }
 
   return {
+    ...(args.orderId ? { id: args.orderId } : {}),
     orderServiceType: args.fulfillmentType === 'pickup' ? 'DeliveryByClient' : 'DeliveryByCourier',
     sourceKey: 'Сайт',
     ...(args.completeBefore ? { completeBefore: args.completeBefore } : {}),
@@ -142,7 +145,7 @@ export function buildIikoOrder(args: CreateSiteOrderArgs, addressFormat: Address
  * Создаёт доставку в iiko (источник «Сайт», курьерский тип заказа по умолчанию)
  * и дожидается результата создания. Бросает Error с причиной, если iiko отклонила заказ.
  */
-export async function createSiteOrder(args: CreateSiteOrderArgs): Promise<{ orderId: string }> {
+export async function createSiteOrder(args: CreateSiteOrderArgs): Promise<{ orderId: string; creationStatus: 'Success' | 'InProgress' }> {
   const { organizationId } = getIikoConfig();
   const terminalGroupId = process.env.IIKO_TERMINAL_GROUP_ID;
   if (!terminalGroupId) throw new Error('iiko config: missing env IIKO_TERMINAL_GROUP_ID');
@@ -158,6 +161,7 @@ export async function createSiteOrder(args: CreateSiteOrderArgs): Promise<{ orde
   );
 
   const orderId = created.orderInfo.id;
+  if (args.orderId && orderId !== args.orderId) throw new Error('iiko returned a different order ID');
 
   // Создание асинхронное: опрашиваем статус, чтобы вернуть сайту честный результат.
   for (let i = 0; i < 10; i++) {
@@ -169,14 +173,13 @@ export async function createSiteOrder(args: CreateSiteOrderArgs): Promise<{ orde
     );
     const o = st.orders?.[0];
     if (!o || o.creationStatus === 'InProgress') continue;
-    if (o.creationStatus === 'Success') return { orderId };
+    if (o.creationStatus === 'Success') return { orderId, creationStatus: 'Success' };
     throw new Error(`iiko отклонила заказ: ${o.errorInfo?.message || o.errorInfo?.code || 'unknown'}`);
   }
-  // ponytail: не дождались статуса за 20с — считаем успехом, кассовый вебхук всё равно уведомит
-  return { orderId };
+  return { orderId, creationStatus: 'InProgress' };
 }
 
 /** Совместимый entry point для существующих курьерских заказов. */
-export function createSiteDelivery(args: CreateSiteDeliveryArgs): Promise<{ orderId: string }> {
+export function createSiteDelivery(args: CreateSiteDeliveryArgs): Promise<{ orderId: string; creationStatus: 'Success' | 'InProgress' }> {
   return createSiteOrder({ ...args, fulfillmentType: 'delivery' });
 }

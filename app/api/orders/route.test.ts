@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   findZoneByName: vi.fn(),
   logOrderAttempt: vi.fn(),
   getIikoMenu: vi.fn(),
+  reserve: vi.fn(),
+  notificationDb: vi.fn(),
 }));
 
 vi.mock('@/lib/iiko/orders', () => ({
@@ -27,13 +29,17 @@ vi.mock('@/app/data/deliveryZones', () => ({
 }));
 vi.mock('@/lib/delivery/orderLog', () => ({ logOrderAttempt: mocks.logOrderAttempt }));
 vi.mock('@/lib/iiko', () => ({ getIikoMenu: mocks.getIikoMenu }));
+vi.mock('@/lib/delivery/orderNotifications.mjs', async (original) => ({
+  ...await original<typeof import('@/lib/delivery/orderNotifications.mjs')>(),
+  createOrderNotifications: () => ({reserve:mocks.reserve,db:mocks.notificationDb}),
+}));
 
 import { POST } from './route';
 
 const makeReq = (body: unknown) => new Request('http://localhost/api/orders', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
+  body: JSON.stringify({ ...(body as object), requestId: '10236bd8-014b-4020-97e8-92a0b5b507e9' }),
 });
 
 describe('POST /api/orders fulfillment boundary', () => {
@@ -41,7 +47,9 @@ describe('POST /api/orders fulfillment boundary', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-12T15:00:00Z'));
     vi.clearAllMocks();
-    mocks.createSiteOrder.mockResolvedValue({ orderId: 'order-1' });
+    mocks.createSiteOrder.mockResolvedValue({ orderId: '10236bd8-014b-4020-97e8-92a0b5b507e9', creationStatus: 'Success' });
+    mocks.reserve.mockResolvedValue({created:true,row:{}});
+    mocks.notificationDb.mockResolvedValue([]);
     mocks.getStopListProductIds.mockResolvedValue(new Set());
     mocks.logOrderAttempt.mockResolvedValue(undefined);
     mocks.getIikoMenu.mockResolvedValue({
@@ -81,6 +89,26 @@ describe('POST /api/orders fulfillment boundary', () => {
     vi.useRealTimers();
   });
 
+  const durablePickup = () => makeReq({fulfillmentType:'pickup',name:'Анна',phone:'8 916 111-22-33',address:'',items:[{id:'ordinary-guid',productId:'ordinary-guid',name:'Блюдо',qty:3,price:400}],deliveryTime:'custom',deliveryTimeCustom:'2026-07-13T15:30:00'});
+  it('queues the full validated order before terminal failure and still accepts the request', async () => {
+    mocks.createSiteOrder.mockRejectedValue(new Error('terminal offline'));
+    const result=await POST(durablePickup() as never);
+    expect(result.status).toBe(200);
+    expect(mocks.reserve.mock.invocationCallOrder[0]).toBeLessThan(mocks.createSiteOrder.mock.invocationCallOrder[0]);
+    expect(mocks.reserve).toHaveBeenCalledWith('10236bd8-014b-4020-97e8-92a0b5b507e9',expect.stringContaining('1200 ₽'));
+    expect(mocks.notificationDb).toHaveBeenCalledWith(expect.stringContaining('last_status=eq.CreationPending'),'PATCH',{last_status:'CreationError'});
+  });
+  it('does not create another terminal order for a claimed retry', async () => {
+    mocks.reserve.mockResolvedValue({created:false,row:{tg_message_id:700}});
+    expect((await POST(durablePickup() as never)).status).toBe(200);
+    expect(mocks.createSiteOrder).not.toHaveBeenCalled();
+  });
+  it('does not accept or create an order if durable storage is unavailable', async () => {
+    mocks.reserve.mockRejectedValue(new Error('storage offline'));
+    expect((await POST(durablePickup() as never)).status).toBe(502);
+    expect(mocks.createSiteOrder).not.toHaveBeenCalled();
+  });
+
   it('creates scheduled pickup from server totals without courier address or zone work', async () => {
     const response = await POST(makeReq({
       fulfillmentType: 'pickup',
@@ -105,7 +133,7 @@ describe('POST /api/orders fulfillment boundary', () => {
     }) as never);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true, orderId: 'order-1' });
+    await expect(response.json()).resolves.toEqual({ ok: true, orderId: '10236bd8-014b-4020-97e8-92a0b5b507e9', creationStatus:'Success' });
     expect(mocks.createSiteOrder).toHaveBeenCalledWith(expect.objectContaining({
       fulfillmentType: 'pickup',
       phone: '+79161112233',

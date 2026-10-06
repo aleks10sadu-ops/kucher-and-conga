@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { buildMessage, POST } from './route';
+import { POST } from './route';
+import { buildMessage } from '@/lib/delivery/formatTelegram';
 
 vi.mock('@/lib/iiko/stopList', () => ({ getStopListProductIds: vi.fn(async () => new Set()) }));
+const orderBoundary=vi.hoisted(()=>({submit:vi.fn()}));
+vi.mock('@/app/api/orders/route',()=>({POST:orderBoundary.submit}));
 
 describe('telegram booking delivery', () => {
   const booking = {
@@ -27,6 +30,15 @@ describe('telegram booking delivery', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it('routes delivery fallback through authoritative validation with the same request ID', async () => {
+    configure();
+    orderBoundary.submit.mockResolvedValue(new Response(JSON.stringify({ok:false,error:'invalid_items'}),{status:422}));
+    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+    const r=await POST(request({type:'delivery',fulfillmentType:'pickup',requestId:'10236bd8-014b-4020-97e8-92a0b5b507e9',items:[]}));
+    expect(r.status).toBe(422);expect(fetcher).not.toHaveBeenCalled();
+    expect(await orderBoundary.submit.mock.calls.at(-1)![0].json()).toMatchObject({requestId:'10236bd8-014b-4020-97e8-92a0b5b507e9'});
   });
 
   it('sends the full request and copy block together to the booking chat', async () => {
