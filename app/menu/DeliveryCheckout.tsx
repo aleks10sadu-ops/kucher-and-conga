@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { X } from 'lucide-react';
 import type { CartItem } from '@/types/index';
@@ -62,6 +62,7 @@ export default function DeliveryCheckout({
     const [consent, setConsent] = useState(false);
     const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
+    const requestAttempt = useRef<{ signature: string; id: string } | null>(null);
     const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(initialFulfillmentType);
 
     useEffect(() => lockBodyScroll(), []);
@@ -281,7 +282,11 @@ export default function DeliveryCheckout({
         const fallbackAddress = isPickup
             ? SITE.address
             : addrDetails ? `${f.address}, ${addrDetails}` : f.address;
-        const result = await submitCheckoutOrder(payload, fetch, {
+        const signature = JSON.stringify(payload);
+        if (requestAttempt.current?.signature !== signature) {
+            requestAttempt.current = { signature, id: crypto.randomUUID() };
+        }
+        const result = await submitCheckoutOrder({ ...payload, requestId: requestAttempt.current.id }, fetch, {
             ...payload,
             address: fallbackAddress,
             comment: `${f.comment ? f.comment + ' | ' : ''}⚠️ Заказ НЕ создан в iiko — пробейте вручную!`,

@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/server';
 
 export type OrderLogOutcome =
   | 'iiko_ok'
+  | 'iiko_pending'
   | 'iiko_error'
   | 'tg_fallback'
   | 'rejected_schedule'

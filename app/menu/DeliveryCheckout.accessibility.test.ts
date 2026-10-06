@@ -9,6 +9,7 @@ vi.mock('react', async () => {
   return {
     ...actual,
     useEffect: vi.fn(),
+    useRef: vi.fn((value) => ({current:value})),
     useState: vi.fn((initial) => {
       const value = typeof initial === 'function' ? initial() : initial;
       if (value && typeof value === 'object' && 'deliveryTime' in value) {

@@ -22,6 +22,12 @@ const response = (status: number, body: Record<string, unknown>) =>
   });
 
 describe('DeliveryCheckout order boundary', () => {
+  it('keeps one request ID and the full validated input on a network fallback', async () => {
+    const fetcher=vi.fn<typeof fetch>().mockRejectedValueOnce(new Error('response lost')).mockResolvedValueOnce(response(200,{ok:true}));
+    await submitCheckoutOrder({fulfillmentType:'pickup',coordinates:[56,37],requestId:'10236bd8-014b-4020-97e8-92a0b5b507e9'},fetcher,{type:'delivery',address:'old display string'});
+    const first=JSON.parse(String(fetcher.mock.calls[0][1]?.body)),second=JSON.parse(String(fetcher.mock.calls[1][1]?.body));
+    expect(second).toMatchObject({...first,type:'delivery'});expect(second.coordinates).toEqual([56,37]);
+  });
   it('does not submit a delivery before its zone is resolved', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response(200, { ok: true }));
 
