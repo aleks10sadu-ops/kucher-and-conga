@@ -96,6 +96,10 @@ describe('POST /api/orders fulfillment boundary', () => {
     expect(result.status).toBe(200);
     expect(mocks.reserve.mock.invocationCallOrder[0]).toBeLessThan(mocks.createSiteOrder.mock.invocationCallOrder[0]);
     expect(mocks.reserve).toHaveBeenCalledWith('10236bd8-014b-4020-97e8-92a0b5b507e9',expect.stringContaining('1200 ₽'));
+    const text=mocks.reserve.mock.calls[0][1];
+    expect(text).toMatch(/^🛍 Новый самовывоз\n/);
+    expect(text).toContain('Телефон: +79161112233');
+    expect(text).toContain('\n\nКомментарий:\n'+mocks.createSiteOrder.mock.calls[0][0].comment);
     expect(mocks.notificationDb).toHaveBeenCalledWith(expect.stringContaining('last_status=eq.CreationPending'),'PATCH',{last_status:'CreationError'});
   });
   it('does not create another terminal order for a claimed retry', async () => {

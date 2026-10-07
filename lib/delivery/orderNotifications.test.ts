@@ -4,6 +4,25 @@ const id = '10236bd8-014b-4020-97e8-92a0b5b507e9';
 const env = {NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'fixture',TELEGRAM_BOT_TOKEN:'fixture',TELEGRAM_CHAT_ID:'fixture'};
 const response = (body:unknown,status=200)=>new Response(JSON.stringify(body),{status});
 describe('durable order notification',()=>{
+  it('restores the compact delivery card and keeps the terminal comment verbatim',()=>{
+    const comment='ЗАКАЗ С САЙТА\nСпособ получения: Доставка\nОплата: картой при получении\nКомментарий гостя: Позвонить\n⚠️ Орехи';
+    const text=formatSiteOrder({name:'Гость',phone:'+79990000000',address:'Улица, д. 31',house:'31',entrance:'2',floor:'3',deliveryTime:'custom',deliveryTimeCustom:'2026-10-07T19:30',orderComment:comment,items:[{name:'Блюдо',qty:2,price:100,modifiers:[{group:'Соус',option:'Острый'},{group:'Хлеб',option:'Без хлеба'}]}],deliveryPrice:300,total:500},id);
+    expect(text).toBe('🚚 Новая доставка\nИмя: Гость\nТелефон: +79990000000\nАдрес: Улица, д. 31, подъезд 2, этаж 3\nКо времени: 07.10.2026 в 19:30\nИсточник: Сайт\n\nПозиции:\n• Блюдо × 2 = 200 ₽\n    – Острый\nДоставка: 300 ₽\nИтого: 500 ₽\n\nКомментарий:\n'+comment);
+    expect(text).not.toContain(id);
+  });
+  it('distinguishes pickup and keeps cash change and guest instructions in the comment',()=>{
+    const text=formatSiteOrder({fulfillmentType:'pickup',name:'Гость',phone:'fixture',orderComment:'ЗАКАЗ С САЙТА\nСпособ получения: Самовывоз\nОплата: наличными (сдача с 1000 ₽)\nКомментарий гостя: Без лука',items:[],total:900},id);
+    expect(text).toMatch(/^🛍 Новый самовывоз\n/);
+    expect(text).toContain('Забрать: Дмитров, Промышленная улица, 20Б');
+    expect(text).toContain('сдача с 1000 ₽');expect(text).toContain('Без лука');
+    expect(text).not.toContain('ID:');
+  });
+  it('adds the terminal number to the same card and retains comments after a late closed order',()=>{
+    const orig_text='🚚 Новая доставка\nИсточник: Сайт\n\nКомментарий:\nНе звонить';
+    const update=reconciliationUpdate({id,orig_text,last_status:'Closed',number:0,tg_message_id:700},{id,creationStatus:'Success',order:{number:123,status:'Closed'}});
+    expect(update?.patch.orig_text).toBe(orig_text.replace('Новая доставка','Новая доставка №123'));
+    expect(update?.text).toBe(update?.patch.orig_text+'\n\n✅ ЗАКРЫТ');
+  });
   it('uses the authenticated storage relay when the worker network cannot reach the database',async()=>{
     const fetcher=vi.fn<typeof fetch>().mockResolvedValue(response([{id}]));
     await createOrderNotifications({...env,ORDER_STORAGE_RELAY_URL:'https://example.com/relay',IIKO_ADMIN_SECRET:'fixture'},fetcher).db('?id=eq.'+id);
@@ -16,10 +35,10 @@ describe('durable order notification',()=>{
   });
   it('preserves delivery address details in the fallback card',()=>{
     const text=formatSiteOrder({phone:'fixture',address:'Улица',house:'20',building:'Б',flat:'4',entrance:'2',floor:'3',intercom:'код',items:[],total:0},id);
-    for(const detail of ['Дом: 20','Корпус: Б','Квартира: 4','Подъезд: 2','Этаж: 3','Домофон: код']) expect(text).toContain(detail);
+    for(const detail of ['д. 20','корп. Б','кв. 4','подъезд 2','этаж 3','домофон код']) expect(text).toContain(detail);
   });
   it('links late terminal confirmation to the existing card without another send',()=>{
-    const row={id,orig_text:'order',last_status:'CreationError',tg_message_id:700};
+    const row={id,orig_text:'🟦 Заявка с сайта: Доставка\nID: '+id,last_status:'CreationError',tg_message_id:700};
     const result={id,creationStatus:'Success',order:{number:123,status:'Unconfirmed'}};
     const update=reconciliationUpdate(row,result);
     expect(update?.text).toContain('№123');

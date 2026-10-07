@@ -383,7 +383,9 @@ export async function POST(req: NextRequest) {
     const saved = await notifications.reserve(orderId, formatSiteOrder({
       ...normalizedPayload,
       fulfillmentType: rules.fulfillmentType,
+      phone: normalizePhone(p.phone),
       address: rules.fulfillmentType === 'pickup' ? SITE.address : p.address,
+      orderComment: buildComment(normalizedPayload, rules.fulfillmentType),
     }, orderId));
     acceptedOrderId = orderId;
     // A retry (including the browser's network fallback) must not create a

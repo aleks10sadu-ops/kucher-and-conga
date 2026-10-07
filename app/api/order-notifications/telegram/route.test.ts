@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 const mocks=vi.hoisted(()=>({db:vi.fn(),telegram:vi.fn()}));
 vi.mock('@/lib/delivery/orderNotifications.mjs',async original=>({...await original<typeof import('@/lib/delivery/orderNotifications.mjs')>(),createOrderNotifications:()=>mocks}));
 import { GET, POST } from './route';
-import { relayCredential } from '@/lib/delivery/orderNotifications.mjs';
+import { relayCredential, SITE_ORDER_QUEUE_FILTER } from '@/lib/delivery/orderNotifications.mjs';
 const id='10236bd8-014b-4020-97e8-92a0b5b507e9';
 const req=(auth:string,payload:unknown)=>new NextRequest('https://example.com/api/order-notifications/telegram',{method:'POST',headers:{Authorization:auth==='Bearer fixture'?'Bearer '+relayCredential({SUPABASE_SERVICE_ROLE_KEY:'fixture'}):auth,'Content-Type':'application/json'},body:JSON.stringify(payload)});
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
@@ -20,6 +20,22 @@ it('relays the bounded pending queue query',async()=>{
   const response=await POST(req('Bearer fixture',{method:'storage',query,operation:'GET'}));
   expect(response.status).toBe(200);
   expect(mocks.db).toHaveBeenCalledWith(query,'GET',undefined);
+});
+it('recovers both old and compact website cards through the bounded queue',async()=>{
+  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','fixture');
+  mocks.db.mockResolvedValue([]);
+  const query='?select=*&or='+encodeURIComponent(SITE_ORDER_QUEUE_FILTER)+'&order=notified_at.desc&limit=200';
+  expect((await POST(req('Bearer fixture',{method:'storage',query,operation:'GET'}))).status).toBe(200);
+  expect((await POST(req('Bearer fixture',{method:'storage',query:query.replace('200','1000'),operation:'GET'}))).status).toBe(400);
+});
+it('allows only the terminal number in the saved header, never a rewrite of order details',async()=>{
+  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','fixture');
+  const orig_text='🚚 Новая доставка\nИсточник: Сайт\n\nКомментарий:\nБез лука';
+  mocks.db.mockResolvedValue([{orig_text}]);
+  const body={number:123,orig_text:orig_text.replace('Новая доставка','Новая доставка №123')};
+  const query='?id=eq.'+id;
+  expect((await POST(req('Bearer fixture',{method:'storage',query,operation:'PATCH',body}))).status).toBe(200);
+  expect((await POST(req('Bearer fixture',{method:'storage',query,operation:'PATCH',body:{...body,orig_text:body.orig_text.replace('Без лука','Другое блюдо')}}))).status).toBe(400);
 });
 it('rejects unrestricted storage operations and message text rewrites',async()=>{
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','fixture');
