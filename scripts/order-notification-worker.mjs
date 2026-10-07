@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import net from 'node:net';
 import dns from 'node:dns';
-import { createOrderNotifications, formatSiteOrder, reconciliationUpdate } from '../lib/delivery/orderNotifications.mjs';
+import { createOrderNotifications, formatSiteOrder, reconciliationUpdate, SITE_ORDER_QUEUE_FILTER } from '../lib/delivery/orderNotifications.mjs';
 if (process.env.ORDER_ENV_FILE) process.loadEnvFile(process.env.ORDER_ENV_FILE);
 net.setDefaultAutoSelectFamily(false);
 dns.setDefaultResultOrder('ipv4first');
@@ -32,15 +32,19 @@ async function reconcile(rows){
       const row=page.find(r=>r.id===result.id);if(!row)continue;
       const update=reconciliationUpdate(row,result);
       if(!update)continue;
+      // Persist only a verified header number, preserving the entire saved card.
+      // The status poller must reuse this base even after a cancellation.
+      if(update.patch.orig_text) await channel.db(`?id=eq.${row.id}`,'PATCH',{orig_text:update.patch.orig_text,number:update.patch.number});
       if(update.text)await channel.telegram('editMessageText',{order_id:row.id,message_id:row.tg_message_id,text:update.text,disable_web_page_preview:true});
-      await channel.db(`?id=eq.${row.id}&last_status=eq.${row.last_status}`,'PATCH',update.patch);
+      const {orig_text,number,...statusPatch}=update.patch;
+      await channel.db(`?id=eq.${row.id}&last_status=eq.${row.last_status}`,'PATCH',statusPatch);
     }
   }
 }
 async function tick(){
-  const rows=await channel.db(`?select=*&finalized=eq.false&orig_text=like.${encodeURIComponent('🟦 Заявка с сайта:*')}&order=notified_at.desc&limit=200`);
+  const rows=await channel.db(`?select=*&or=${encodeURIComponent(SITE_ORDER_QUEUE_FILTER)}&order=notified_at.desc&limit=200`);
   for(const row of rows.filter(r=>!r.tg_message_id)){try{await notify(row);}catch(e){console.error(`notification ${row.id}: ${e.message}`);}}
-  if(Date.now()-reconciledAt>=60000){await reconcile(rows.filter(r=>r.tg_message_id&&(['CreationPending','CreationError'].includes(r.last_status)||!r.number)));reconciledAt=Date.now();}
+  if(Date.now()-reconciledAt>=60000){await reconcile(rows.filter(r=>r.tg_message_id&&((!r.finalized&&['CreationPending','CreationError'].includes(r.last_status))||!r.number)));reconciledAt=Date.now();}
 }
 if(process.argv[2]==='--recover'){
   process.loadEnvFile('.env.local');
